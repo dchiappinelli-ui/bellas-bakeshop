@@ -1590,6 +1590,8 @@
       style="padding:10px 18px;border:none;border-bottom:3px solid transparent;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;margin-bottom:-2px">🌙 Closing</button>
     <button id="open-tab-baker" onclick="openSwitchTab('baker')"
       style="padding:10px 18px;border:none;border-bottom:3px solid transparent;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;margin-bottom:-2px">🍞 Baker Morning</button>
+    <button id="open-tab-side" onclick="openSwitchTab('side')"
+      style="padding:10px 18px;border:none;border-bottom:3px solid transparent;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;margin-bottom:-2px">🃏 Side Tasks</button>
   </div>
 
   <!-- Header -->
@@ -1634,6 +1636,32 @@
 
   <div id="open-checklist" style="display:flex;flex-direction:column;gap:0"></div>
   <div id="open-last-complete" style="text-align:center;font-size:11px;color:var(--muted);margin-top:24px"></div>
+
+  <!-- Side Tasks panel (shown when side tab active) -->
+  <div id="open-side-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:12px;color:var(--muted)">Tap a card to log it done — cards show how long since last completed</div>
+      <div id="side-manage-btn"></div>
+    </div>
+    <div id="side-add-row" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:10px">New Side Task</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="side-add-input" type="text" placeholder="Task description…"
+          onkeydown="if(event.key==='Enter')sideTaskConfirmAdd()"
+          style="flex:2;min-width:180px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+        <select id="side-add-cat" style="flex:1;min-width:130px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+          <option>Cleaning</option>
+          <option>Prep</option>
+          <option>Restocking</option>
+          <option>Admin</option>
+          <option>Other</option>
+        </select>
+        <button onclick="sideTaskConfirmAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer">+ Add</button>
+        <button onclick="document.getElementById('side-add-row').style.display='none'" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+    <div id="side-task-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
+  </div>
 </div>
 
 <div class="page" id="page-ingredients" style="padding:16px;max-width:800px;margin:0 auto">
@@ -1719,9 +1747,12 @@
         onkeydown="if(event.key==='Enter')freezerAddItem()"
         style="flex:2;min-width:160px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
                border-radius:8px;color:var(--text);font-size:14px">
-      <input id="freezer-add-cat" type="text" placeholder="Category (optional)…"
+      <select id="freezer-add-cat-select" onchange="freezerCatSelectChange()"
+        style="flex:1;min-width:130px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);
+               border-radius:8px;color:var(--text);font-size:13px"></select>
+      <input id="freezer-add-cat" type="text" placeholder="New category name…"
         onkeydown="if(event.key==='Enter')freezerAddItem()"
-        style="flex:1;min-width:130px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
+        style="display:none;flex:1;min-width:130px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
                border-radius:8px;color:var(--text);font-size:14px">
       <button onclick="freezerAddItem()"
         style="background:var(--accent);color:#1a1209;border:none;border-radius:8px;padding:10px 18px;
@@ -10915,24 +10946,56 @@ function authHideModal() {
   document.getElementById('auth-modal').style.display = 'none';
 }
 
+let _authLoginTab = 'foh';
+
+const AUTH_LOGIN_TABS = [
+  { id:'foh',   label:'☕ Front of House', roles:['Barista','Bakery Assistant'] },
+  { id:'baker', label:'🍞 Bakers',         roles:['Baker','Head Baker'] },
+  { id:'mgmt',  label:'⭐ Management',      roles:['Owner'] },
+];
+
 function authBuildPickList() {
   const pins = authGetPins();
   const list = document.getElementById('auth-staff-list');
-  list.innerHTML = staff.map(m => {
+
+  const tabBar = `<div style="display:flex;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0">
+    ${AUTH_LOGIN_TABS.map(t => `
+      <button id="ltab-${t.id}" onclick="authLoginSwitchTab('${t.id}')"
+        style="flex:1;padding:8px 4px;border:none;border-bottom:3px solid ${_authLoginTab===t.id?'var(--accent)':'transparent'};
+               background:none;color:${_authLoginTab===t.id?'var(--accent)':'var(--muted)'};
+               font-size:11px;font-weight:${_authLoginTab===t.id?'700':'500'};cursor:pointer;
+               white-space:nowrap;margin-bottom:-2px;transition:all 0.15s">${t.label}</button>`).join('')}
+  </div>`;
+
+  const currentTabDef = AUTH_LOGIN_TABS.find(t => t.id === _authLoginTab);
+  const filtered = staff.filter(m => currentTabDef && currentTabDef.roles.includes(m.role));
+
+  const memberCards = filtered.map(m => {
     const hasPin = !!pins[m.id];
     return `<button onclick="authPickStaff('${m.id}')"
       style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);
-             border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;transition:border-color 0.15s"
+             border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;transition:border-color 0.15s;width:100%"
       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
       <div style="width:36px;height:36px;border-radius:50%;background:${m.color};display:flex;align-items:center;
            justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${m.initials}</div>
-      <div style="flex:1">
+      <div style="flex:1;text-align:left">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${m.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${m.role}</div>
+        <div style="font-size:11px;color:var(--muted)">${m.title || m.role}</div>
       </div>
       ${hasPin ? '' : '<div style="font-size:10px;color:#e57373">No PIN set</div>'}
     </button>`;
   }).join('');
+
+  const empty = filtered.length === 0
+    ? `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0">No staff in this group</div>`
+    : '';
+
+  list.innerHTML = tabBar + `<div style="display:flex;flex-direction:column;gap:8px">${memberCards}${empty}</div>`;
+}
+
+function authLoginSwitchTab(tabId) {
+  _authLoginTab = tabId;
+  authBuildPickList();
 }
 
 function authPickStaff(staffId) {
@@ -11146,6 +11209,7 @@ function renderFreezerPage() {
 
   freezerRenderItems(canEdit);
   acAttach(document.getElementById('freezer-add-input'));
+  freezerPopulateCatSelect();
 
   // Last submit
   const last = localStorage.getItem('bk_freezer_last_submit');
@@ -11258,11 +11322,46 @@ function freezerSetVal(freezerId, name, val) {
   if (ind) { ind.style.opacity = '1'; setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
 }
 
+function freezerPopulateCatSelect() {
+  const sel = document.getElementById('freezer-add-cat-select');
+  const catInput = document.getElementById('freezer-add-cat');
+  if (!sel) return;
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === _activeFreezer);
+  const cats = freezer ? [...new Set(Object.values(freezer.itemCategories || {}))] : [];
+  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('') +
+    `<option value="__new__">+ New category…</option>` +
+    (cats.length === 0 ? '' : '');
+  if (cats.length === 0) {
+    sel.style.display = 'none';
+    catInput.style.display = '';
+  } else {
+    sel.style.display = '';
+    catInput.style.display = 'none';
+    catInput.value = '';
+  }
+}
+
+function freezerCatSelectChange() {
+  const sel = document.getElementById('freezer-add-cat-select');
+  const catInput = document.getElementById('freezer-add-cat');
+  if (sel.value === '__new__') {
+    catInput.style.display = '';
+    catInput.focus();
+  } else {
+    catInput.style.display = 'none';
+    catInput.value = '';
+  }
+}
+
 function freezerAddItem() {
   const input = document.getElementById('freezer-add-input');
   const catInput = document.getElementById('freezer-add-cat');
+  const catSel = document.getElementById('freezer-add-cat-select');
   const name = input.value.trim();
-  const cat = catInput ? catInput.value.trim() : '';
+  const cat = (catSel && catSel.value !== '__new__' && catSel.style.display !== 'none')
+    ? catSel.value.trim()
+    : (catInput ? catInput.value.trim() : '');
   if (!name) return;
   const defs = freezerGetDefs();
   const freezer = defs.find(f => f.id === _activeFreezer);
@@ -11660,6 +11759,138 @@ const CL_DEFAULTS = {
   ],
 };
 
+const SIDE_TASKS_KEY = 'bk_side_tasks';
+const SIDE_TASK_LOG_KEY = 'bk_side_task_log';
+
+const SIDE_TASK_DEFAULTS = [
+  { id:'st1',  name:'Clean sandwich station',       cat:'Cleaning' },
+  { id:'st2',  name:'Clean dishes',                 cat:'Cleaning' },
+  { id:'st3',  name:'Wipe tables & chairs',         cat:'Cleaning' },
+  { id:'st4',  name:'Wipe down display case glass', cat:'Cleaning' },
+  { id:'st5',  name:'Clean espresso machine',       cat:'Cleaning' },
+  { id:'st6',  name:'Sweep floors',                 cat:'Cleaning' },
+  { id:'st7',  name:'Make boxes — Large & Small',   cat:'Prep' },
+  { id:'st8',  name:'Stamp bags',                   cat:'Prep' },
+  { id:'st9',  name:'Re-label items',               cat:'Prep' },
+  { id:'st10', name:'Take milk inventory',           cat:'Admin' },
+  { id:'st11', name:'Restock napkins & straws',     cat:'Restocking' },
+  { id:'st12', name:'Restock drink fridge',         cat:'Restocking' },
+];
+
+function sideGetTasks() {
+  try { return JSON.parse(localStorage.getItem(SIDE_TASKS_KEY) || 'null') || SIDE_TASK_DEFAULTS; } catch { return SIDE_TASK_DEFAULTS; }
+}
+function sideSaveTasks(t) { localStorage.setItem(SIDE_TASKS_KEY, JSON.stringify(t)); }
+
+function sideGetLog() {
+  try { return JSON.parse(localStorage.getItem(SIDE_TASK_LOG_KEY) || '[]'); } catch { return []; }
+}
+function sideSaveLog(l) { localStorage.setItem(SIDE_TASK_LOG_KEY, JSON.stringify(l)); }
+
+function sideLastDone(taskId, log) {
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].taskId === taskId) return log[i];
+  }
+  return null;
+}
+
+function sideDaysAgoLabel(isoStr) {
+  if (!isoStr) return null;
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 2)   return 'just now';
+  if (mins < 60)  return `${mins}m ago`;
+  if (hrs  < 24)  return `${hrs}h ago`;
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
+
+function renderSideTasks() {
+  const tasks = sideGetTasks();
+  const log   = sideGetLog();
+  const canEdit  = authCanAccess('Bakery Assistant');
+  const canManage = openCanManage();
+
+  const manageBtn = document.getElementById('side-manage-btn');
+  if (manageBtn) manageBtn.innerHTML = canManage
+    ? `<button onclick="sideTaskAddRow()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">+ Add Task</button>`
+    : '';
+
+  const grid = document.getElementById('side-task-grid');
+  if (!grid) return;
+
+  // Group by category
+  const cats = [], groups = {};
+  tasks.forEach(t => {
+    if (!groups[t.cat]) { groups[t.cat] = []; cats.push(t.cat); }
+    groups[t.cat].push(t);
+  });
+
+  grid.innerHTML = cats.map(cat => {
+    const items = groups[cat];
+    return `<div style="grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-top:8px;margin-bottom:2px;padding-left:2px">${cat}</div>` +
+    items.map(t => {
+      const last   = sideLastDone(t.id, log);
+      const label  = last ? sideDaysAgoLabel(last.at) : null;
+      const byText = last ? `by ${last.by}` : '';
+      const age    = last ? (Date.now() - new Date(last.at).getTime()) / 86400000 : 999;
+      const urgency = age > 3 ? '#e57373' : age > 1 ? '#e8a045' : '#4a9c6e';
+      const dot    = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${urgency};flex-shrink:0;margin-top:3px"></span>`;
+      const safeId = t.id.replace(/'/g,"\\'");
+      return `<div onclick="${canEdit ? `sideTaskTap('${safeId}')` : ''}"
+        style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+               padding:16px 14px;cursor:${canEdit ? 'pointer' : 'default'};
+               display:flex;flex-direction:column;gap:8px;position:relative;
+               transition:border-color 0.15s;active:border-color:var(--accent)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+          ${dot}
+          ${canManage ? `<button onclick="event.stopPropagation();sideTaskRemove('${safeId}')"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;line-height:1;opacity:0.4;margin-left:auto">✕</button>` : ''}
+        </div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.35">${t.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:auto">
+          ${label ? `${label} ${byText}` : '<span style="color:#e57373;font-weight:600">Never done</span>'}
+        </div>
+      </div>`;
+    }).join('');
+  }).join('');
+}
+
+function sideTaskTap(taskId) {
+  const session = authGetSession();
+  const log = sideGetLog();
+  log.push({ taskId, by: session ? session.name : 'Unknown', at: new Date().toISOString() });
+  sideSaveLog(log.slice(-500));
+  renderSideTasks();
+}
+
+function sideTaskAddRow() {
+  const row = document.getElementById('side-add-row');
+  if (row) { row.style.display = ''; document.getElementById('side-add-input')?.focus(); }
+}
+
+function sideTaskConfirmAdd() {
+  const input = document.getElementById('side-add-input');
+  const catEl = document.getElementById('side-add-cat');
+  const name  = input?.value.trim();
+  const cat   = catEl?.value || 'Other';
+  if (!name) return;
+  const tasks = sideGetTasks();
+  tasks.push({ id: 'st' + Date.now(), name, cat });
+  sideSaveTasks(tasks);
+  if (input) input.value = '';
+  document.getElementById('side-add-row').style.display = 'none';
+  renderSideTasks();
+}
+
+function sideTaskRemove(taskId) {
+  if (!confirm('Remove this task?')) return;
+  sideSaveTasks(sideGetTasks().filter(t => t.id !== taskId));
+  renderSideTasks();
+}
+
 let _openActiveTab = 'opening';
 
 function openGetDefs(tab) {
@@ -11680,20 +11911,44 @@ function openSaveLog(tab, l) { localStorage.setItem(CL_LISTS[tab].logKey, JSON.s
 
 function openSwitchTab(tab) {
   _openActiveTab = tab;
+  const isSide = tab === 'side';
+
   // Update tab button styles
-  ['opening','closing','baker'].forEach(t => {
+  ['opening','closing','baker','side'].forEach(t => {
     const btn = document.getElementById('open-tab-' + t);
     if (!btn) return;
     const active = t === tab;
-    btn.style.color              = active ? 'var(--accent)' : 'var(--muted)';
-    btn.style.fontWeight         = active ? '700' : '600';
-    btn.style.borderBottomColor  = active ? 'var(--accent)' : 'transparent';
+    btn.style.color             = active ? 'var(--accent)' : 'var(--muted)';
+    btn.style.fontWeight        = active ? '700' : '600';
+    btn.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
   });
-  // Update finalize button label
-  const labels = { opening:'✓ Complete Opening', closing:'✓ Complete Closing', baker:'✓ Complete Baker Morning' };
-  const btn = document.getElementById('open-finalize-btn');
-  if (btn) btn.textContent = labels[tab];
-  renderOpeningPage();
+
+  // Show/hide checklist vs side panel
+  const clPanel  = document.getElementById('open-checklist');
+  const sidePanel = document.getElementById('open-side-panel');
+  const lastEl   = document.getElementById('open-last-complete');
+  const hdrBtns  = document.getElementById('open-header-btns');
+  const progress = document.querySelector('#page-opening .progress-wrap');
+
+  if (clPanel)   clPanel.style.display   = isSide ? 'none' : 'flex';
+  if (sidePanel) sidePanel.style.display = isSide ? 'block' : 'none';
+  if (lastEl)    lastEl.style.display    = isSide ? 'none' : '';
+
+  // Hide the Complete / Reset / Add Task buttons on the side tab
+  const finBtn   = document.getElementById('open-finalize-btn');
+  const resetBtn  = document.querySelector('#page-opening button[onclick="openReset()"]');
+  const addBtn    = document.querySelector('#page-opening button[onclick="openAddRow()"]');
+  if (finBtn)   finBtn.style.display   = isSide ? 'none' : '';
+  if (resetBtn) resetBtn.style.display = isSide ? 'none' : '';
+  if (addBtn)   addBtn.style.display   = (isSide || !openCanManage()) ? 'none' : '';
+
+  if (isSide) {
+    renderSideTasks();
+  } else {
+    const labels = { opening:'✓ Complete Opening', closing:'✓ Complete Closing', baker:'✓ Complete Baker Morning' };
+    if (finBtn) finBtn.textContent = labels[tab];
+    renderOpeningPage();
+  }
 }
 
 function renderOpeningPage() {
@@ -11756,9 +12011,13 @@ function renderOpeningPage() {
               text-decoration:${done ? 'line-through' : 'none'}">${t.name}</div>
             ${byLine}
           </div>
+          ${openCanManage() ? `
+          <button onclick="event.stopPropagation();openEditTask('${safeId}')"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px;line-height:1;opacity:0.4;flex-shrink:0"
+            title="Edit">✏️</button>
           <button onclick="event.stopPropagation();openRemoveTask('${safeId}')"
             style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px;line-height:1;opacity:0.4;flex-shrink:0"
-            title="Remove">✕</button>
+            title="Remove">✕</button>` : ''}
         </div>`;
       }).join('')}
     </div>`;
@@ -11821,12 +12080,16 @@ function openReset() {
   renderOpeningPage();
 }
 
+function openCanManage() { return authCanAccess('Head Baker'); }
+
 function openAddRow() {
+  if (!openCanManage()) { alert('Sign in as Head Baker or Owner to manage tasks.'); return; }
   const row = document.getElementById('open-add-row');
   if (row) { row.style.display = ''; document.getElementById('open-add-input')?.focus(); }
 }
 
 function openConfirmAdd() {
+  if (!openCanManage()) return;
   const tab   = _openActiveTab;
   const input = document.getElementById('open-add-input');
   const catEl = document.getElementById('open-add-cat');
@@ -11841,7 +12104,21 @@ function openConfirmAdd() {
   renderOpeningPage();
 }
 
+function openEditTask(taskId) {
+  if (!openCanManage()) { alert('Sign in as Head Baker or Owner to edit tasks.'); return; }
+  const tab  = _openActiveTab;
+  const defs = openGetDefs(tab);
+  const task = defs.find(t => t.id === taskId);
+  if (!task) return;
+  const newName = prompt('Edit task:', task.name);
+  if (newName === null || newName.trim() === '') return;
+  task.name = newName.trim();
+  openSaveDefs(tab, defs);
+  renderOpeningPage();
+}
+
 function openRemoveTask(taskId) {
+  if (!openCanManage()) { alert('Sign in as Head Baker or Owner to remove tasks.'); return; }
   const tab   = _openActiveTab;
   const defs  = openGetDefs(tab).filter(t => t.id !== taskId);
   openSaveDefs(tab, defs);
@@ -12388,6 +12665,7 @@ const FB_SYNC_KEYS = new Set([
   'bk_cl_log_opening',   'bk_cl_log_closing',   'bk_cl_log_baker',
   'bk_eod_log', 'bk_eod_locations',
   'bk_staff', 'bk_recipes', 'bk_standing_tasks', 'bk_role_slots',
+  'bk_side_tasks', 'bk_side_task_log',
 ]);
 
 // Which page to re-render when a key changes remotely
@@ -12401,6 +12679,8 @@ const FB_KEY_PAGE = {
   'bk_cl_state_opening':  () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
   'bk_cl_state_closing':  () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
   'bk_cl_state_baker':    () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
+  'bk_side_tasks':        () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
+  'bk_side_task_log':     () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_staff':             () => { if (activePage() === 'staff')       try { renderStaffPage();        } catch(e){} },
