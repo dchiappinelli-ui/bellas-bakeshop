@@ -1600,6 +1600,7 @@
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button onclick="openAddRow()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">+ Add Task</button>
       <button onclick="openReset()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
+      <button onclick="openGenerateReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">📄 Report</button>
       <button id="open-finalize-btn" onclick="openFinalize()" style="background:#4a9c6e;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">✓ Complete</button>
     </div>
   </div>
@@ -1641,7 +1642,10 @@
   <div id="open-side-panel" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div style="font-size:12px;color:var(--muted)">Tap a card to log it done — cards show how long since last completed</div>
-      <div id="side-manage-btn"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="sideGenerateReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">📄 Report</button>
+        <div id="side-manage-btn"></div>
+      </div>
     </div>
     <div id="side-add-row" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:10px">New Side Task</div>
@@ -11178,15 +11182,25 @@ function freezerSaveDefs(defs) { localStorage.setItem(FREEZER_DEFS_KEY, JSON.str
 // item key = freezerId + '::' + itemName (prevents cross-freezer collisions)
 function freezerKey(freezerId, itemName) { return freezerId + '::' + itemName; }
 
+// FOH-managed freezers — Barista+ can edit; all others require Baker+
+const FOH_FREEZER_IDS = new Set(['f-retail', 'f-bakery']);
+
+function freezerCanEdit(freezerId) {
+  return FOH_FREEZER_IDS.has(freezerId)
+    ? authCanAccess('Barista')
+    : authCanAccess('Baker');
+}
+
 function renderFreezerPage() {
-  const canEdit = authCanAccess('Bakery Assistant');
   const session = authGetSession();
   const defs = freezerGetDefs();
 
-  // Default to first freezer
+  // Default to first freezer the user can see
   if (!_activeFreezer || !defs.find(f => f.id === _activeFreezer)) {
     _activeFreezer = defs[0].id;
   }
+
+  const canEdit = freezerCanEdit(_activeFreezer);
 
   // Auth badge & controls
   document.getElementById('freezer-readonly-notice').style.display = canEdit ? 'none' : '';
@@ -11195,17 +11209,26 @@ function renderFreezerPage() {
   if (session) { badge.style.display = ''; badge.textContent = `Editing as ${session.name}`; }
   else { badge.style.display = 'none'; }
 
-  // Freezer selector tabs
+  // Freezer selector tabs — with FOH / BOH section labels
+  const fohDefs = defs.filter(f =>  FOH_FREEZER_IDS.has(f.id));
+  const bohDefs = defs.filter(f => !FOH_FREEZER_IDS.has(f.id));
+
+  function tabBtn(f) {
+    const active = _activeFreezer === f.id;
+    return `<button onclick="freezerSelectFreezer('${f.id}')"
+      style="flex-shrink:0;padding:8px 16px;border-radius:20px;border:1px solid ${active?'var(--accent)':'var(--border)'};
+             background:${active?'var(--accent)':'var(--surface2)'};
+             color:${active?'#1a1209':'var(--muted)'};
+             font-size:13px;font-weight:${active?'700':'400'};cursor:pointer;white-space:nowrap;
+             touch-action:manipulation">${f.name}</button>`;
+  }
+
   const tabsEl = document.getElementById('freezer-tabs');
-  tabsEl.innerHTML = defs.map(f => `
-    <button onclick="freezerSelectFreezer('${f.id}')"
-      style="flex-shrink:0;padding:8px 16px;border-radius:20px;border:1px solid ${_activeFreezer===f.id?'var(--accent)':'var(--border)'};
-             background:${_activeFreezer===f.id?'var(--accent)':'var(--surface2)'};
-             color:${_activeFreezer===f.id?'#1a1209':'var(--muted)'};
-             font-size:13px;font-weight:${_activeFreezer===f.id?'700':'400'};cursor:pointer;white-space:nowrap;
-             touch-action:manipulation">
-      ${f.name}
-    </button>`).join('');
+  tabsEl.innerHTML =
+    (fohDefs.length ? `<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);align-self:center;white-space:nowrap">☕ FoH</span>` : '') +
+    fohDefs.map(tabBtn).join('') +
+    (bohDefs.length ? `<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);align-self:center;white-space:nowrap;margin-left:8px">🍞 Bakery</span>` : '') +
+    bohDefs.map(tabBtn).join('');
 
   freezerRenderItems(canEdit);
   acAttach(document.getElementById('freezer-add-input'));
@@ -11308,6 +11331,7 @@ function freezerAdjust(freezerId, name, delta) {
 }
 
 function freezerSetVal(freezerId, name, val) {
+  if (!freezerCanEdit(freezerId)) return;
   const session = authGetSession();
   const num = parseInt(val);
   if (isNaN(num) || num < 0) return;
@@ -12068,6 +12092,174 @@ function openFinalize() {
   if (btn) { btn.textContent = labels[tab]; btn.style.background = '#2d7a52';
     setTimeout(() => { btn.textContent = resets[tab]; renderOpeningPage(); }, 2500); }
   renderOpeningPage();
+}
+
+function openGenerateReport() {
+  const tab      = _openActiveTab;
+  const defs     = openGetDefs(tab);
+  const state    = openGetState(tab);
+  const log      = openGetLog(tab);
+  const tabLabel = { opening:'Opening', closing:'Closing', baker:'Baker Morning' }[tab] || tab;
+
+  // Build last-30-days date list
+  const days = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  const isDone = v => v && (v === true || v.done);
+
+  // Today detail section
+  const today = days[0];
+  const todayState = state[today] || {};
+  const cats = [], groups = {};
+  defs.forEach(t => { if (!groups[t.cat]) { groups[t.cat]=[]; cats.push(t.cat); } groups[t.cat].push(t); });
+
+  const todayRows = cats.map(cat => {
+    const tasks = groups[cat];
+    return `<tr><td colspan="3" style="background:#f5f0e8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#888;padding:6px 10px">${cat}</td></tr>` +
+      tasks.map(t => {
+        const entry = todayState[t.id];
+        const done  = isDone(entry);
+        const by    = (entry && entry.by)  ? entry.by  : '—';
+        const at    = (entry && entry.at)  ? new Date(entry.at).toLocaleString('en-US',{hour:'numeric',minute:'2-digit'}) : '—';
+        return `<tr>
+          <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px">${t.name}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:center">
+            <span style="padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;
+              background:${done?'#d4edda':'#f8d7da'};color:${done?'#2d6a4f':'#721c24'}">
+              ${done ? '✓ Done' : '✗ Missed'}
+            </span>
+          </td>
+          <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:11px;color:#555">${done ? `${by} · ${at}` : '—'}</td>
+        </tr>`;
+      }).join('');
+  }).join('');
+
+  // 30-day completion history
+  const histRows = days.map(date => {
+    const s = state[date] || {};
+    const checked = defs.filter(t => isDone(s[t.id])).length;
+    const pct = defs.length ? Math.round(checked/defs.length*100) : 0;
+    const logEntry = log.slice().reverse().find(l => l.date === date);
+    const completedBy = logEntry ? `${logEntry.by}` : (checked > 0 ? 'In progress' : '—');
+    const color = pct === 100 ? '#2d6a4f' : pct >= 50 ? '#856404' : pct > 0 ? '#721c24' : '#aaa';
+    const nice = new Date(date + 'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    return `<tr>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${nice}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center">
+        <span style="font-weight:700;color:${color}">${checked}/${defs.length} (${pct}%)</span>
+      </td>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:11px;color:#555">${completedBy}</td>
+    </tr>`;
+  }).join('');
+
+  const now = new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${tabLabel} Checklist Report — Bella's Bake Shop</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding: 32px; color: #1a1209; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; border-bottom:2px solid #1a1209; padding-bottom:16px; }
+    .header h1 { font-size:22px; margin:0 0 4px; } .header .meta { font-size:11px; color:#777; text-align:right; line-height:1.8; }
+    h2 { font-size:14px; background:#1a1209; color:#fff; padding:8px 12px; border-radius:4px; margin:28px 0 0; }
+    table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+    th { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#888; padding:6px 10px; border-bottom:2px solid #ddd; text-align:left; }
+    @media print { body { padding:16px; } }
+  </style></head><body>
+  <div class="header">
+    <div><h1>☑ ${tabLabel} Checklist Report</h1><div style="font-size:12px;color:#777">Bella's Bake Shop</div></div>
+    <div class="meta">Generated ${now}<br>${defs.length} tasks total</div>
+  </div>
+
+  <h2>Today's Checklist — ${new Date(today+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</h2>
+  <table><thead><tr><th>Task</th><th style="text-align:center;width:100px">Status</th><th>Completed By · Time</th></tr></thead>
+  <tbody>${todayRows}</tbody></table>
+
+  <h2>30-Day Completion History</h2>
+  <table><thead><tr><th>Date</th><th style="text-align:center">Tasks Completed</th><th>Finalized By</th></tr></thead>
+  <tbody>${histRows}</tbody></table>
+
+  <div style="margin-top:32px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">
+    Bella's Bake Shop · ${tabLabel} Checklist · Printed ${now}
+  </div>
+  <div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="padding:10px 28px;background:#1a1209;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">🖨 Print / Save as PDF</button></div>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+function sideGenerateReport() {
+  const tasks = sideGetTasks();
+  const log   = sideGetLog();
+  const now   = new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'});
+
+  // Build per-task summary
+  const taskRows = tasks.map(t => {
+    const entries = log.filter(e => e.taskId === t.id);
+    const last    = entries[entries.length - 1];
+    const lastStr = last ? `${last.by} · ${new Date(last.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}` : 'Never';
+    const count   = entries.length;
+    const age     = last ? Math.floor((Date.now()-new Date(last.at).getTime())/86400000) : null;
+    const ageStr  = age === null ? '—' : age === 0 ? 'Today' : age === 1 ? 'Yesterday' : `${age} days ago`;
+    const color   = age === null || age > 3 ? '#721c24' : age > 1 ? '#856404' : '#2d6a4f';
+    return `<tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px">${t.name}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:11px;color:#555">${t.cat}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px;font-weight:700;color:${color}">${ageStr}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:11px;color:#555">${lastStr}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:center;font-size:12px">${count}</td>
+    </tr>`;
+  }).join('');
+
+  // Recent activity log (last 60 entries)
+  const recent = log.slice(-60).reverse();
+  const activityRows = recent.map(e => {
+    const task = tasks.find(t => t.id === e.taskId);
+    const name = task ? task.name : '(removed task)';
+    const at   = new Date(e.at).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    return `<tr>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${at}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${name}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${e.by}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Side Tasks Report — Bella's Bake Shop</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding: 32px; color: #1a1209; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; border-bottom:2px solid #1a1209; padding-bottom:16px; }
+    .header h1 { font-size:22px; margin:0 0 4px; } .header .meta { font-size:11px; color:#777; text-align:right; line-height:1.8; }
+    h2 { font-size:14px; background:#1a1209; color:#fff; padding:8px 12px; border-radius:4px; margin:28px 0 0; }
+    table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+    th { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#888; padding:6px 10px; border-bottom:2px solid #ddd; text-align:left; }
+    @media print { body { padding:16px; } }
+  </style></head><body>
+  <div class="header">
+    <div><h1>🃏 Side Tasks Report</h1><div style="font-size:12px;color:#777">Bella's Bake Shop</div></div>
+    <div class="meta">Generated ${now}<br>${tasks.length} active tasks</div>
+  </div>
+
+  <h2>Task Summary — Last Completed</h2>
+  <table><thead><tr><th>Task</th><th>Category</th><th>Last Done</th><th>By · When</th><th style="text-align:center">Total Logs</th></tr></thead>
+  <tbody>${taskRows}</tbody></table>
+
+  <h2>Recent Activity Log</h2>
+  <table><thead><tr><th>Date & Time</th><th>Task</th><th>Staff Member</th></tr></thead>
+  <tbody>${activityRows || '<tr><td colspan="3" style="padding:12px;color:#aaa;text-align:center">No activity logged yet</td></tr>'}</tbody></table>
+
+  <div style="margin-top:32px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">
+    Bella's Bake Shop · Side Tasks Report · Printed ${now}
+  </div>
+  <div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="padding:10px 28px;background:#1a1209;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">🖨 Print / Save as PDF</button></div>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function openReset() {
