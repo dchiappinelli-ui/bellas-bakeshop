@@ -652,6 +652,19 @@
   <button onclick="document.getElementById('fb-upload-banner').style.display=\'none\'" style="background:transparent;color:#aaa;border:none;cursor:pointer;margin-left:8px;font-size:13px">✕ Dismiss</button>
 </div>
 
+<!-- ══════════════ VERSION SPLASH ══════════════ -->
+<div id="version-modal" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(15,17,22,0.96);
+     align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:320px;max-width:88vw;
+              box-shadow:0 20px 60px rgba(0,0,0,0.6);text-align:center;padding:32px 28px">
+    <div style="font-size:36px;margin-bottom:8px">🥐</div>
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px">Bella's Bakeshop</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px;letter-spacing:0.5px">App updated to <strong style="color:var(--accent)" id="version-number"></strong></div>
+    <div id="version-notes" style="font-size:13px;color:var(--muted);background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:22px;text-align:left;line-height:1.6"></div>
+    <button onclick="versionDismiss()" class="btn btn-primary" style="width:100%;font-size:15px;padding:12px">Got it →</button>
+  </div>
+</div>
+
 <!-- ══════════════ LOGIN MODAL ══════════════ -->
 <div id="auth-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,17,22,0.92);
      align-items:center;justify-content:center;flex-direction:column">
@@ -704,6 +717,10 @@
         style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;margin-left:4px">⏏</button>
     </div>
     <button id="auth-login-btn" onclick="authShowModal()" class="btn btn-ghost btn-sm" style="white-space:nowrap">🔑 Sign In</button>
+    <span id="fb-sync-indicator" title="Cloud sync status" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:20px;padding:3px 9px;cursor:default;white-space:nowrap">
+      <span id="fb-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;transition:background 0.4s"></span>
+      <span id="fb-sync-label">Connecting…</span>
+    </span>
     <button onclick="showDeployChecklist()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Pre-deploy checklist">🚀 Deploy</button>
     <button onclick="exportFullBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Backup">💾 Backup</button>
     <button onclick="triggerImportBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap">📂 Restore</button>
@@ -1970,6 +1987,7 @@
 <script>
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
+const APP_VERSION      = '1.4';
 const AUTH_PINS_KEY    = 'bk_staff_pins';
 const AUTH_SESSION_KEY = 'bk_auth_session';
 const AUTH_ROLES       = ['Anyone', 'Bakery Assistant', 'Barista', 'Baker', 'Head Baker', 'Owner'];
@@ -12887,14 +12905,40 @@ const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.ge
 const _fbWriteTimers = {};
 let _fbDb = null;
 let _fbIgnoreKeys = new Set(); // keys we just received from Firestore — don't echo back
+let _fbLastSync = null;
+let _fbSyncDotTimer = null;
+
+function fbSetSyncStatus(status) {
+  const dot = document.getElementById('fb-sync-dot');
+  const label = document.getElementById('fb-sync-label');
+  if (!dot || !label) return;
+  const map = {
+    connecting: { color: '#888',    text: 'Connecting…' },
+    online:     { color: '#4caf50', text: 'Synced' },
+    syncing:    { color: '#e8a045', text: 'Syncing…' },
+    offline:    { color: '#f44336', text: 'Offline' },
+    error:      { color: '#f44336', text: 'Sync Error' },
+  };
+  const s = map[status] || map.offline;
+  dot.style.background = s.color;
+  label.textContent = s.text;
+  if (status === 'online' && _fbLastSync) {
+    const t = new Date(_fbLastSync);
+    label.textContent = 'Synced ' + t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+  const indicator = document.getElementById('fb-sync-indicator');
+  if (indicator) indicator.title = 'Cloud sync: ' + s.text + (_fbLastSync ? ' (last sync ' + new Date(_fbLastSync).toLocaleTimeString() + ')' : '');
+}
 
 localStorage.setItem = function(key, value) {
   _ls.set(key, value);
   if (_fbDb && FB_SYNC_KEYS.has(key) && !_fbIgnoreKeys.has(key)) {
     clearTimeout(_fbWriteTimers[key]);
+    fbSetSyncStatus('syncing');
     _fbWriteTimers[key] = setTimeout(() => {
       _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: new Date().toISOString() })
-        .catch(e => console.warn('FB write error:', key, e));
+        .then(() => { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); })
+        .catch(e => { console.warn('FB write error:', key, e); fbSetSyncStatus('error'); });
     }, 400);
   }
 };
@@ -12934,7 +12978,39 @@ function authBoot() {
   }
   authUpdateChip();
   const _bootSession = authGetSession();
-  if (!_bootSession) { authShowModal(); } else { authRedirectForRole(_bootSession.role); }
+  const seenVersion = localStorage.getItem('bk_seen_version');
+  if (seenVersion !== APP_VERSION) {
+    versionShow(() => {
+      if (!_bootSession) { authShowModal(); } else { authRedirectForRole(_bootSession.role); }
+    });
+  } else {
+    if (!_bootSession) { authShowModal(); } else { authRedirectForRole(_bootSession.role); }
+  }
+}
+
+const VERSION_NOTES = {
+  '1.4': [
+    '☁️ Cloud sync status indicator in the top bar',
+    '✅ Side tasks with urgency levels & activity log',
+    '🗂️ Tabbed login screen (FOH / Bakers / Management)',
+    '🧊 Front-of-house & back-of-house freezer sections',
+    '📄 Print/report buttons on checklists & side tasks',
+  ],
+};
+
+let _versionCallback = null;
+function versionShow(callback) {
+  _versionCallback = callback;
+  document.getElementById('version-number').textContent = 'v' + APP_VERSION;
+  const notes = VERSION_NOTES[APP_VERSION] || [];
+  document.getElementById('version-notes').innerHTML = notes.map(n => `<div style="margin-bottom:4px">${n}</div>`).join('') || '<div>Bug fixes and improvements.</div>';
+  const modal = document.getElementById('version-modal');
+  modal.style.display = 'flex';
+}
+function versionDismiss() {
+  localStorage.setItem('bk_seen_version', APP_VERSION);
+  document.getElementById('version-modal').style.display = 'none';
+  if (_versionCallback) { _versionCallback(); _versionCallback = null; }
 }
 
 function fbUploadLocalData() {
@@ -12968,6 +13044,7 @@ function fbUploadLocalData() {
     firebase.initializeApp(FB_CONFIG);
     const db = firebase.firestore();
     _fbDb = db;
+    fbSetSyncStatus('connecting');
 
     // Pull all sync keys from Firestore before boot
     loadBanner.style.display = 'block';
@@ -13003,11 +13080,14 @@ function fbUploadLocalData() {
     }
 
     // Boot app, then set up live listeners
+    _fbLastSync = new Date().toISOString();
+    fbSetSyncStatus('online');
     authBoot();
     fbSetupListeners(db);
   } catch(e) {
     console.warn('Firebase init failed, running offline:', e);
     loadBanner.style.display = 'none';
+    fbSetSyncStatus('offline');
     authBoot();
   }
 })();
