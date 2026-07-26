@@ -179,6 +179,60 @@
 
   select option { background: var(--surface2); }
 
+  /* ====== STAFF PAGE TABLET MODE ====== */
+  .staff-page { font-size: 19px; }
+
+  .staff-page h2 {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+  .staff-page .subtitle {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+  .staff-page .card {
+    padding: 28px;
+    margin-bottom: 24px;
+    border-width: 2px;
+  }
+  .staff-page .card-title {
+    font-size: 20px;
+  }
+  .staff-page .btn {
+    padding: 18px 28px;
+    font-size: 17px;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+  .staff-page .btn-sm {
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+  .staff-page input,
+  .staff-page select,
+  .staff-page textarea {
+    font-size: 18px;
+    padding: 16px 14px;
+  }
+  .staff-page .form-group label {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .staff-page .nav-btn { font-size: 17px; padding: 16px 30px; }
+
+  /* Section category headers inside staff pages */
+  .staff-section-label {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    padding-left: 2px;
+  }
+
+  /* ====== END STAFF PAGE TABLET MODE ====== */
+
   /* Recipe list */
   .recipe-card {
     background: var(--surface2);
@@ -751,6 +805,8 @@
   <button class="nav-btn" data-staff-visible="true"  onclick="showPage('prep')">🫙 Prep Items</button>
   <button class="nav-btn" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
   <button class="nav-btn" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('doughtimer')">⏱ Dough Timer</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Board</button>
   <button class="nav-btn" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
   <button class="nav-btn" data-staff-visible="true" data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
   <button class="nav-btn" data-staff-visible="false" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
@@ -960,7 +1016,7 @@
 </div>
 
 <!-- ======== TODAY'S BOARD ======== -->
-<div class="page" id="page-board">
+<div class="page staff-page" id="page-board">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
     <div>
       <h2 style="margin-bottom:2px">Today's Board</h2>
@@ -1103,7 +1159,7 @@
 <!-- page-ingredients is defined below near line 1627 -->
 
 <!-- ======== PREP ITEMS STATUS (in-house made items: pesto, ganache, garlic butter, etc.) ======== -->
-<div class="page" id="page-prep">
+<div class="page staff-page" id="page-prep">
   <h2 style="font-family:'Playfair Display',serif;color:var(--accent);margin-bottom:6px">🫙 Prep Items</h2>
   <p style="font-size:12px;color:var(--muted);margin-bottom:16px;max-width:640px">
     Items made in-house and stocked — sauces, fillings, butters, mise en place. When something's low, the action
@@ -1131,7 +1187,7 @@
 </div>
 
 <!-- ======== STAFF COUNT SHEET (simplified, touch-friendly) ======== -->
-<div class="page" id="page-countsheet">
+<div class="page staff-page" id="page-countsheet">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
     <div>
       <h2 style="margin-bottom:2px">📋 Count Inventory</h2>
@@ -1496,7 +1552,119 @@
 </div>
 
 <!-- ======== END OF DAY PAGE ======== -->
-<div class="page" id="page-eod">
+<!-- ======== DOUGH / SANDWICH TIMER PAGE ======== -->
+<div class="page staff-page" id="page-doughtimer" style="max-width:1000px;margin:0 auto">
+  <h2>⏱ Station Timer</h2>
+
+  <!-- Tab switcher -->
+  <div style="display:flex;gap:0;margin-bottom:32px;border:3px solid #111;border-radius:4px;overflow:hidden;flex-wrap:nowrap">
+    <button id="dt-tab-dough" onclick="dtSwitchTab('dough')"
+      style="flex:1;padding:18px 10px;font-size:18px;font-weight:800;border:none;cursor:pointer;
+             touch-action:manipulation;background:#111;color:#fff;min-height:64px">🥖 Dough</button>
+    <button id="dt-tab-sandwich" onclick="dtSwitchTab('sandwich')"
+      style="flex:1;padding:18px 10px;font-size:18px;font-weight:800;border:none;cursor:pointer;
+             touch-action:manipulation;background:#fff;color:#555;border-left:3px solid #111;min-height:64px">🥪 Sandwich</button>
+  </div>
+
+  <!-- Dough panel -->
+  <div id="dt-panel-dough">
+    <p class="subtitle" style="margin-top:-16px;margin-bottom:24px">Track concurrent dough batches — tap Done at each step</p>
+    <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:28px">
+      <div id="dt-recipe-selector" style="display:flex;gap:8px;flex-wrap:wrap;flex:1"></div>
+      <button onclick="dtStartBatch()"
+        style="padding:18px 32px;background:#111;color:#fff;border:none;border-radius:4px;
+               font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation;
+               min-height:64px;white-space:nowrap;flex-shrink:0">▶ Start Batch</button>
+    </div>
+    <div id="dt-alerts"></div>
+    <div id="dt-matrix"></div>
+  </div>
+
+  <!-- Sandwich panel -->
+  <div id="dt-panel-sandwich" style="display:none">
+    <p class="subtitle" style="margin-top:-16px;margin-bottom:24px">Step-by-step timed guide — stay on pace</p>
+    <div id="sw-recipe-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px"></div>
+    <div id="sw-active"></div>
+  </div>
+</div>
+
+<!-- Sandwich Timer Recipe Editor Modal -->
+<div id="sw-editor-modal" style="display:none;position:fixed;inset:0;z-index:99991;
+  background:rgba(0,0,0,0.65);align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:700px;margin:auto;
+              box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:22px;font-weight:800">Edit Sandwich Steps</div>
+      <button onclick="swHideEditor()" style="background:none;border:none;color:rgba(255,255,255,0.5);
+        font-size:26px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div id="sw-editor-body" style="padding:28px"></div>
+    <div style="padding:18px 28px;border-top:2px solid #eee;display:flex;
+      justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <button onclick="swEditorDelete()" style="padding:13px 22px;border:2px solid #e03030;
+        border-radius:4px;background:#fff;color:#e03030;font-size:15px;font-weight:700;cursor:pointer">
+        🗑 Delete</button>
+      <div style="display:flex;gap:10px">
+        <button onclick="swHideEditor()" style="padding:13px 22px;border:2px solid #ccc;border-radius:4px;
+          background:#fff;color:#777;font-size:15px;cursor:pointer">Cancel</button>
+        <button onclick="swEditorSave()" style="padding:13px 32px;background:#111;color:#fff;border:none;
+          border-radius:4px;font-size:17px;font-weight:800;cursor:pointer">✓ Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dough Timer Recipe Editor Modal -->
+<div id="dt-editor-modal" style="display:none;position:fixed;inset:0;z-index:99990;
+  background:rgba(0,0,0,0.65);align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:700px;margin:auto;
+              box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:22px;font-weight:800">Edit Recipe</div>
+      <button onclick="dtHideEditor()" style="background:none;border:none;color:rgba(255,255,255,0.5);
+        font-size:26px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div id="dt-editor-body" style="padding:28px"></div>
+    <div style="padding:18px 28px;border-top:2px solid #eee;display:flex;
+      justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <button onclick="dtEditorDelete()" style="padding:13px 22px;border:2px solid #e03030;
+        border-radius:4px;background:#fff;color:#e03030;font-size:15px;font-weight:700;cursor:pointer">
+        🗑 Delete Recipe</button>
+      <div style="display:flex;gap:10px">
+        <button onclick="dtHideEditor()" style="padding:13px 22px;border:2px solid #ccc;border-radius:4px;
+          background:#fff;color:#777;font-size:15px;cursor:pointer">Cancel</button>
+        <button onclick="dtEditorSave()" style="padding:13px 32px;background:#111;color:#fff;border:none;
+          border-radius:4px;font-size:17px;font-weight:800;cursor:pointer">✓ Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== STAFF BOARD PAGE ======== -->
+<div class="page staff-page" id="page-staffboard" style="max-width:800px;margin:0 auto">
+  <h2>💬 Staff Board</h2>
+  <p class="subtitle">Messages, shift notes, and morning tasks — visible to everyone</p>
+
+  <!-- Compose box -->
+  <div style="background:var(--surface);border:2px solid var(--border);border-radius:4px;padding:20px;margin-bottom:28px">
+    <textarea id="sb-compose-text" placeholder="Write a message, close note, or morning task…"
+      style="width:100%;min-height:80px;resize:vertical;font-size:16px;padding:12px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;margin-bottom:14px"></textarea>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+        <button id="sb-type-general"  onclick="sbSetType('general')"  style="padding:10px 16px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:4px">💬 General</button>
+        <button id="sb-type-morning"  onclick="sbSetType('morning')"  style="padding:10px 16px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-radius:4px">🌅 For Morning</button>
+        <button id="sb-type-close"    onclick="sbSetType('close')"    style="padding:10px 16px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-radius:4px">🌙 Close Note</button>
+      </div>
+      <button onclick="sbPost()" style="padding:12px 28px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap">Post →</button>
+    </div>
+  </div>
+
+  <!-- Feed -->
+  <div id="sb-feed"></div>
+</div>
+
+<div class="page staff-page" id="page-eod">
+  <div id="ds-banner-eod" style="margin-bottom:0"></div>
   <div style="max-width:960px;margin:0 auto;padding:20px 16px">
 
     <!-- Header -->
@@ -1600,18 +1768,18 @@
 </div>
 
 <!-- ======== CHECKLISTS PAGE (Opening / Closing / Baker Morning) ======== -->
-<div class="page" id="page-opening" style="padding:16px;max-width:700px;margin:0 auto">
-
+<div class="page staff-page" id="page-opening" style="padding:16px;max-width:700px;margin:0 auto">
+  <div id="ds-banner-opening" style="margin:-16px -16px 20px -16px"></div>
   <!-- Tab bar -->
   <div style="display:flex;gap:8px;margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:wrap">
     <button id="open-tab-opening" onclick="openSwitchTab('opening')"
-      style="padding:14px 26px;border:2px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;touch-action:manipulation">☀️ Opening</button>
+      style="padding:18px 32px;border:3px solid var(--accent);border-radius:4px;background:var(--accent);color:#fff;font-size:19px;font-weight:800;cursor:pointer;white-space:nowrap;touch-action:manipulation;min-height:64px">☀️ Opening</button>
     <button id="open-tab-closing" onclick="openSwitchTab('closing')"
-      style="padding:14px 26px;border:2px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation">🌙 Closing</button>
+      style="padding:18px 32px;border:3px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:19px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation;min-height:64px">🌙 Closing</button>
     <button id="open-tab-baker" onclick="openSwitchTab('baker')"
-      style="padding:14px 26px;border:2px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation">🍞 Baker Morning</button>
+      style="padding:18px 32px;border:3px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:19px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation;min-height:64px">🍞 Baker Morning</button>
     <button id="open-tab-side" onclick="openSwitchTab('side')"
-      style="padding:14px 26px;border:2px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation">🃏 Side Tasks</button>
+      style="padding:18px 32px;border:3px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:19px;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation;min-height:64px">🃏 Side Tasks</button>
   </div>
 
   <!-- Header -->
@@ -1688,7 +1856,8 @@
   </div>
 </div>
 
-<div class="page" id="page-ingredients" style="padding:16px;max-width:800px;margin:0 auto">
+<div class="page staff-page" id="page-ingredients" style="padding:16px;max-width:800px;margin:0 auto">
+  <div id="ds-banner-ingredients" style="margin:-16px -16px 20px -16px"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
     <div>
       <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">🥪 FOH Ingredients</h2>
@@ -1730,8 +1899,8 @@
 </div>
 
 <!-- ======== FREEZER STOCK PAGE ======== -->
-<div class="page" id="page-freezer" style="padding:16px;max-width:800px;margin:0 auto">
-
+<div class="page staff-page" id="page-freezer" style="padding:16px;max-width:800px;margin:0 auto">
+  <div id="ds-banner-freezer" style="margin:-16px -16px 20px -16px"></div>
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <div>
@@ -1989,8 +2158,115 @@
 <!-- ======== SCRIPT ======== -->
 <script>
 
+// ============ DAILY STATUS SYSTEM ============
+function _dsToday() { return new Date().toISOString().slice(0,10); }
+function _dsTodayLocale() {
+  return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function dsCheckSubmit(lsKey) {
+  const val = localStorage.getItem(lsKey) || '';
+  if (!val) return { done: false, detail: 'Never submitted' };
+  const done = val.includes(_dsTodayLocale());
+  const parts = val.split(' by ');
+  const by    = parts[1] ? parts[1].trim() : '';
+  const time  = parts[0] ? parts[0].trim() : val;
+  return { done, detail: done ? `${time}${by ? ' by ' + by : ''}` : `Last: ${val}` };
+}
+
+function dsCheckLog(logKey) {
+  try {
+    const log = JSON.parse(localStorage.getItem(logKey) || '[]');
+    const today = _dsToday();
+    const entry = log.slice().reverse().find(e => e.date === today);
+    if (entry) return { done: true, detail: `${entry.ts} by ${entry.by}` };
+    const last = log[log.length - 1];
+    return { done: false, detail: last ? `Last: ${last.ts} by ${last.by}` : 'Not done yet' };
+  } catch { return { done: false, detail: 'Not done yet' }; }
+}
+
+function dsCheckEod() {
+  try {
+    const log = JSON.parse(localStorage.getItem('bk_eod_log') || '[]');
+    const today = _dsToday();
+    const entry = log.find(e => e.date === today);
+    if (entry) return { done: true, detail: `Logged by ${entry.by || 'Staff'}` };
+    const last = log[log.length - 1];
+    return { done: false, detail: last ? `Last: ${last.date}` : 'Not logged yet' };
+  } catch { return { done: false, detail: 'Not logged yet' }; }
+}
+
+// Map page id → array of status checks for that page
+const DS_PAGE_CHECKS = {
+  freezer:     [{ label:'❄️ Freezer Stock Count',   fn: () => dsCheckSubmit('bk_freezer_last_submit') }],
+  ingredients: [{ label:'🧂 Ingredient Status',      fn: () => dsCheckSubmit('bk_ing_last_submit') }],
+  opening: [
+    { label:'☀️ Opening Checklist',  fn: () => dsCheckLog('bk_cl_log_opening') },
+    { label:'🌙 Closing Checklist',  fn: () => dsCheckLog('bk_cl_log_closing') },
+    { label:'🍞 Baker Morning',       fn: () => dsCheckLog('bk_cl_log_baker') },
+  ],
+  eod: [{ label:'📊 End of Day Log', fn: () => dsCheckEod() }],
+  staffboard: [{ label:'💬 Staff Board', fn: () => ({ done: true, detail: '' }) }],
+};
+
+// Nav dot: small colored circle appended to nav button text
+function updateNavDots() {
+  Object.entries(DS_PAGE_CHECKS).forEach(([page, checks]) => {
+    if (page === 'staffboard') return;
+    const btn = document.querySelector(`.nav-btn[onclick*="'${page}'"]`);
+    if (!btn) return;
+    const allDone = checks.every(c => c.fn().done);
+    const anyDone = checks.some(c => c.fn().done);
+    const color = allDone ? '#22a855' : anyDone ? '#e8a030' : '#e03030';
+    let dot = btn.querySelector('.nav-status-dot');
+    if (!dot) {
+      dot = document.createElement('span');
+      dot.className = 'nav-status-dot';
+      dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:middle;flex-shrink:0';
+      btn.appendChild(dot);
+    }
+    dot.style.background = color;
+    dot.title = allDone ? 'Done today' : 'Needs attention';
+  });
+}
+
+// Status banner rendered at top of each page
+function renderStatusBanners(page) {
+  const checks = DS_PAGE_CHECKS[page];
+  if (!checks) return;
+  const bannerId = 'ds-banner-' + page;
+  const el = document.getElementById(bannerId);
+  if (!el) return;
+
+  el.innerHTML = checks.map(c => {
+    const s      = c.fn();
+    const bg     = s.done ? '#1a7a3a' : '#cc2200';
+    const icon   = s.done ? '✓' : '!';
+    const msg    = s.done ? 'DONE TODAY' : 'NEEDS UPDATE';
+    const detail = s.detail;
+    return `<div style="display:flex;align-items:center;gap:24px;padding:22px 28px;
+      background:${bg};margin-bottom:3px">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;
+        display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;
+        flex-shrink:0;border:3px solid rgba(255,255,255,0.5)">${icon}</div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;
+          color:rgba(255,255,255,0.75);margin-bottom:2px">${c.label}</div>
+        <div style="font-size:26px;font-weight:900;color:#fff;line-height:1">${msg}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px">${detail}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Call after any submit/complete action
+function dsRefresh(page) {
+  updateNavDots();
+  renderStatusBanners(page || activePage());
+}
+
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.4';
+const APP_VERSION      = '1.5';
 const AUTH_PINS_KEY    = 'bk_staff_pins';
 const AUTH_SESSION_KEY = 'bk_auth_session';
 const AUTH_ROLES       = ['Anyone', 'Bakery Assistant', 'Barista', 'Baker', 'Head Baker', 'Owner'];
@@ -2669,6 +2945,8 @@ function showPageDirect(page) {
   if (page === 'freezer') renderFreezerPage();
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
+  if (page === 'staffboard') renderStaffBoard();
+  if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
 }
 
 function showPage(page) {
@@ -2694,6 +2972,9 @@ function showPage(page) {
   if (page === 'freezer') renderFreezerPage();
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
+  if (page === 'staffboard') renderStaffBoard();
+  if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
+  renderStatusBanners(page);
 }
 
 // ============ RECIPES ============
@@ -10569,6 +10850,7 @@ function eodAutoSave() {
     if (idx !== -1) log[idx] = entry; else log.push(entry);
     log.sort((a,b) => a.date.localeCompare(b.date));
     eodSaveLog(log.slice(-365));
+    dsRefresh('eod');
     const ind = document.getElementById('eod-autosave-ind');
     if (ind) { ind.style.opacity = '1'; setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
   }, 600);
@@ -11237,11 +11519,11 @@ function renderFreezerPage() {
   function tabBtn(f) {
     const active = _activeFreezer === f.id;
     return `<button onclick="freezerSelectFreezer('${f.id}')"
-      style="flex-shrink:0;padding:12px 22px;border-radius:4px;border:2px solid ${active?'var(--accent)':'var(--border)'};
+      style="flex-shrink:0;padding:18px 28px;border-radius:4px;border:3px solid ${active?'var(--accent)':'var(--border)'};
              background:${active?'var(--accent)':'var(--surface)'};
              color:${active?'#fff':'var(--text)'};
-             font-size:15px;font-weight:${active?'700':'500'};cursor:pointer;white-space:nowrap;
-             touch-action:manipulation">${f.name}</button>`;
+             font-size:18px;font-weight:${active?'800':'600'};cursor:pointer;white-space:nowrap;
+             touch-action:manipulation;min-height:64px">${f.name}</button>`;
   }
 
   const tabsEl = document.getElementById('freezer-tabs');
@@ -11529,6 +11811,7 @@ function freezerSubmit() {
   const session = authGetSession();
   const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
   localStorage.setItem('bk_freezer_last_submit', `${ts} by ${session ? session.name : 'Unknown'}`);
+  dsRefresh('freezer');
   renderFreezerPage();
   const btn = document.getElementById('freezer-submit-btn');
   if (btn) { btn.textContent = '✓ Submitted!'; btn.style.background='#2d7a52'; setTimeout(()=>{ btn.textContent='✓ Submit Count'; btn.style.background='#4a9c6e'; }, 2000); }
@@ -11807,6 +12090,944 @@ const CL_DEFAULTS = {
 const SIDE_TASKS_KEY = 'bk_side_tasks';
 const SIDE_TASK_LOG_KEY = 'bk_side_task_log';
 
+// ============ DOUGH TIMER ============
+const DT_RECIPES_KEY = 'bk_dough_recipes';
+const DT_BATCHES_KEY = 'bk_dough_batches';
+
+const DT_DEFAULT_RECIPES = [
+  { id:'dr_sourdough', name:'Sourdough', steps:[
+    { id:'s1',  name:'Gather & Mix',      duration:3,  type:'active' },
+    { id:'s2',  name:'Machine Mix',       duration:1,  type:'active' },
+    { id:'s3',  name:'Autolyse Rest',     duration:15, type:'wait'   },
+    { id:'s4',  name:'Add Salt + Mix',    duration:4,  type:'active' },
+    { id:'s5',  name:'Turn Out to Box',   duration:1,  type:'active' },
+    { id:'s6',  name:'1st Fold',          duration:2,  type:'active' },
+    { id:'s7',  name:'Bulk Rest',         duration:30, type:'wait', staggerSuggest:true },
+    { id:'s8',  name:'2nd Fold',          duration:2,  type:'active' },
+    { id:'s9',  name:'Bulk Rest',         duration:30, type:'wait'   },
+    { id:'s10', name:'3rd Fold',          duration:2,  type:'active' },
+    { id:'s11', name:'Bulk Rest',         duration:30, type:'wait'   },
+    { id:'s12', name:'Divide',            duration:2,  type:'active' },
+    { id:'s13', name:'Shape',             duration:20, type:'active' },
+  ]},
+  { id:'dr_bagel', name:'Bagel Dough', steps:[
+    { id:'s1', name:'Scale & Mix',        duration:5,  type:'active' },
+    { id:'s2', name:'Machine Mix',        duration:8,  type:'active' },
+    { id:'s3', name:'Rest',               duration:20, type:'wait'   },
+    { id:'s4', name:'Fold & Tighten',     duration:3,  type:'active' },
+    { id:'s5', name:'Bulk Ferment',       duration:60, type:'wait', staggerSuggest:true },
+    { id:'s6', name:'Divide & Shape',     duration:20, type:'active' },
+    { id:'s7', name:'Proof',              duration:30, type:'wait'   },
+  ]},
+];
+
+let _dtSelectedRecipeId = null;
+let _dtTickInterval     = null;
+let _dtEditingRecipe    = null;
+
+function dtGetRecipes() {
+  try {
+    const s = JSON.parse(localStorage.getItem(DT_RECIPES_KEY) || 'null');
+    if (s && s.length) return s;
+    localStorage.setItem(DT_RECIPES_KEY, JSON.stringify(DT_DEFAULT_RECIPES));
+    return DT_DEFAULT_RECIPES;
+  } catch { return DT_DEFAULT_RECIPES; }
+}
+function dtSaveRecipes(r) { localStorage.setItem(DT_RECIPES_KEY, JSON.stringify(r)); }
+function dtGetBatches()   { try { return JSON.parse(localStorage.getItem(DT_BATCHES_KEY)||'[]'); } catch { return []; } }
+function dtSaveBatches(b) { localStorage.setItem(DT_BATCHES_KEY, JSON.stringify(b)); }
+
+function dtSelectRecipe(id) { _dtSelectedRecipeId = id; renderDoughTimer(); }
+
+function dtStartBatch() {
+  if (!_dtSelectedRecipeId) { alert('Select a dough type first.'); return; }
+  const recipes = dtGetRecipes();
+  const recipe  = recipes.find(r => r.id === _dtSelectedRecipeId);
+  if (!recipe) return;
+  const batches = dtGetBatches();
+  const active  = batches.filter(b => b.status === 'active');
+  const num     = batches.filter(b => b.recipeId === recipe.id).length + 1;
+  const now     = new Date().toISOString();
+  batches.push({
+    id: 'batch_' + Date.now(),
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+    label: recipe.name + ' Batch ' + num,
+    startedAt: now,
+    currentStepIdx: 0,
+    stepLog: [{ stepIdx:0, startedAt:now, completedAt:null }],
+    status: 'active',
+  });
+  dtSaveBatches(batches);
+  dtStartTick();
+  renderDoughTimer();
+}
+
+function dtCompleteStep(batchId) {
+  const batches = dtGetBatches();
+  const batch   = batches.find(b => b.id === batchId);
+  if (!batch) return;
+  const recipe  = dtGetRecipes().find(r => r.id === batch.recipeId);
+  if (!recipe) return;
+  const now = new Date().toISOString();
+  const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
+  if (log) log.completedAt = now;
+  const next = batch.currentStepIdx + 1;
+  if (next >= recipe.steps.length) {
+    batch.status = 'complete';
+    batch.completedAt = now;
+  } else {
+    batch.currentStepIdx = next;
+    batch.stepLog.push({ stepIdx:next, startedAt:now, completedAt:null });
+  }
+  dtSaveBatches(batches);
+  renderDoughTimer();
+}
+
+function dtAbandonBatch(batchId) {
+  if (!confirm('Abandon this batch?')) return;
+  const batches = dtGetBatches();
+  const b = batches.find(b => b.id === batchId);
+  if (b) { b.status = 'abandoned'; b.abandonedAt = new Date().toISOString(); }
+  dtSaveBatches(batches);
+  renderDoughTimer();
+}
+
+function dtClearDone() {
+  dtSaveBatches(dtGetBatches().filter(b => b.status === 'active'));
+  renderDoughTimer();
+}
+
+function dtMinutesLeft(logEntry, step) {
+  if (!logEntry) return step.duration;
+  const elapsed = (Date.now() - new Date(logEntry.startedAt)) / 60000;
+  return Math.max(0, Math.ceil(step.duration - elapsed));
+}
+
+function dtFmtTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+function dtStartTick() {
+  if (_dtTickInterval) return;
+  _dtTickInterval = setInterval(() => {
+    const batches = dtGetBatches();
+    const recipes = dtGetRecipes();
+    let changed = false;
+    batches.forEach(batch => {
+      if (batch.status !== 'active') return;
+      const recipe = recipes.find(r => r.id === batch.recipeId);
+      if (!recipe) return;
+      const step = recipe.steps[batch.currentStepIdx];
+      if (!step || step.type !== 'wait') return;
+      const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
+      if (!log || log.completedAt) return;
+      if ((Date.now() - new Date(log.startedAt)) / 60000 >= step.duration) {
+        const now = new Date().toISOString();
+        log.completedAt = now;
+        const next = batch.currentStepIdx + 1;
+        if (next >= recipe.steps.length) { batch.status='complete'; batch.completedAt=now; }
+        else { batch.currentStepIdx=next; batch.stepLog.push({stepIdx:next,startedAt:now,completedAt:null}); }
+        changed = true;
+      }
+    });
+    if (changed) dtSaveBatches(batches);
+    if (activePage() === 'doughtimer') renderDoughTimer();
+  }, 20000);
+}
+
+function renderDoughTimer() {
+  const recipes = dtGetRecipes();
+  const batches = dtGetBatches();
+  const active  = batches.filter(b => b.status === 'active');
+  const done    = batches.filter(b => b.status === 'complete');
+
+  // — Recipe selector —
+  const selEl = document.getElementById('dt-recipe-selector');
+  if (selEl) selEl.innerHTML = recipes.map(r => {
+    const sel = _dtSelectedRecipeId === r.id;
+    return `<div style="display:flex;gap:0">
+      <button onclick="dtSelectRecipe('${r.id}')"
+        style="padding:18px 26px;border:3px solid ${sel?'#111':'#ccc'};border-right:none;border-radius:4px 0 0 4px;
+               background:${sel?'#111':'#fff'};color:${sel?'#fff':'#555'};font-size:18px;font-weight:${sel?'800':'600'};
+               cursor:pointer;touch-action:manipulation;min-height:64px;white-space:nowrap">${r.name}</button>
+      <button onclick="dtEditRecipe('${r.id}')" title="Edit recipe"
+        style="padding:18px 14px;border:3px solid ${sel?'#111':'#ccc'};border-radius:0 4px 4px 0;
+               background:${sel?'#333':'#f5f5f5'};color:${sel?'#fff':'#888'};font-size:17px;
+               cursor:pointer;min-height:64px">✏️</button>
+    </div>`;
+  }).join('') +
+  `<button onclick="dtNewRecipe()"
+     style="padding:18px 22px;border:3px dashed #ccc;border-radius:4px;background:#fff;
+            color:#888;font-size:17px;font-weight:600;cursor:pointer;min-height:64px">+ New</button>`;
+
+  // — Alerts —
+  const alertEl = document.getElementById('dt-alerts');
+  if (alertEl) {
+    // Detect stagger suggestion: batch currently on a staggerSuggest wait step
+    const staggerBatches = active.filter(b => {
+      const recipe = recipes.find(r => r.id === b.recipeId);
+      const step = recipe?.steps[b.currentStepIdx];
+      return step?.type === 'wait' && step?.staggerSuggest;
+    });
+    const staggerHtml = staggerBatches.map(b => {
+      const recipe = recipes.find(r => r.id === b.recipeId);
+      const batchesOfSameRecipe = active.filter(a => a.recipeId === b.recipeId);
+      const mostRecent = batchesOfSameRecipe.sort((a,z) => new Date(z.startedAt)-new Date(a.startedAt))[0];
+      if (mostRecent.id !== b.id) return '';
+      return `<div style="background:#1a4a8a;color:#fff;border-radius:4px;padding:20px 26px;
+        margin-bottom:10px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <div style="font-size:36px;flex-shrink:0">⏭</div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+            color:rgba(255,255,255,0.55);margin-bottom:4px">Suggested</div>
+          <div style="font-size:22px;font-weight:800">Good time to start next ${recipe.name} batch</div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.6);margin-top:4px">${b.label} is resting — start the next one now to stagger them</div>
+        </div>
+        <button onclick="dtSelectRecipe('${b.recipeId}');dtStartBatch()"
+          style="padding:18px 28px;background:#fff;color:#1a4a8a;border:none;border-radius:4px;
+                 font-size:18px;font-weight:900;cursor:pointer;touch-action:manipulation;
+                 white-space:nowrap;flex-shrink:0;min-height:64px">▶ Start Now</button>
+      </div>`;
+    }).filter(Boolean).join('');
+
+    const needsAction = active.filter(b => {
+      const recipe = recipes.find(r => r.id === b.recipeId);
+      return recipe && recipe.steps[b.currentStepIdx]?.type === 'active';
+    });
+    if (needsAction.length) {
+      alertEl.innerHTML = staggerHtml + `
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;
+          color:#cc3300;margin-bottom:10px">⚡ Action Required Now</div>
+        ${needsAction.map(b => {
+          const recipe = recipes.find(r => r.id === b.recipeId);
+          const step   = recipe.steps[b.currentStepIdx];
+          const log    = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
+          return `<div style="background:#111;color:#fff;border-radius:4px;padding:24px 28px;
+            margin-bottom:10px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+                color:rgba(255,255,255,0.55);margin-bottom:6px">${b.label}</div>
+              <div style="font-size:30px;font-weight:900;line-height:1.1">${step.name}</div>
+              <div style="font-size:15px;color:rgba(255,255,255,0.55);margin-top:8px">
+                Step ${b.currentStepIdx+1} of ${recipe.steps.length} &nbsp;·&nbsp; ${step.duration} min &nbsp;·&nbsp; Started ${dtFmtTime(log?.startedAt)}</div>
+            </div>
+            <button onclick="dtCompleteStep('${b.id}')"
+              style="padding:22px 40px;background:#22a855;color:#fff;border:none;border-radius:4px;
+                     font-size:24px;font-weight:900;cursor:pointer;touch-action:manipulation;
+                     white-space:nowrap;flex-shrink:0;min-height:80px">✓ Done</button>
+          </div>`;
+        }).join('')}`;
+    } else if (active.length) {
+      alertEl.innerHTML = staggerHtml + `<div style="background:#e8f5ee;border:3px solid #22a855;border-radius:4px;
+        padding:22px 28px;margin-bottom:20px;display:flex;align-items:center;gap:20px">
+        <span style="font-size:40px">⏱</span>
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#1a6e3a">Timers running — nothing to do yet</div>
+          <div style="font-size:15px;color:#555;margin-top:4px">Next action will appear here automatically</div>
+        </div>
+      </div>`;
+    } else {
+      alertEl.innerHTML = staggerHtml;
+    }
+  }
+
+  // — Matrix —
+  const matEl = document.getElementById('dt-matrix');
+  if (!matEl) return;
+  const shown = [...active, ...done].slice(0, 10);
+  if (!shown.length) {
+    matEl.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aaa;font-size:18px;
+      border:3px dashed #ddd;border-radius:4px">
+      Select a dough type above and tap <strong style="color:#111">▶ Start Batch</strong></div>`;
+    return;
+  }
+
+  matEl.innerHTML = shown.map(batch => {
+    const recipe  = recipes.find(r => r.id === batch.recipeId);
+    if (!recipe) return '';
+    const isActive = batch.status === 'active';
+    const elapsed  = Math.round((Date.now() - new Date(batch.startedAt)) / 60000);
+
+    const steps = recipe.steps.map((step, idx) => {
+      const isDone    = idx < batch.currentStepIdx || batch.status === 'complete';
+      const isCurrent = idx === batch.currentStepIdx && isActive;
+      const log       = batch.stepLog.find(l => l.stepIdx === idx);
+
+      let bg, border, textColor, inner;
+      if (isDone) {
+        bg='#22a855'; border='#22a855'; textColor='#fff';
+        inner = `<div style="font-size:22px;font-weight:900">✓</div>
+                 <div style="font-size:10px;margin-top:3px;opacity:0.85;text-align:center">${step.name}</div>`;
+      } else if (isCurrent && step.type === 'wait') {
+        const left = dtMinutesLeft(log, step);
+        bg='#1a4a8a'; border='#1a4a8a'; textColor='#fff';
+        inner = `<div style="font-size:20px;font-weight:900">${left}m</div>
+                 <div style="font-size:10px;margin-top:3px;opacity:0.85;text-align:center">${step.name}</div>`;
+      } else if (isCurrent && step.type === 'active') {
+        bg='#cc3300'; border='#cc3300'; textColor='#fff';
+        inner = `<div style="font-size:18px">▶</div>
+                 <div style="font-size:10px;margin-top:3px;font-weight:800;text-align:center">${step.name}</div>`;
+      } else {
+        bg='#f2f2f2'; border='#ddd'; textColor=step.type==='wait'?'#bbb':'#aaa';
+        inner = `<div style="font-size:10px;font-weight:${step.type==='wait'?'400':'600'};
+                   text-align:center;color:${textColor}">${step.name}</div>
+                 <div style="font-size:10px;margin-top:3px;color:#ccc">${step.duration}m</div>`;
+      }
+      return `<div style="flex-shrink:0;width:76px;min-height:76px;border-radius:4px;border:2px solid ${border};
+        background:${bg};color:${textColor};display:flex;flex-direction:column;align-items:center;
+        justify-content:center;padding:6px 4px">${inner}</div>`;
+    }).join('');
+
+    return `<div style="background:${isActive?'#fff':'#f8f8f8'};border:${isActive?'3px solid #111':'2px solid #ddd'};
+      border-radius:4px;margin-bottom:14px;overflow:hidden">
+      <div style="background:${isActive?'#111':'#888'};color:#fff;padding:16px 22px;
+        display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-size:21px;font-weight:800">${batch.label}</div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.6);margin-top:3px">
+            Started ${dtFmtTime(batch.startedAt)}
+            ${batch.status==='complete' ? ' &nbsp;·&nbsp; ✓ Complete' : ` &nbsp;·&nbsp; ${elapsed} min elapsed`}
+          </div>
+        </div>
+        ${isActive ? `<button onclick="dtAbandonBatch('${batch.id}')"
+          style="padding:10px 18px;background:transparent;border:2px solid rgba(255,255,255,0.3);
+            border-radius:4px;color:rgba(255,255,255,0.6);font-size:14px;cursor:pointer">Abandon</button>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding:16px 14px;
+        -webkit-overflow-scrolling:touch;scrollbar-width:none">${steps}</div>
+    </div>`;
+  }).join('') +
+  (done.length ? `<button onclick="dtClearDone()"
+    style="padding:13px 22px;background:#f2f2f2;border:2px solid #ddd;border-radius:4px;
+      font-size:15px;color:#888;cursor:pointer;margin-top:4px">
+    Clear ${done.length} completed batch${done.length>1?'es':''}</button>` : '');
+}
+
+// — Recipe Editor —
+function dtNewRecipe() {
+  _dtEditingRecipe = { id:'dr_'+Date.now(), name:'New Recipe', steps:[
+    { id:'step_'+Date.now(), name:'Step 1', duration:5, type:'active' }
+  ]};
+  dtShowEditor();
+}
+function dtEditRecipe(id) {
+  const r = dtGetRecipes().find(r => r.id === id);
+  if (!r) return;
+  _dtEditingRecipe = JSON.parse(JSON.stringify(r));
+  dtShowEditor();
+}
+function dtShowEditor() {
+  dtRenderEditor();
+  document.getElementById('dt-editor-modal').style.display = 'flex';
+}
+function dtHideEditor() {
+  document.getElementById('dt-editor-modal').style.display = 'none';
+  _dtEditingRecipe = null;
+}
+function dtRenderEditor() {
+  const r = _dtEditingRecipe;
+  if (!r) return;
+  const el = document.getElementById('dt-editor-body');
+  if (!el) return;
+  const totalMins = r.steps.reduce((s,st) => s+st.duration, 0);
+  const h = Math.floor(totalMins/60), m = totalMins%60;
+  el.innerHTML = `
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:8px">Recipe Name</label>
+      <input type="text" value="${r.name}" oninput="_dtEditingRecipe.name=this.value"
+        style="width:100%;font-size:22px;font-weight:700;padding:14px;border:2px solid #ccc;border-radius:4px">
+    </div>
+    <div style="font-size:12px;color:#999;margin-bottom:16px">
+      ${r.steps.length} steps &nbsp;·&nbsp; Total time: ${h?h+'h ':''} ${m}m
+    </div>
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+      color:#777;margin-bottom:12px">Steps</div>
+    ${r.steps.map((step,idx) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border:2px solid #ddd;
+        border-radius:4px;margin-bottom:8px;background:#fff;flex-wrap:wrap">
+        <div style="background:#eee;color:#777;border-radius:4px;padding:6px 12px;
+          font-size:15px;font-weight:700;flex-shrink:0">${idx+1}</div>
+        <input type="text" value="${step.name}" oninput="_dtEditingRecipe.steps[${idx}].name=this.value"
+          style="flex:2;min-width:130px;font-size:16px;padding:10px 12px;border:1px solid #ddd;border-radius:4px">
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <input type="number" value="${step.duration}" min="1" max="720"
+            oninput="_dtEditingRecipe.steps[${idx}].duration=Math.max(1,parseInt(this.value)||1)"
+            style="width:68px;font-size:16px;padding:10px;border:1px solid #ddd;border-radius:4px;text-align:center">
+          <span style="font-size:13px;color:#999;white-space:nowrap">min</span>
+        </div>
+        <select onchange="_dtEditingRecipe.steps[${idx}].type=this.value"
+          style="font-size:15px;padding:10px 12px;border:1px solid #ddd;border-radius:4px;flex-shrink:0">
+          <option value="active" ${step.type==='active'?'selected':''}>▶ Active</option>
+          <option value="wait"   ${step.type==='wait'?'selected':''}>⏱ Wait</option>
+        </select>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          ${idx>0 ? `<button onclick="dtEditorMove(${idx},-1)" style="padding:8px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↑</button>` : '<span style="width:36px"></span>'}
+          ${idx<r.steps.length-1 ? `<button onclick="dtEditorMove(${idx},1)" style="padding:8px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↓</button>` : '<span style="width:36px"></span>'}
+          <button onclick="dtEditorDel(${idx})" style="padding:8px 10px;border:1px solid #fcc;border-radius:4px;background:#fff0f0;color:#c00;cursor:pointer">✕</button>
+        </div>
+      </div>`).join('')}
+    <button onclick="dtEditorAdd()" style="width:100%;padding:16px;border:2px dashed #ccc;border-radius:4px;
+      background:#fafafa;font-size:16px;font-weight:600;color:#888;cursor:pointer;margin-top:4px">+ Add Step</button>`;
+}
+function dtEditorAdd() {
+  if (!_dtEditingRecipe) return;
+  _dtEditingRecipe.steps.push({id:'step_'+Date.now(),name:'New Step',duration:5,type:'active'});
+  dtRenderEditor();
+}
+function dtEditorDel(idx) {
+  if (!_dtEditingRecipe||_dtEditingRecipe.steps.length<=1) return;
+  _dtEditingRecipe.steps.splice(idx,1);
+  dtRenderEditor();
+}
+function dtEditorMove(idx,dir) {
+  if (!_dtEditingRecipe) return;
+  const s=_dtEditingRecipe.steps, ni=idx+dir;
+  if (ni<0||ni>=s.length) return;
+  [s[idx],s[ni]]=[s[ni],s[idx]];
+  dtRenderEditor();
+}
+function dtEditorSave() {
+  if (!_dtEditingRecipe||!_dtEditingRecipe.name.trim()) { alert('Enter a recipe name.'); return; }
+  const recipes=dtGetRecipes();
+  const i=recipes.findIndex(r=>r.id===_dtEditingRecipe.id);
+  if (i>=0) recipes[i]=_dtEditingRecipe; else recipes.push(_dtEditingRecipe);
+  dtSaveRecipes(recipes);
+  dtHideEditor();
+  renderDoughTimer();
+}
+function dtEditorDelete() {
+  if (!_dtEditingRecipe) return;
+  if (!confirm('Delete this recipe?')) return;
+  dtSaveRecipes(dtGetRecipes().filter(r=>r.id!==_dtEditingRecipe.id));
+  if (_dtSelectedRecipeId===_dtEditingRecipe.id) _dtSelectedRecipeId=null;
+  dtHideEditor();
+  renderDoughTimer();
+}
+
+// ============ TIMER TAB SWITCHING ============
+let _dtActiveTab = 'dough';
+function dtSwitchTab(tab) {
+  _dtActiveTab = tab;
+  document.getElementById('dt-panel-dough').style.display      = tab === 'dough'    ? '' : 'none';
+  document.getElementById('dt-panel-sandwich').style.display   = tab === 'sandwich' ? '' : 'none';
+  const dBtn = document.getElementById('dt-tab-dough');
+  const sBtn = document.getElementById('dt-tab-sandwich');
+  if (dBtn) { dBtn.style.background = tab==='dough'?'#111':'#fff'; dBtn.style.color = tab==='dough'?'#fff':'#555'; }
+  if (sBtn) { sBtn.style.background = tab==='sandwich'?'#111':'#fff'; sBtn.style.color = tab==='sandwich'?'#fff':'#555'; }
+  if (tab === 'dough')    { renderDoughTimer(); dtStartTick(); }
+  if (tab === 'sandwich') { renderSandwichTimer(); swStartClock(); }
+}
+
+// ============ SANDWICH TIMER ============
+const SW_RECIPES_KEY = 'bk_sandwich_recipes';
+const SW_SESSION_KEY = 'bk_sandwich_session';
+
+const SW_DEFAULT_RECIPES = [
+  { id:'sw_classic', name:'Classic Sandwich', steps:[
+    { id:'ss1', name:'Pull bread & open',      targetSecs:10 },
+    { id:'ss2', name:'Spread condiments',       targetSecs:20 },
+    { id:'ss3', name:'Layer protein',           targetSecs:15 },
+    { id:'ss4', name:'Add veggies & toppings',  targetSecs:25 },
+    { id:'ss5', name:'Cut & wrap',              targetSecs:20 },
+  ]},
+  { id:'sw_bagel', name:'Bagel Sandwich', steps:[
+    { id:'ss1', name:'Slice & toast bagel',    targetSecs:30 },
+    { id:'ss2', name:'Add spreads',             targetSecs:15 },
+    { id:'ss3', name:'Layer fillings',          targetSecs:20 },
+    { id:'ss4', name:'Wrap & label',            targetSecs:15 },
+  ]},
+];
+
+let _swSelectedRecipeId = null;
+let _swClockInterval    = null;
+let _swEditingRecipe    = null;
+
+function swGetRecipes() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SW_RECIPES_KEY) || 'null');
+    if (s && s.length) return s;
+    localStorage.setItem(SW_RECIPES_KEY, JSON.stringify(SW_DEFAULT_RECIPES));
+    return SW_DEFAULT_RECIPES;
+  } catch { return SW_DEFAULT_RECIPES; }
+}
+function swSaveRecipes(r)  { localStorage.setItem(SW_RECIPES_KEY, JSON.stringify(r)); }
+function swGetSession()    { try { return JSON.parse(localStorage.getItem(SW_SESSION_KEY)||'null'); } catch { return null; } }
+function swSaveSession(s)  { localStorage.setItem(SW_SESSION_KEY, s ? JSON.stringify(s) : 'null'); }
+
+function swFmtSecs(s) {
+  const neg = s < 0; const abs = Math.abs(s);
+  const m = Math.floor(abs/60), sec = abs%60;
+  return (neg?'-':'') + (m>0 ? m+':'+String(sec).padStart(2,'0') : String(sec)+'s');
+}
+
+function swSelectRecipe(id) { _swSelectedRecipeId = id; renderSandwichTimer(); }
+
+function swStart() {
+  if (!_swSelectedRecipeId) { alert('Select a sandwich type first.'); return; }
+  const recipe = swGetRecipes().find(r => r.id === _swSelectedRecipeId);
+  if (!recipe) return;
+  const now = new Date().toISOString();
+  swSaveSession({
+    id: 'sw_' + Date.now(),
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+    startedAt: now,
+    currentStepIdx: 0,
+    stepLog: [{ stepIdx:0, startedAt:now, completedAt:null }],
+    status: 'active',
+  });
+  swStartClock();
+  renderSandwichTimer();
+}
+
+function swCompleteStep() {
+  const session = swGetSession();
+  if (!session || session.status !== 'active') return;
+  const recipe = swGetRecipes().find(r => r.id === session.recipeId);
+  if (!recipe) return;
+  const now = new Date().toISOString();
+  const log = session.stepLog.find(l => l.stepIdx === session.currentStepIdx);
+  if (log) log.completedAt = now;
+  const next = session.currentStepIdx + 1;
+  if (next >= recipe.steps.length) {
+    session.status = 'complete';
+    session.completedAt = now;
+    swStopClock();
+  } else {
+    session.currentStepIdx = next;
+    session.stepLog.push({ stepIdx:next, startedAt:now, completedAt:null });
+  }
+  swSaveSession(session);
+  renderSandwichTimer();
+}
+
+function swAbandon() {
+  if (!confirm('Clear this session?')) return;
+  swSaveSession(null);
+  swStopClock();
+  renderSandwichTimer();
+}
+
+function swStartClock() {
+  if (_swClockInterval) return;
+  _swClockInterval = setInterval(() => {
+    if (activePage() !== 'doughtimer' || _dtActiveTab !== 'sandwich') return;
+    const session = swGetSession();
+    if (!session || session.status !== 'active') { swStopClock(); return; }
+    const now = Date.now();
+    const totalSecs = Math.floor((now - new Date(session.startedAt)) / 1000);
+    const totalEl = document.getElementById('sw-total-clock');
+    if (totalEl) totalEl.textContent = swFmtSecs(totalSecs);
+    const log = session.stepLog.find(l => l.stepIdx === session.currentStepIdx);
+    if (log) {
+      const stepSecs  = Math.floor((now - new Date(log.startedAt)) / 1000);
+      const recipes   = swGetRecipes();
+      const recipe    = recipes.find(r => r.id === session.recipeId);
+      const target    = recipe?.steps[session.currentStepIdx]?.targetSecs || 0;
+      const over      = stepSecs - target;
+      const color     = over > 5 ? '#cc3300' : over > 0 ? '#b87000' : '#1a7a3a';
+      const stepEl    = document.getElementById('sw-step-clock');
+      const diffEl    = document.getElementById('sw-step-diff');
+      if (stepEl) { stepEl.textContent = swFmtSecs(stepSecs); stepEl.style.color = color; }
+      if (diffEl) {
+        if (over > 0) { diffEl.textContent = '+'+swFmtSecs(over)+' over'; diffEl.style.color='#cc3300'; }
+        else          { diffEl.textContent = swFmtSecs(-over)+' left';    diffEl.style.color='#1a7a3a'; }
+      }
+    }
+  }, 1000);
+}
+function swStopClock() { clearInterval(_swClockInterval); _swClockInterval = null; }
+
+function renderSandwichTimer() {
+  const recipes = swGetRecipes();
+  const session = swGetSession();
+
+  // Recipe selector
+  const selEl = document.getElementById('sw-recipe-selector');
+  if (selEl) selEl.innerHTML = recipes.map(r => {
+    const sel = _swSelectedRecipeId === r.id;
+    return `<div style="display:flex;gap:0">
+      <button onclick="swSelectRecipe('${r.id}')"
+        style="padding:18px 24px;border:3px solid ${sel?'#111':'#ccc'};border-right:none;
+               border-radius:4px 0 0 4px;background:${sel?'#111':'#fff'};
+               color:${sel?'#fff':'#555'};font-size:18px;font-weight:${sel?'800':'600'};
+               cursor:pointer;touch-action:manipulation;min-height:64px;white-space:nowrap">${r.name}</button>
+      <button onclick="swEditRecipe('${r.id}')"
+        style="padding:18px 14px;border:3px solid ${sel?'#111':'#ccc'};border-radius:0 4px 4px 0;
+               background:${sel?'#333':'#f5f5f5'};color:${sel?'#fff':'#888'};font-size:17px;
+               cursor:pointer;min-height:64px">✏️</button>
+    </div>`;
+  }).join('') +
+  `<button onclick="swNewRecipe()"
+     style="padding:18px 22px;border:3px dashed #ccc;border-radius:4px;background:#fff;
+            color:#888;font-size:17px;font-weight:600;cursor:pointer;min-height:64px">+ New</button>`;
+
+  const activeEl = document.getElementById('sw-active');
+  if (!activeEl) return;
+
+  // No session — show start button
+  if (!session || session.status === 'null') {
+    activeEl.innerHTML = `
+      <div style="display:flex;justify-content:center;margin-bottom:32px">
+        <button onclick="swStart()"
+          style="padding:26px 64px;background:#111;color:#fff;border:none;border-radius:4px;
+                 font-size:24px;font-weight:900;cursor:pointer;touch-action:manipulation;min-height:80px">
+          ▶ Start Timer</button>
+      </div>
+      <div style="text-align:center;padding:40px 20px;color:#bbb;font-size:17px;
+        border:3px dashed #ddd;border-radius:4px">
+        Select a sandwich type above, then tap Start Timer</div>`;
+    return;
+  }
+
+  // Complete session — show summary
+  if (session.status === 'complete') {
+    const recipe = recipes.find(r => r.id === session.recipeId) || { steps:[] };
+    const totalSecs = Math.round((new Date(session.completedAt) - new Date(session.startedAt)) / 1000);
+    const targetTotal = recipe.steps.reduce((s,st) => s+st.targetSecs, 0);
+    const over = totalSecs - targetTotal;
+    const color = over > 5 ? '#cc3300' : over > 0 ? '#b87000' : '#1a7a3a';
+    const stepRows = recipe.steps.map((step,idx) => {
+      const log = session.stepLog.find(l => l.stepIdx === idx);
+      if (!log) return '';
+      const actual = log.completedAt ? Math.round((new Date(log.completedAt)-new Date(log.startedAt))/1000) : null;
+      const diff   = actual !== null ? actual - step.targetSecs : null;
+      const dc     = diff === null ? '#999' : diff > 5 ? '#cc3300' : diff > 0 ? '#b87000' : '#1a7a3a';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;
+        border-bottom:1px solid #eee;flex-wrap:wrap">
+        <div style="flex:1;font-size:17px;font-weight:600;min-width:140px">${step.name}</div>
+        <div style="font-size:17px;color:#333;flex-shrink:0">${actual!==null?swFmtSecs(actual):'–'}</div>
+        <div style="font-size:14px;flex-shrink:0;min-width:80px;text-align:right;color:${dc}">
+          ${diff===null?'':diff>0?'+'+swFmtSecs(diff)+' over':swFmtSecs(-diff)+' under'}</div>
+      </div>`;
+    }).join('');
+    activeEl.innerHTML = `
+      <div style="background:#fff;border:3px solid #111;border-radius:4px;overflow:hidden;margin-bottom:20px">
+        <div style="background:#111;color:#fff;padding:20px 28px;text-align:center">
+          <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;
+            color:rgba(255,255,255,0.5);margin-bottom:8px">${session.recipeName} — Complete</div>
+          <div style="font-size:56px;font-weight:900;color:${color}">${swFmtSecs(totalSecs)}</div>
+          <div style="font-size:16px;color:rgba(255,255,255,0.6);margin-top:8px">
+            Target ${swFmtSecs(targetTotal)} &nbsp;·&nbsp;
+            <span style="color:${color}">${over>0?'+'+swFmtSecs(over)+' over':swFmtSecs(-over)+' under target'}</span>
+          </div>
+        </div>
+        ${stepRows}
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button onclick="swStart()"
+          style="flex:1;padding:20px;background:#111;color:#fff;border:none;border-radius:4px;
+                 font-size:19px;font-weight:800;cursor:pointer;min-height:64px">▶ Start Another</button>
+        <button onclick="swAbandon()"
+          style="padding:20px 28px;border:2px solid #ccc;background:#fff;border-radius:4px;
+                 font-size:16px;color:#888;cursor:pointer">Clear</button>
+      </div>`;
+    return;
+  }
+
+  // Active session
+  const recipe = recipes.find(r => r.id === session.recipeId) || { steps:[] };
+  const step   = recipe.steps[session.currentStepIdx];
+  if (!step) return;
+  const log    = session.stepLog.find(l => l.stepIdx === session.currentStepIdx);
+  const stepSecs  = log ? Math.floor((Date.now() - new Date(log.startedAt)) / 1000) : 0;
+  const totalSecs = Math.floor((Date.now() - new Date(session.startedAt)) / 1000);
+  const over = stepSecs - step.targetSecs;
+  const color = over > 5 ? '#cc3300' : over > 0 ? '#b87000' : '#1a7a3a';
+
+  const upcomingSteps = recipe.steps.slice(session.currentStepIdx + 1).map((s,i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #eee">
+      <div style="background:#eee;color:#999;border-radius:4px;padding:5px 11px;
+        font-size:13px;font-weight:700">${session.currentStepIdx+2+i}</div>
+      <div style="flex:1;font-size:16px;color:#888">${s.name}</div>
+      <div style="font-size:14px;color:#bbb">${swFmtSecs(s.targetSecs)}</div>
+    </div>`).join('');
+
+  const completedSteps = recipe.steps.slice(0, session.currentStepIdx).map((s,i) => {
+    const l = session.stepLog.find(x => x.stepIdx === i);
+    const actual = l?.completedAt ? Math.round((new Date(l.completedAt)-new Date(l.startedAt))/1000) : null;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid #eee;opacity:0.7">
+      <div style="color:#22a855;font-size:20px;width:32px;text-align:center">✓</div>
+      <div style="flex:1;font-size:16px;color:#666">${s.name}</div>
+      <div style="font-size:14px;color:#888">${actual!==null?swFmtSecs(actual):'–'}</div>
+    </div>`;
+  }).join('');
+
+  activeEl.innerHTML = `
+    <!-- Current step big card -->
+    <div style="background:#111;color:#fff;border-radius:4px;padding:28px 28px 24px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+        <div>
+          <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+            color:rgba(255,255,255,0.45);margin-bottom:6px">
+            Step ${session.currentStepIdx+1} of ${recipe.steps.length} — ${session.recipeName}</div>
+          <div style="font-size:32px;font-weight:900">${step.name}</div>
+          <div style="font-size:15px;color:rgba(255,255,255,0.5);margin-top:4px">
+            Target: ${swFmtSecs(step.targetSecs)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+            color:rgba(255,255,255,0.45);margin-bottom:4px">Total</div>
+          <div id="sw-total-clock" style="font-size:24px;font-weight:800">${swFmtSecs(totalSecs)}</div>
+        </div>
+      </div>
+      <!-- Step clock -->
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:24px">
+        <span id="sw-step-clock" style="font-size:64px;font-weight:900;color:${color};line-height:1">${swFmtSecs(stepSecs)}</span>
+        <div>
+          <div style="font-size:15px;color:rgba(255,255,255,0.5)">/ ${swFmtSecs(step.targetSecs)} target</div>
+          <div id="sw-step-diff" style="font-size:14px;font-weight:700;color:${color}">
+            ${over>5?'+'+swFmtSecs(over)+' over':over>0?swFmtSecs(over)+' over':swFmtSecs(-over)+' left'}</div>
+        </div>
+      </div>
+      <button onclick="swCompleteStep()"
+        style="width:100%;padding:24px;background:#22a855;color:#fff;border:none;border-radius:4px;
+               font-size:26px;font-weight:900;cursor:pointer;touch-action:manipulation;min-height:80px">
+        ✓ Done — Next Step</button>
+    </div>
+    <!-- Step list -->
+    <div style="background:#fff;border:2px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:16px">
+      ${completedSteps}
+      ${upcomingSteps || '<div style="padding:14px 20px;color:#bbb;font-size:15px">No more steps after this one</div>'}
+    </div>
+    <button onclick="swAbandon()"
+      style="padding:13px 22px;border:2px solid #ccc;background:#fff;border-radius:4px;
+             font-size:15px;color:#888;cursor:pointer">✕ Abandon</button>`;
+
+  swStartClock();
+}
+
+// ============ SANDWICH EDITOR ============
+function swNewRecipe() {
+  _swEditingRecipe = { id:'sw_'+Date.now(), name:'New Sandwich', steps:[
+    { id:'ss_'+Date.now(), name:'Step 1', targetSecs:15 }
+  ]};
+  swShowEditor();
+}
+function swEditRecipe(id) {
+  const r = swGetRecipes().find(r => r.id === id);
+  if (!r) return;
+  _swEditingRecipe = JSON.parse(JSON.stringify(r));
+  swShowEditor();
+}
+function swShowEditor() { swRenderEditor(); document.getElementById('sw-editor-modal').style.display = 'flex'; }
+function swHideEditor() { document.getElementById('sw-editor-modal').style.display = 'none'; _swEditingRecipe = null; }
+function swRenderEditor() {
+  const r = _swEditingRecipe;
+  if (!r) return;
+  const el = document.getElementById('sw-editor-body');
+  if (!el) return;
+  const total = r.steps.reduce((s,st) => s+st.targetSecs, 0);
+  el.innerHTML = `
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:8px">Name</label>
+      <input type="text" value="${r.name}" oninput="_swEditingRecipe.name=this.value"
+        style="width:100%;font-size:22px;font-weight:700;padding:14px;border:2px solid #ccc;border-radius:4px">
+    </div>
+    <div style="font-size:12px;color:#999;margin-bottom:16px">${r.steps.length} steps · Total target: ${swFmtSecs(total)}</div>
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#777;margin-bottom:12px">Steps</div>
+    ${r.steps.map((step,idx) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border:2px solid #ddd;
+        border-radius:4px;margin-bottom:8px;background:#fff;flex-wrap:wrap">
+        <div style="background:#eee;color:#777;border-radius:4px;padding:5px 10px;font-size:14px;font-weight:700;flex-shrink:0">${idx+1}</div>
+        <input type="text" value="${step.name}" oninput="_swEditingRecipe.steps[${idx}].name=this.value"
+          style="flex:2;min-width:120px;font-size:16px;padding:9px 12px;border:1px solid #ddd;border-radius:4px">
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <input type="number" value="${step.targetSecs}" min="1" max="3600"
+            oninput="_swEditingRecipe.steps[${idx}].targetSecs=Math.max(1,parseInt(this.value)||1)"
+            style="width:68px;font-size:16px;padding:9px;border:1px solid #ddd;border-radius:4px;text-align:center">
+          <span style="font-size:13px;color:#999;white-space:nowrap">sec</span>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          ${idx>0?`<button onclick="swEditorMove(${idx},-1)" style="padding:7px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↑</button>`:'<span style="width:34px"></span>'}
+          ${idx<r.steps.length-1?`<button onclick="swEditorMove(${idx},1)" style="padding:7px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↓</button>`:'<span style="width:34px"></span>'}
+          <button onclick="swEditorDel(${idx})" style="padding:7px 10px;border:1px solid #fcc;border-radius:4px;background:#fff0f0;color:#c00;cursor:pointer">✕</button>
+        </div>
+      </div>`).join('')}
+    <button onclick="swEditorAdd()" style="width:100%;padding:14px;border:2px dashed #ccc;border-radius:4px;
+      background:#fafafa;font-size:16px;font-weight:600;color:#888;cursor:pointer;margin-top:4px">+ Add Step</button>`;
+}
+function swEditorAdd()      { if (!_swEditingRecipe) return; _swEditingRecipe.steps.push({id:'ss_'+Date.now(),name:'New Step',targetSecs:15}); swRenderEditor(); }
+function swEditorDel(idx)   { if (!_swEditingRecipe||_swEditingRecipe.steps.length<=1) return; _swEditingRecipe.steps.splice(idx,1); swRenderEditor(); }
+function swEditorMove(idx,d){ if (!_swEditingRecipe) return; const s=_swEditingRecipe.steps,ni=idx+d; if(ni<0||ni>=s.length)return; [s[idx],s[ni]]=[s[ni],s[idx]]; swRenderEditor(); }
+function swEditorSave() {
+  if (!_swEditingRecipe||!_swEditingRecipe.name.trim()) { alert('Enter a name.'); return; }
+  const recipes=swGetRecipes(), i=recipes.findIndex(r=>r.id===_swEditingRecipe.id);
+  if (i>=0) recipes[i]=_swEditingRecipe; else recipes.push(_swEditingRecipe);
+  swSaveRecipes(recipes); swHideEditor(); renderSandwichTimer();
+}
+function swEditorDelete() {
+  if (!_swEditingRecipe||!confirm('Delete this sandwich type?')) return;
+  swSaveRecipes(swGetRecipes().filter(r=>r.id!==_swEditingRecipe.id));
+  if (_swSelectedRecipeId===_swEditingRecipe.id) _swSelectedRecipeId=null;
+  swHideEditor(); renderSandwichTimer();
+}
+
+// ============ STAFF BOARD ============
+const SB_KEY = 'bk_staff_board';
+let _sbType = 'general';
+
+function sbGetPosts() {
+  try { return JSON.parse(localStorage.getItem(SB_KEY) || '[]'); } catch { return []; }
+}
+function sbSavePosts(posts) { localStorage.setItem(SB_KEY, JSON.stringify(posts)); }
+
+function sbSetType(type) {
+  _sbType = type;
+  ['general','morning','close'].forEach(t => {
+    const btn = document.getElementById('sb-type-' + t);
+    if (!btn) return;
+    const active = t === type;
+    btn.style.background  = active ? 'var(--accent)' : 'var(--surface)';
+    btn.style.color       = active ? '#fff' : 'var(--muted)';
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.borderWidth = '3px';
+    btn.style.fontWeight  = active ? '800' : '600';
+  });
+}
+
+function sbPost() {
+  const text = (document.getElementById('sb-compose-text').value || '').trim();
+  if (!text) { alert('Write a message first.'); return; }
+  const session = authGetSession();
+  const now = new Date();
+  const posts = sbGetPosts();
+  posts.unshift({
+    id: 'sb_' + Date.now(),
+    type: _sbType,
+    text,
+    by: session ? session.name : 'Staff',
+    role: session ? session.role : 'Anyone',
+    date: now.toISOString().slice(0,10),
+    at: now.toISOString(),
+    checked: false,
+    checkedBy: null,
+    checkedAt: null,
+  });
+  sbSavePosts(posts);
+  document.getElementById('sb-compose-text').value = '';
+  sbSetType('general');
+  renderStaffBoard();
+}
+
+function sbCheck(id) {
+  const posts = sbGetPosts();
+  const post = posts.find(p => p.id === id);
+  if (!post) return;
+  const session = authGetSession();
+  post.checked = !post.checked;
+  post.checkedBy = post.checked ? (session ? session.name : 'Staff') : null;
+  post.checkedAt = post.checked ? new Date().toISOString() : null;
+  sbSavePosts(posts);
+  renderStaffBoard();
+}
+
+function sbDelete(id) {
+  if (!confirm('Delete this post?')) return;
+  const posts = sbGetPosts().filter(p => p.id !== id);
+  sbSavePosts(posts);
+  renderStaffBoard();
+}
+
+function sbPin(id) {
+  const posts = sbGetPosts();
+  const post = posts.find(p => p.id === id);
+  if (!post) return;
+  post.pinned = !post.pinned;
+  sbSavePosts(posts);
+  renderStaffBoard();
+}
+
+function renderStaffBoard() {
+  const el = document.getElementById('sb-feed');
+  if (!el) return;
+  const session = authGetSession();
+  const canManage = authCanAccess('Head Baker');
+  const posts = sbGetPosts();
+  if (!posts.length) {
+    el.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--muted);font-size:16px">No messages yet — be the first to post.</div>';
+    return;
+  }
+
+  // Pinned first, then by date desc
+  const pinned = posts.filter(p => p.pinned);
+  const rest   = posts.filter(p => !p.pinned);
+
+  // Group rest by date
+  const groups = {};
+  rest.forEach(p => {
+    if (!groups[p.date]) groups[p.date] = [];
+    groups[p.date].push(p);
+  });
+  const dates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+
+  const typeStyle = {
+    general: { icon:'💬', label:'General',     bg:'var(--surface)',  border:'var(--border)',  labelColor:'var(--muted)' },
+    morning: { icon:'🌅', label:'For Morning', bg:'#fffbe6',         border:'#f0c040',        labelColor:'#8a6800' },
+    close:   { icon:'🌙', label:'Close Note',  bg:'#f0f0f8',         border:'#8888cc',        labelColor:'#444488' },
+  };
+
+  function renderPost(p) {
+    const s = typeStyle[p.type] || typeStyle.general;
+    const time = new Date(p.at).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    const isMine = session && session.name === p.by;
+    const canDelete = canManage || isMine;
+    const pinnedBadge = p.pinned ? `<span style="font-size:12px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-weight:700">📌 Pinned</span>` : '';
+
+    const checkRow = p.type === 'morning' ? `
+      <div onclick="sbCheck('${p.id}')" style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 14px;
+        background:${p.checked ? '#e8f5e9' : 'var(--surface)'};border:2px solid ${p.checked ? '#4caf50' : 'var(--border)'};
+        border-radius:4px;cursor:pointer;touch-action:manipulation">
+        <div style="width:26px;height:26px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+          background:${p.checked ? '#4caf50' : 'transparent'};border:2px solid ${p.checked ? '#4caf50' : 'var(--border)'}">
+          ${p.checked ? '<span style="color:#fff;font-size:16px;font-weight:900">✓</span>' : ''}
+        </div>
+        <div style="font-size:14px;color:${p.checked ? '#2e7d32' : 'var(--muted)'}">
+          ${p.checked ? `Done by ${p.checkedBy} · ${new Date(p.checkedAt).toLocaleString('en-US',{hour:'numeric',minute:'2-digit'})}` : 'Tap to mark complete'}
+        </div>
+      </div>` : '';
+
+    return `<div style="background:${s.bg};border:2px solid ${s.border};border-radius:4px;padding:18px 20px;margin-bottom:12px;position:relative">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:${s.labelColor};background:${s.border}22;padding:3px 10px;border-radius:4px">${s.icon} ${s.label}</span>
+        ${pinnedBadge}
+        <span style="font-size:13px;font-weight:700;color:var(--text);margin-left:4px">${p.by}</span>
+        <span style="font-size:12px;color:var(--muted)">${time}</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          ${canManage ? `<button onclick="sbPin('${p.id}')" title="${p.pinned?'Unpin':'Pin'}" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--muted)">${p.pinned?'📌 Unpin':'📌 Pin'}</button>` : ''}
+          ${canDelete ? `<button onclick="sbDelete('${p.id}')" title="Delete" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--danger)">✕</button>` : ''}
+        </div>
+      </div>
+      <div style="font-size:16px;color:var(--text);line-height:1.6;white-space:pre-wrap">${p.text}</div>
+      ${checkRow}
+    </div>`;
+  }
+
+  let html = '';
+  if (pinned.length) {
+    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px">📌 Pinned</div>`;
+    html += pinned.map(renderPost).join('');
+    html += `<div style="border-top:2px solid var(--border);margin:20px 0"></div>`;
+  }
+  dates.forEach(date => {
+    const label = (() => {
+      const today = new Date().toISOString().slice(0,10);
+      const yest  = new Date(Date.now()-86400000).toISOString().slice(0,10);
+      if (date === today) return 'Today';
+      if (date === yest)  return 'Yesterday';
+      return new Date(date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+    })();
+    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:20px 0 10px">${label}</div>`;
+    html += groups[date].map(renderPost).join('');
+  });
+
+  el.innerHTML = html;
+}
+
 const SIDE_TASK_DEFAULTS = [
   { id:'st1',  name:'Clean sandwich station',       cat:'Cleaning' },
   { id:'st2',  name:'Clean dishes',                 cat:'Cleaning' },
@@ -11966,7 +13187,8 @@ function openSwitchTab(tab) {
     btn.style.background  = active ? 'var(--accent)' : 'var(--surface)';
     btn.style.color       = active ? '#fff' : 'var(--muted)';
     btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
-    btn.style.fontWeight  = active ? '700' : '600';
+    btn.style.borderWidth = '3px';
+    btn.style.fontWeight  = active ? '800' : '600';
   });
 
   // Show/hide checklist vs side panel
@@ -12043,26 +13265,26 @@ function renderOpeningPage() {
           ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">Checked by ${entry.by} · ${new Date(entry.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>`
           : '';
         const safeId = t.id.replace(/'/g,"\\'");
-        return `<div onclick="openToggle('${safeId}')" style="display:flex;align-items:center;gap:16px;
-          padding:18px 20px;border-radius:4px;cursor:pointer;margin-bottom:8px;
-          background:${done ? 'var(--surface2)' : 'var(--surface)'};
-          border:2px solid ${done ? 'var(--accent)' : 'var(--border)'};
-          opacity:${done ? '0.65' : '1'};transition:all 0.15s;touch-action:manipulation">
-          <div style="width:30px;height:30px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-            background:${done ? 'var(--accent)' : 'transparent'};border:2.5px solid ${done ? 'var(--accent)' : 'var(--border)'}">
-            ${done ? '<span style="color:#fff;font-size:17px;font-weight:900;line-height:1">✓</span>' : ''}
+        return `<div onclick="openToggle('${safeId}')" style="display:flex;align-items:center;gap:20px;
+          padding:22px 24px;border-radius:4px;cursor:pointer;margin-bottom:10px;
+          background:${done ? '#e8f5ee' : 'var(--surface)'};
+          border:3px solid ${done ? '#22a855' : 'var(--border)'};
+          opacity:${done ? '0.75' : '1'};transition:all 0.15s;touch-action:manipulation;min-height:76px">
+          <div style="width:40px;height:40px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+            background:${done ? '#22a855' : 'transparent'};border:3px solid ${done ? '#22a855' : '#bbb'}">
+            ${done ? '<span style="color:#fff;font-size:24px;font-weight:900;line-height:1">✓</span>' : ''}
           </div>
           <div style="flex:1;line-height:1.5">
-            <div style="font-size:17px;font-weight:${done ? '400' : '500'};color:var(--text);
+            <div style="font-size:19px;font-weight:${done ? '400' : '600'};color:var(--text);
               text-decoration:${done ? 'line-through' : 'none'}">${t.name}</div>
             ${byLine}
           </div>
           ${openCanManage() ? `
           <button onclick="event.stopPropagation();openEditTask('${safeId}')"
-            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:6px;line-height:1;opacity:0.4;flex-shrink:0"
+            style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:18px;padding:8px 10px;line-height:1;flex-shrink:0"
             title="Edit">✏️</button>
           <button onclick="event.stopPropagation();openRemoveTask('${safeId}')"
-            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:6px;line-height:1;opacity:0.4;flex-shrink:0"
+            style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--danger);cursor:pointer;font-size:18px;padding:8px 10px;line-height:1;flex-shrink:0"
             title="Remove">✕</button>` : ''}
         </div>`;
       }).join('')}
@@ -12108,6 +13330,7 @@ function openFinalize() {
   const log = openGetLog(tab);
   log.push({ date: today, ts, by, checked, total: defs.length });
   openSaveLog(tab, log.slice(-180));
+  dsRefresh('opening');
   const labels = { opening:'✓ Opening Complete!', closing:'✓ Closing Complete!', baker:'✓ Baker Morning Complete!' };
   const resets = { opening:'✓ Complete Opening', closing:'✓ Complete Closing', baker:'✓ Complete Baker Morning' };
   const btn = document.getElementById('open-finalize-btn');
@@ -12435,6 +13658,7 @@ function ingSubmit() {
   const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
   const by = session ? session.name : 'Unknown';
   localStorage.setItem('bk_ing_last_submit', `${ts} by ${by}`);
+  dsRefresh('ingredients');
   const el = document.getElementById('ing-last-submit');
   if (el) el.textContent = `Last submitted: ${ts} by ${by}`;
   const btn = document.getElementById('ing-submit-btn');
@@ -12880,6 +14104,9 @@ const FB_SYNC_KEYS = new Set([
   'bk_eod_log', 'bk_eod_locations',
   'bk_staff', 'bk_recipes', 'bk_standing_tasks', 'bk_role_slots',
   'bk_side_tasks', 'bk_side_task_log',
+  'bk_staff_board',
+  'bk_dough_recipes', 'bk_dough_batches',
+  'bk_sandwich_recipes',
 ]);
 
 // Which page to re-render when a key changes remotely
@@ -12895,6 +14122,10 @@ const FB_KEY_PAGE = {
   'bk_cl_state_baker':    () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
   'bk_side_tasks':        () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
   'bk_side_task_log':     () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
+  'bk_staff_board':       () => { if (activePage() === 'staffboard') try { renderStaffBoard(); } catch(e){} },
+  'bk_dough_recipes':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
+  'bk_dough_batches':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
+  'bk_sandwich_recipes':  () => { if (activePage() === 'doughtimer') try { renderSandwichTimer(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_staff':             () => { if (activePage() === 'staff')       try { renderStaffPage();        } catch(e){} },
@@ -12981,6 +14212,7 @@ function authBoot() {
     localStorage.setItem('bk_staff', JSON.stringify(staff));
   }
   authUpdateChip();
+  updateNavDots();
   const _bootSession = authGetSession();
   const seenVersion = localStorage.getItem('bk_seen_version');
   if (seenVersion !== APP_VERSION) {
@@ -12993,6 +14225,12 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.5': [
+    '⏱ Dough Timer — track concurrent batches with auto stagger suggestions',
+    '🥪 Sandwich Timer — step-by-step timed guide for sandwich assembly',
+    '📋 Staff Board — team messages, morning tasks & close notes',
+    '🔴🟢 Daily status banners on Freezer, Opening, Ingredients & EOD pages',
+  ],
   '1.4': [
     '☁️ Cloud sync status indicator in the top bar',
     '✅ Side tasks with urgency levels & activity log',
@@ -13099,4 +14337,5 @@ function fbUploadLocalData() {
 </script>
 </body>
 </html>
+
 
