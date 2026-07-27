@@ -8,6 +8,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Bakery Scheduler</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -2951,7 +2954,7 @@ function showPageDirect(page) {
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
   if (page === 'staffboard') renderStaffBoard();
-  if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); dtStartClock(); }
+  if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
 }
 
 function showPage(page) {
@@ -2978,7 +2981,7 @@ function showPage(page) {
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
   if (page === 'staffboard') renderStaffBoard();
-  if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); dtStartClock(); }
+  if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   renderStatusBanners(page);
 }
 
@@ -12139,7 +12142,6 @@ const DT_BATCH_COLORS = [
 
 let _dtSelectedRecipeId = null;
 let _dtTickInterval     = null;
-let _dtClockInterval    = null;
 let _dtEditingRecipe    = null;
 
 function dtGetRecipes() {
@@ -12248,18 +12250,46 @@ function dtProjectedFinish(batch, recipe) {
     .reduce((s, st) => s + st.duration * 60000, 0);
   return new Date(now + currentRemaining + futureMs);
 }
-function dtStartClock() {
-  if (_dtClockInterval) return;
-  _dtClockInterval = setInterval(() => {
-    if (activePage() !== 'doughtimer' || _dtActiveTab !== 'dough') return;
+function dtStartTick() {
+  if (_dtTickInterval) return;
+  _dtTickInterval = setInterval(() => {
     const batches = dtGetBatches();
     const recipes = dtGetRecipes();
     const now = Date.now();
-    batches.filter(b => b.status === 'active').forEach(b => {
-      const recipe = recipes.find(r => r.id === b.recipeId);
+    let changed = false;
+
+    // Check for wait steps that should auto-advance
+    batches.forEach(batch => {
+      if (batch.status !== 'active') return;
+      const recipe = recipes.find(r => r.id === batch.recipeId);
       if (!recipe) return;
-      const step = recipe.steps[b.currentStepIdx];
-      const log  = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
+      const step = recipe.steps[batch.currentStepIdx];
+      if (!step || step.type !== 'wait') return;
+      const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
+      if (!log || log.completedAt) return;
+      if ((now - new Date(log.startedAt)) / 60000 >= step.duration) {
+        const ts = new Date().toISOString();
+        log.completedAt = ts;
+        const next = batch.currentStepIdx + 1;
+        if (next >= recipe.steps.length) { batch.status = 'complete'; batch.completedAt = ts; }
+        else { batch.currentStepIdx = next; batch.stepLog.push({ stepIdx: next, startedAt: ts, completedAt: null }); }
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      dtSaveBatches(batches);
+      if (activePage() === 'doughtimer') renderDoughTimer();
+      return;
+    }
+
+    // Every second: update clock displays in-place (no full re-render needed)
+    if (activePage() !== 'doughtimer' || _dtActiveTab !== 'dough') return;
+    batches.filter(b => b.status === 'active').forEach(b => {
+      const recipe  = recipes.find(r => r.id === b.recipeId);
+      if (!recipe) return;
+      const step    = recipe.steps[b.currentStepIdx];
+      const log     = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
       const stepEl  = document.getElementById('dt-step-clock-' + b.id);
       const totalEl = document.getElementById('dt-total-elapsed-' + b.id);
       if (stepEl && log) {
@@ -12277,34 +12307,6 @@ function dtStartClock() {
       if (totalEl) { totalEl.textContent = dtFmtHHMM((now - new Date(b.startedAt)) / 1000); totalEl.style.color = '#111'; }
     });
   }, 1000);
-}
-
-function dtStartTick() {
-  if (_dtTickInterval) return;
-  _dtTickInterval = setInterval(() => {
-    const batches = dtGetBatches();
-    const recipes = dtGetRecipes();
-    let changed = false;
-    batches.forEach(batch => {
-      if (batch.status !== 'active') return;
-      const recipe = recipes.find(r => r.id === batch.recipeId);
-      if (!recipe) return;
-      const step = recipe.steps[batch.currentStepIdx];
-      if (!step || step.type !== 'wait') return;
-      const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
-      if (!log || log.completedAt) return;
-      if ((Date.now() - new Date(log.startedAt)) / 60000 >= step.duration) {
-        const now = new Date().toISOString();
-        log.completedAt = now;
-        const next = batch.currentStepIdx + 1;
-        if (next >= recipe.steps.length) { batch.status='complete'; batch.completedAt=now; }
-        else { batch.currentStepIdx=next; batch.stepLog.push({stepIdx:next,startedAt:now,completedAt:null}); }
-        changed = true;
-      }
-    });
-    if (changed) dtSaveBatches(batches);
-    if (activePage() === 'doughtimer') renderDoughTimer();
-  }, 20000);
 }
 
 function renderDoughTimer() {
@@ -12411,7 +12413,6 @@ function renderDoughTimer() {
     matEl.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aaa;font-size:18px;
       border:3px dashed #ddd;border-radius:4px">
       Select a dough type above and tap <strong style="color:#111">▶ Start Batch</strong></div>`;
-    dtStartClock();
     return;
   }
 
@@ -12552,7 +12553,6 @@ function renderDoughTimer() {
     style="padding:13px 22px;background:#f2f2f2;border:2px solid #ddd;border-radius:4px;
       font-size:15px;color:#888;cursor:pointer;margin-top:4px">
     Clear ${done.length} completed batch${done.length>1?'es':''}</button>` : '');
-  dtStartClock();
 }
 
 // — Recipe Editor —
@@ -12667,7 +12667,7 @@ function dtSwitchTab(tab) {
   const sBtn = document.getElementById('dt-tab-sandwich');
   if (dBtn) { dBtn.style.background = tab==='dough'?'#111':'#fff'; dBtn.style.color = tab==='dough'?'#fff':'#555'; }
   if (sBtn) { sBtn.style.background = tab==='sandwich'?'#111':'#fff'; sBtn.style.color = tab==='sandwich'?'#fff':'#555'; }
-  if (tab === 'dough')    { renderDoughTimer(); dtStartTick(); dtStartClock(); }
+  if (tab === 'dough')    { renderDoughTimer(); dtStartTick(); }
   if (tab === 'sandwich') { renderSandwichTimer(); swStartClock(); }
 }
 
