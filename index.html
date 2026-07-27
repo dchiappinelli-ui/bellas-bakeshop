@@ -11214,21 +11214,23 @@ function authUpdateChip() {
 // Filter nav buttons by data-min-role
 function authApplyNav() {
   const role = authCurrentRole();
-  const isOwner = role === 'Owner';
+  const isOwner   = role === 'Owner';
   const isBarista = role === 'Barista';
-  const isBOH = authCanAccess('Bakery Assistant'); // Baker, Head Baker, Owner
+  const isBOH     = authCanAccess('Bakery Assistant');
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    const onclick = btn.getAttribute('onclick') || '';
+    const onclick       = btn.getAttribute('onclick') || '';
     const isFreezer     = onclick.includes("'freezer'");
     const isEod         = onclick.includes("'eod'");
     const isIngredients = onclick.includes("'ingredients'");
     const isOpening     = onclick.includes("'opening'");
+    const isDoughTimer  = onclick.includes("'doughtimer'");
+    const isStaffBoard  = onclick.includes("'staffboard'");
+    const isBoard       = onclick.includes("'board'");
+    const staffPages    = isFreezer || isEod || isIngredients || isOpening || isDoughTimer || isStaffBoard || isBoard;
     if (isOwner) {
       btn.style.display = '';
-    } else if (isBarista) {
-      btn.style.display = (isFreezer || isEod || isIngredients || isOpening) ? '' : 'none';
-    } else if (isBOH) {
-      btn.style.display = (isFreezer || isEod || isIngredients || isOpening) ? '' : 'none';
+    } else if (isBarista || isBOH) {
+      btn.style.display = staffPages ? '' : 'none';
     } else {
       btn.style.display = 'none';
     }
@@ -12257,16 +12259,17 @@ function dtStartClock() {
       const totalEl = document.getElementById('dt-total-elapsed-' + b.id);
       if (stepEl && log) {
         const elapsed = (now - new Date(log.startedAt)) / 1000;
+        const scheme  = DT_BATCH_COLORS[(b.colorIdx ?? 0) % DT_BATCH_COLORS.length];
         if (step.type === 'wait') {
           const left = Math.max(0, step.duration * 60 - elapsed);
           stepEl.textContent = dtFmtMMSS(left);
-          stepEl.style.color = left < 60 ? '#ffcc44' : '#fff';
+          stepEl.style.color = left < 60 ? '#b87000' : scheme.done;
         } else {
           stepEl.textContent = dtFmtMMSS(elapsed);
-          stepEl.style.color = elapsed > step.duration * 60 ? '#ff8844' : '#fff';
+          stepEl.style.color = elapsed > step.duration * 60 ? '#cc3300' : '#111';
         }
       }
-      if (totalEl) totalEl.textContent = dtFmtHHMM((now - new Date(b.startedAt)) / 1000);
+      if (totalEl) { totalEl.textContent = dtFmtHHMM((now - new Date(b.startedAt)) / 1000); totalEl.style.color = '#111'; }
     });
   }, 1000);
 }
@@ -12359,35 +12362,35 @@ function renderDoughTimer() {
       return recipe && recipe.steps[b.currentStepIdx]?.type === 'active';
     });
     if (needsAction.length) {
-      alertEl.innerHTML = staggerHtml + `
-        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;
-          color:#cc3300;margin-bottom:10px">⚡ Action Required Now</div>
-        ${needsAction.map(b => {
+      alertEl.innerHTML = staggerHtml + needsAction.map(b => {
           const recipe = recipes.find(r => r.id === b.recipeId);
           const step   = recipe.steps[b.currentStepIdx];
           const log    = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
-          return `<div style="background:#111;color:#fff;border-radius:4px;padding:24px 28px;
-            margin-bottom:10px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          const scheme = DT_BATCH_COLORS[(b.colorIdx ?? 0) % DT_BATCH_COLORS.length];
+          return `<div style="background:#fff;border:3px solid #111;border-left:6px solid ${scheme.done};
+            border-radius:4px;padding:22px 24px;margin-bottom:10px;
+            display:flex;align-items:center;gap:24px;flex-wrap:wrap;min-height:76px;
+            touch-action:manipulation">
             <div style="flex:1;min-width:200px">
-              <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
-                color:rgba(255,255,255,0.55);margin-bottom:6px">${b.label}</div>
-              <div style="font-size:30px;font-weight:900;line-height:1.1">${step.name}</div>
-              <div style="font-size:15px;color:rgba(255,255,255,0.55);margin-top:8px">
+              <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+                color:#777;margin-bottom:6px">${b.label}</div>
+              <div style="font-size:28px;font-weight:900;line-height:1.1;color:#111">${step.name}</div>
+              <div style="font-size:14px;color:#888;margin-top:6px">
                 Step ${b.currentStepIdx+1} of ${recipe.steps.length} &nbsp;·&nbsp; ${step.duration} min &nbsp;·&nbsp; Started ${dtFmtTime(log?.startedAt)}</div>
             </div>
             <button onclick="dtCompleteStep('${b.id}')"
-              style="padding:22px 40px;background:#22a855;color:#fff;border:none;border-radius:4px;
-                     font-size:24px;font-weight:900;cursor:pointer;touch-action:manipulation;
-                     white-space:nowrap;flex-shrink:0;min-height:80px">✓ Done</button>
+              style="padding:20px 40px;background:#111;color:#fff;border:none;border-radius:4px;
+                     font-size:22px;font-weight:900;cursor:pointer;touch-action:manipulation;
+                     white-space:nowrap;flex-shrink:0;min-height:76px">✓ Done</button>
           </div>`;
-        }).join('')}`;
+        }).join('');
     } else if (active.length) {
       alertEl.innerHTML = staggerHtml + `<div style="background:#e8f5ee;border:3px solid #22a855;border-radius:4px;
-        padding:22px 28px;margin-bottom:20px;display:flex;align-items:center;gap:20px">
-        <span style="font-size:40px">⏱</span>
+        padding:22px 24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;min-height:76px">
+        <span style="font-size:36px">⏱</span>
         <div>
-          <div style="font-size:22px;font-weight:800;color:#1a6e3a">Timers running — nothing to do yet</div>
-          <div style="font-size:15px;color:#555;margin-top:4px">Next action will appear here automatically</div>
+          <div style="font-size:20px;font-weight:800;color:#1a6e3a">Timers running — nothing to do yet</div>
+          <div style="font-size:14px;color:#555;margin-top:4px">Next action will appear here automatically</div>
         </div>
       </div>`;
     } else {
@@ -12461,29 +12464,30 @@ function renderDoughTimer() {
       const finishDisplay = finish ? dtFmtTime(finish.toISOString()) : '—';
       const finishRemaining = finish ? dtFmtHHMM((finish.getTime() - now) / 1000) : '';
       const stepColor = step.type === 'wait'
-        ? (step.duration * 60 - stepSecs < 60 ? '#ffcc44' : '#fff')
-        : (stepSecs > step.duration * 60 ? '#ff8844' : '#fff');
+        ? (step.duration * 60 - stepSecs < 60 ? '#b87000' : scheme.done)
+        : (stepSecs > step.duration * 60 ? '#cc3300' : '#111');
       timerRow = `
-        <div style="display:flex;gap:0;background:rgba(0,0,0,0.25);border-radius:4px;overflow:hidden;margin-top:14px">
-          <div style="flex:1;padding:12px 16px;border-right:1px solid rgba(255,255,255,0.1)">
+        <div style="display:flex;gap:0;background:#fff;border:2px solid ${scheme.border};border-radius:4px;
+          overflow:hidden;margin-top:12px">
+          <div style="flex:1;padding:11px 14px;border-right:1px solid #eee">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:rgba(255,255,255,0.4);margin-bottom:4px">Stage</div>
+              color:#999;margin-bottom:3px">Stage</div>
             <div id="dt-step-clock-${batch.id}"
-              style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:${stepColor}">${stepDisplay}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px">${stepLabel}</div>
+              style="font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:${stepColor}">${stepDisplay}</div>
+            <div style="font-size:10px;color:#aaa;margin-top:3px">${stepLabel}</div>
           </div>
-          <div style="flex:1;padding:12px 16px;border-right:1px solid rgba(255,255,255,0.1)">
+          <div style="flex:1;padding:11px 14px;border-right:1px solid #eee">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:rgba(255,255,255,0.4);margin-bottom:4px">Total</div>
+              color:#999;margin-bottom:3px">Total</div>
             <div id="dt-total-elapsed-${batch.id}"
-              style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1">${totalDisplay}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px">since ${dtFmtTime(batch.startedAt)}</div>
+              style="font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:#111">${totalDisplay}</div>
+            <div style="font-size:10px;color:#aaa;margin-top:3px">since ${dtFmtTime(batch.startedAt)}</div>
           </div>
-          <div style="flex:1;padding:12px 16px">
+          <div style="flex:1;padding:11px 14px">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:rgba(255,255,255,0.4);margin-bottom:4px">Est. Finish</div>
-            <div style="font-size:26px;font-weight:900;line-height:1">${finishDisplay}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px">${finishRemaining} remaining</div>
+              color:#999;margin-bottom:3px">Est. Finish</div>
+            <div style="font-size:24px;font-weight:900;line-height:1;color:#111">${finishDisplay}</div>
+            <div style="font-size:10px;color:#aaa;margin-top:3px">${finishRemaining} remaining</div>
           </div>
         </div>`;
     } else {
@@ -12491,37 +12495,47 @@ function renderDoughTimer() {
         ? (new Date(batch.completedAt) - new Date(batch.startedAt)) / 1000
         : (now - new Date(batch.startedAt)) / 1000;
       timerRow = `
-        <div style="display:flex;gap:0;background:rgba(0,0,0,0.15);border-radius:4px;overflow:hidden;margin-top:14px">
-          <div style="flex:1;padding:10px 16px;border-right:1px solid rgba(255,255,255,0.1)">
+        <div style="display:flex;gap:0;background:#fff;border:2px solid #ddd;border-radius:4px;
+          overflow:hidden;margin-top:12px">
+          <div style="flex:1;padding:10px 14px;border-right:1px solid #eee">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:rgba(255,255,255,0.4);margin-bottom:3px">Started</div>
-            <div style="font-size:18px;font-weight:800">${dtFmtTime(batch.startedAt)}</div>
+              color:#999;margin-bottom:3px">Started</div>
+            <div style="font-size:18px;font-weight:800;color:#555">${dtFmtTime(batch.startedAt)}</div>
           </div>
-          <div style="flex:1;padding:10px 16px;border-right:1px solid rgba(255,255,255,0.1)">
+          <div style="flex:1;padding:10px 14px;border-right:1px solid #eee">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:rgba(255,255,255,0.4);margin-bottom:3px">Total Time</div>
-            <div style="font-size:18px;font-weight:800">${dtFmtHHMM(totalSecs)}</div>
+              color:#999;margin-bottom:3px">Total Time</div>
+            <div style="font-size:18px;font-weight:800;color:#555">${dtFmtHHMM(totalSecs)}</div>
           </div>
-          <div style="flex:1;padding:10px 16px">
+          <div style="flex:1;padding:10px 14px">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:rgba(255,255,255,0.4);margin-bottom:3px">Finished</div>
-            <div style="font-size:18px;font-weight:800">${batch.completedAt ? dtFmtTime(batch.completedAt) : 'Abandoned'}</div>
+              color:#999;margin-bottom:3px">Finished</div>
+            <div style="font-size:18px;font-weight:800;color:#555">${batch.completedAt ? dtFmtTime(batch.completedAt) : 'Abandoned'}</div>
           </div>
         </div>`;
     }
 
-    const stepNum = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length} — ${recipe.steps[batch.currentStepIdx]?.name}` : (batch.status === 'complete' ? '✓ Complete' : 'Abandoned');
+    const stepNum = isActive
+      ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length} — ${recipe.steps[batch.currentStepIdx]?.name}`
+      : (batch.status === 'complete' ? '✓ Complete' : 'Abandoned');
+    const statusBadge = !isActive
+      ? `<span style="padding:5px 12px;border-radius:4px;font-size:12px;font-weight:800;
+           background:${batch.status==='complete'?'#e8f5ee':'#f5f5f5'};
+           color:${batch.status==='complete'?'#1a6e3a':'#999'};border:2px solid ${batch.status==='complete'?'#22a855':'#ccc'}">
+           ${batch.status==='complete'?'✓ Done':'Abandoned'}</span>` : '';
 
-    return `<div style="background:#fff;border:3px solid ${bdr};border-radius:4px;margin-bottom:16px;overflow:hidden">
-      <div style="background:${hdr};color:#fff;padding:18px 22px">
-        <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+    return `<div style="background:#fff;border:3px solid ${bdr};border-left:6px solid ${isActive?scheme.done:'#ccc'};
+      border-radius:4px;margin-bottom:16px;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:2px solid #eee;background:var(--surface2,#f2f2f2)">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="flex:1">
-            <div style="font-size:22px;font-weight:900;line-height:1.1">${batch.label}</div>
-            <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:5px">${stepNum}</div>
+            <div style="font-size:21px;font-weight:900;color:#111;line-height:1.1">${batch.label}</div>
+            <div style="font-size:13px;color:#777;margin-top:4px">${stepNum}</div>
           </div>
+          ${statusBadge}
           ${isActive ? `<button onclick="dtAbandonBatch('${batch.id}')"
-            style="padding:10px 18px;background:transparent;border:2px solid rgba(255,255,255,0.25);
-              border-radius:4px;color:rgba(255,255,255,0.55);font-size:13px;cursor:pointer;flex-shrink:0">Abandon</button>` : ''}
+            style="padding:8px 16px;background:#fff;border:2px solid #ccc;
+              border-radius:4px;color:#999;font-size:13px;cursor:pointer;flex-shrink:0">Abandon</button>` : ''}
         </div>
         ${timerRow}
       </div>
