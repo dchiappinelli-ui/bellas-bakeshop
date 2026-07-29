@@ -749,6 +749,15 @@
   </div>
 </div>
 
+<!-- ══════════════ AUTH GATE ══════════════ -->
+<!-- Covers the entire app when no one is logged in. z-index below the login modal (99999) but above all pages. -->
+<div id="app-gate" style="display:none;position:fixed;inset:0;z-index:9998;
+  background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-size:36px">🥐</div>
+  <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--accent)">Bella's Bakeshop</div>
+  <div style="font-size:13px;color:var(--muted)">Please sign in to continue</div>
+</div>
+
 <!-- ══════════════ LOGIN MODAL ══════════════ -->
 <div id="auth-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,17,22,0.92);
      align-items:center;justify-content:center;flex-direction:column">
@@ -2098,6 +2107,7 @@
       <div id="ing-autosave-ind" style="font-size:12px;color:var(--muted);opacity:0;transition:opacity 0.4s">✓ Saved</div>
       <button onclick="ingAddRow()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">+ Add Item</button>
       <button onclick="ingGenerateReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">📄 Report</button>
+      <button id="ing-submit-btn" onclick="ingSubmit()" style="background:#4a9c6e;color:#fff;border:none;border-radius:4px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">✓ Mark Complete</button>
     </div>
   </div>
 
@@ -3254,6 +3264,62 @@ function deleteRecipe(id) {
   renderRecipes();
 }
 
+function duplicateRecipe(id) {
+  const src = recipes.find(r => r.id === id);
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id    = Date.now();
+  copy.name  = src.name + ' (Copy)';
+  copy.stages = copy.stages.map(s => ({ ...s, id: Date.now() + Math.random() }));
+  recipes.push(copy);
+  save();
+  renderRecipes();
+  // Auto-open the new recipe and focus its name field so baker can rename immediately
+  setTimeout(() => {
+    toggleRecipe(copy.id);
+    const nameInput = document.querySelector(`#recipe-body-${copy.id} input[type="text"]`);
+    if (nameInput) { nameInput.focus(); nameInput.select(); }
+  }, 50);
+}
+
+function archiveRecipe(id) {
+  const r = recipes.find(r => r.id === id);
+  if (!r) return;
+  r.active = r.active === false ? true : false;
+  save();
+  renderRecipes();
+}
+
+function sendRecipeToDoughTimer(id) {
+  const r = recipes.find(r => r.id === id);
+  if (!r) return;
+  if (!r.stages.length) { alert('This recipe has no stages yet.'); return; }
+  const steps = r.stages.map(s => ({
+    name: s.name,
+    duration: s.activeMins + s.waitMins,
+    type: s.waitMins > 0 && s.activeMins === 0 ? 'wait' : 'active',
+    day: s.day || 1
+  }));
+  const batch = {
+    id: 'dt_' + Date.now(),
+    recipeId: r.id,
+    recipeName: r.name,
+    label: r.name,
+    steps,
+    currentStepIdx: 0,
+    stepStartMs: Date.now(),
+    status: 'active',
+    startedAt: Date.now()
+  };
+  let batches = JSON.parse(localStorage.getItem('bk_dt_batches') || '[]');
+  batches.push(batch);
+  localStorage.setItem('bk_dt_batches', JSON.stringify(batches));
+  showPageDirect('doughtimer');
+  renderDoughTimer();
+  dtStartTick();
+  alert(`"${r.name}" added to Dough Timer as a new batch.`);
+}
+
 function addStage(recipeId) {
   const r = recipes.find(r => r.id === recipeId);
   const name = document.getElementById(`stage-name-${recipeId}`).value.trim();
@@ -3335,25 +3401,46 @@ function renderRecipes() {
     return;
   }
 
-  const SKILLS = ['Head Baker','Baker','Bakery Assistant','Anyone'];
-  const CATS   = ['Bread','Pastry','Cookie / Bar','Bagel','Croissant','Savory','Other'];
+  const SKILLS   = ['Head Baker','Baker','Bakery Assistant','Anyone'];
+  const CAT_ORDER = ['Bread','Croissant','Bagel','Pastry','Cookie / Bar','Savory','Other'];
 
-  let html = '';
-  recipes.forEach(r => {
+  const active   = recipes.filter(r => r.active !== false);
+  const archived = recipes.filter(r => r.active === false);
+
+  // Group active by category
+  const byCategory = {};
+  CAT_ORDER.forEach(c => byCategory[c] = []);
+  active.forEach(r => {
+    const cat = CAT_ORDER.includes(r.category) ? r.category : 'Other';
+    byCategory[cat].push(r);
+  });
+
+  function recipeCard(r) {
     const totalActive = r.stages.reduce((s, x) => s + x.activeMins, 0);
     const totalWait   = r.stages.reduce((s, x) => s + x.waitMins, 0);
+    const totalMins   = totalActive + totalWait;
+    const multiDay    = r.stages.some(s => (s.day || 1) > 1);
+    const maxDay      = r.stages.reduce((m, s) => Math.max(m, s.day || 1), 1);
+    const totalLabel  = multiDay
+      ? `${maxDay}-day · ${totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60||'')+(totalMins%60?'m':'') : totalMins+'m'} total`
+      : (totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60 ? totalMins%60+'m' : '') + ' total' : totalMins+'m total');
+    const isArchived  = r.active === false;
+    const CATS        = ['Bread','Pastry','Cookie / Bar','Bagel','Croissant','Savory','Other'];
 
-    html += `
-    <div class="recipe-card">
+    return `
+    <div class="recipe-card" style="${isArchived ? 'opacity:0.6' : ''}">
       <div class="recipe-card-header" onclick="toggleRecipe(${r.id})">
         <div style="flex:1">
           <div class="recipe-name">${r.name}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.category} · ${r.yield || '?'} ${r.notes ? '· '+r.notes : ''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.yield || '?'} ${r.notes ? '· '+r.notes : ''}</div>
         </div>
         <div class="recipe-meta">
           <span class="badge badge-stages">${r.stages.length} stage${r.stages.length !== 1 ? 's' : ''}</span>
           <span class="time-pill" id="r-active-${r.id}">${totalActive}m active</span>
           ${totalWait > 0 ? `<span class="wait-pill" id="r-wait-${r.id}">${totalWait}m wait</span>` : `<span class="wait-pill" id="r-wait-${r.id}" style="display:none">0m wait</span>`}
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap">${totalLabel}</span>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();duplicateRecipe(${r.id})" title="Duplicate recipe" style="font-size:13px">⧉ Copy</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveRecipe(${r.id})" title="${isArchived ? 'Restore recipe' : 'Archive recipe'}" style="font-size:12px">${isArchived ? '↩ Restore' : '🗄 Archive'}</button>
           <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRecipe(${r.id})">✕</button>
         </div>
       </div>
@@ -3361,7 +3448,13 @@ function renderRecipes() {
 
         <!-- Recipe-level editable fields -->
         <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-          <div class="section-label" style="margin-bottom:8px">Recipe Details</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+            <div class="section-label">Recipe Details</div>
+            <button onclick="sendRecipeToDoughTimer(${r.id})"
+              style="background:#1a3a8a;color:#fff;border:none;border-radius:4px;
+                padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+              ⏱ Send to Dough Timer</button>
+          </div>
           <div class="form-row">
             <div class="form-group" style="flex:2">
               <label>Name</label>
@@ -3394,7 +3487,7 @@ function renderRecipes() {
                 onchange="updateRecipe(${r.id},'levainGrams',parseInt(this.value)||0)" style="width:90px">
             </div>
             <div class="form-group" style="min-width:110px">
-              <label title="Mixer/oven holds this many batches per run. 0 = no limit. E.g. 3 for croissant dough — 4 batches becomes 2 runs of 2.">Max batches/run</label>
+              <label title="Mixer/oven holds this many batches per run. 0 = no limit.">Max batches/run</label>
               <input type="number" min="0" step="1" value="${r.batchCapacity || 0}" placeholder="0 = unlimited"
                 onchange="updateRecipe(${r.id},'batchCapacity',parseInt(this.value)||0)" style="width:80px">
             </div>
@@ -3404,72 +3497,68 @@ function renderRecipes() {
                 onchange="updateRecipe(${r.id},'notes',this.value)">
             </div>
           </div>
-        </div>
+        </div>`
+    + recipeStagesHtml(r, SKILLS);
+  }
 
-        <!-- Stages — inline editable, grouped by Day -->
+  function recipeStagesHtml(r, SKILLS) {
+    const byDay = {};
+    r.stages.forEach((s, i) => {
+      const d = s.day || 1;
+      if (!byDay[d]) byDay[d] = [];
+      byDay[d].push({ ...s, _origIndex: i });
+    });
+    const dayKeys = Object.keys(byDay).map(Number).sort((a, b) => a - b);
+    return `
         <div class="stages-list">
           ${r.stages.length === 0 ? '<div style="color:var(--muted);font-size:12px;padding:8px 0">No stages yet — add below</div>' : ''}
-          ${(() => {
-            // Group stages by day (default 1 for legacy stages without a day field)
-            const byDay = {};
-            r.stages.forEach((s, i) => {
-              const d = s.day || 1;
-              if (!byDay[d]) byDay[d] = [];
-              byDay[d].push({ ...s, _origIndex: i });
-            });
-            const dayKeys = Object.keys(byDay).map(Number).sort((a, b) => a - b);
-            return dayKeys.map(dayNum => `
-              <div style="margin:14px 0 8px;display:flex;align-items:center;gap:8px">
-                <div style="font-weight:700;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.6px">Day ${dayNum}</div>
-                <div style="flex:1;height:1px;background:var(--border)"></div>
-              </div>
-              ${byDay[dayNum].map(s => `
-                <div style="background:var(--surface2);border-radius:5px;padding:10px 12px;margin-bottom:8px">
-                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                    <span class="stage-num">${s._origIndex + 1}</span>
-                    <input type="text" value="${s.name.replace(/"/g,'&quot;')}"
-                      onchange="updateStage(${r.id},${s.id},'name',this.value)"
-                      style="flex:1;font-weight:600;font-size:13px">
-                    <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
+          ${dayKeys.map(dayNum => `
+            <div style="margin:14px 0 8px;display:flex;align-items:center;gap:8px">
+              <div style="font-weight:700;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.6px">Day ${dayNum}</div>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+            ${byDay[dayNum].map(s => `
+              <div style="background:var(--surface2);border-radius:5px;padding:10px 12px;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  <span class="stage-num">${s._origIndex + 1}</span>
+                  <input type="text" value="${s.name.replace(/"/g,'&quot;')}"
+                    onchange="updateStage(${r.id},${s.id},'name',this.value)"
+                    style="flex:1;font-weight:600;font-size:13px">
+                  <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
+                </div>
+                <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 1fr;gap:8px;align-items:end">
+                  <div class="form-group" style="margin:0">
+                    <label>Day</label>
+                    <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
+                      ${[1,2,3,4].map(d => `<option value="${d}" ${(s.day||1)===d?'selected':''}>${d}</option>`).join('')}
+                    </select>
                   </div>
-                  <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 1fr;gap:8px;align-items:end">
-                    <div class="form-group" style="margin:0">
-                      <label>Day</label>
-                      <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
-                        ${[1,2,3,4].map(d => `<option value="${d}" ${(s.day||1)===d?'selected':''}>${d}</option>`).join('')}
-                      </select>
-                    </div>
-                    <div class="form-group" style="margin:0">
-                      <label>Active (min)</label>
-                      <input type="number" min="0" value="${s.activeMins}"
-                        onchange="updateStage(${r.id},${s.id},'activeMins',this.value)"
-                        style="text-align:center">
-                    </div>
-                    <div class="form-group" style="margin:0">
-                      <label>Wait (min)</label>
-                      <input type="number" min="0" value="${s.waitMins}"
-                        onchange="updateStage(${r.id},${s.id},'waitMins',this.value)"
-                        style="text-align:center">
-                    </div>
-                    <div class="form-group" style="margin:0">
-                      <label>Who Can Do This</label>
-                      <select onchange="updateStage(${r.id},${s.id},'skill',this.value)">
-                        ${SKILLS.map(sk => `<option ${sk===s.skill?'selected':''}>${sk}</option>`).join('')}
-                      </select>
-                    </div>
-                    <div class="form-group" style="margin:0">
-                      <label>Stage Notes</label>
-                      <input type="text" value="${(s.notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."
-                        onchange="updateStage(${r.id},${s.id},'notes',this.value)">
-                    </div>
+                  <div class="form-group" style="margin:0">
+                    <label>Active (min)</label>
+                    <input type="number" min="0" value="${s.activeMins}"
+                      onchange="updateStage(${r.id},${s.id},'activeMins',this.value)" style="text-align:center">
+                  </div>
+                  <div class="form-group" style="margin:0">
+                    <label>Wait (min)</label>
+                    <input type="number" min="0" value="${s.waitMins}"
+                      onchange="updateStage(${r.id},${s.id},'waitMins',this.value)" style="text-align:center">
+                  </div>
+                  <div class="form-group" style="margin:0">
+                    <label>Who Can Do This</label>
+                    <select onchange="updateStage(${r.id},${s.id},'skill',this.value)">
+                      ${SKILLS.map(sk => `<option ${sk===s.skill?'selected':''}>${sk}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin:0">
+                    <label>Stage Notes</label>
+                    <input type="text" value="${(s.notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."
+                      onchange="updateStage(${r.id},${s.id},'notes',this.value)">
                   </div>
                 </div>
-              `).join('')}
-            `).join('');
-          })()}
+              </div>
+            `).join('')}
+          `).join('')}
         </div>
-
-        <!-- Add stage -->
         <div class="stage-add-form">
           <div class="section-label">Add Stage</div>
           <div class="form-row">
@@ -3508,7 +3597,32 @@ function renderRecipes() {
         </div>
       </div>
     </div>`;
+  }
+
+  // ── Render: grouped by category, archived at bottom ──────────────────────
+  let html = '';
+
+  CAT_ORDER.forEach(cat => {
+    const list = byCategory[cat];
+    if (!list.length) return;
+    html += `<div style="display:flex;align-items:center;gap:10px;margin:20px 0 10px">
+      <div style="font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;
+        color:var(--accent);white-space:nowrap">${cat}</div>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <div style="font-size:11px;color:var(--muted)">${list.length} recipe${list.length !== 1 ? 's' : ''}</div>
+    </div>`;
+    list.forEach(r => { html += recipeCard(r); });
   });
+
+  if (archived.length) {
+    html += `<div style="display:flex;align-items:center;gap:10px;margin:28px 0 10px">
+      <div style="font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;
+        color:var(--muted);white-space:nowrap">🗄 Archived</div>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <div style="font-size:11px;color:var(--muted)">${archived.length} recipe${archived.length !== 1 ? 's' : ''}</div>
+    </div>`;
+    archived.forEach(r => { html += recipeCard(r); });
+  }
 
   el.innerHTML = html;
 }
@@ -11441,7 +11555,9 @@ function authUpdateChip() {
   const chip = document.getElementById('auth-chip');
   const loginBtn = document.getElementById('auth-login-btn');
   const staffModeBtn = document.getElementById('staff-mode-btn');
+  const gate = document.getElementById('app-gate');
   if (session) {
+    if (gate) gate.style.display = 'none';
     chip.style.display = 'flex';
     if (loginBtn) loginBtn.style.display = 'none';
     if (staffModeBtn) staffModeBtn.style.display = 'none';
@@ -11451,6 +11567,7 @@ function authUpdateChip() {
     document.getElementById('auth-chip-name').textContent = session.name;
     document.getElementById('auth-chip-role').textContent = session.role;
   } else {
+    if (gate) gate.style.display = 'flex';
     chip.style.display = 'none';
     if (loginBtn) loginBtn.style.display = '';
     if (staffModeBtn) staffModeBtn.style.display = '';
@@ -11643,6 +11760,7 @@ function authPinConfirm() {
 function authLogout() {
   authClearSession();
   authUpdateChip();
+  authShowModal();
 }
 
 // ── PIN management (called from Staff page) ──────────────────
