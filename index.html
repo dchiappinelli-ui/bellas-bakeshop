@@ -99,14 +99,62 @@
 
   .nav-btn.active {
     background: var(--accent);
-    color: #fff;
+    color: #1a1209;
     font-weight: 700;
+  }
+
+  .nav-btn-foh.active {
+    background: #c87941;
+    color: #fff;
+  }
+
+  .nav-btn-bakery.active {
+    background: #5c3d1e;
+    color: #e8c99a;
+    border-color: #8b5e35;
   }
 
   .nav-btn:hover:not(.active) {
     color: var(--text);
     border-color: var(--border);
     background: var(--surface2);
+  }
+
+  .nav-btn-foh:not(.active) {
+    border-bottom: 2.5px solid rgba(200,121,65,0.45);
+  }
+
+  .nav-btn-bakery:not(.active) {
+    border-bottom: 2.5px solid rgba(139,94,53,0.5);
+  }
+
+  /* Section label chips in the nav */
+  .nav-sep {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin: 0 4px;
+    pointer-events: none;
+  }
+
+  #nav-sep-foh {
+    color: #c87941;
+    background: rgba(200,121,65,0.12);
+    border: 1px solid rgba(200,121,65,0.25);
+  }
+
+  #nav-sep-bakery {
+    color: #b5855a;
+    background: rgba(92,61,30,0.35);
+    border: 1px solid rgba(139,94,53,0.4);
   }
 
   .page { display: none; padding: 40px 48px; max-width: 1300px; margin: 0 auto; }
@@ -880,29 +928,31 @@
 </header>
 
 <div class="nav" id="main-nav">
-  <button class="nav-btn active" data-staff-visible="false" onclick="showPage('staff')">Staff</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('standing')">📋 Standing Tasks</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('weekly')">📅 Weekly Schedule</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('board')">🛫 Today's Board</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('channels')">🏪 Channels</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('orders')">📋 Orders</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('planner')">Daily Planner</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('timeline')">🗓 Timeline</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('schedule')">Schedule</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('inventory')">📦 Inventory</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('opening')">📋 Daily Checklists</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('ingredients')">🧂 Ingredients</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('prep')">🫙 Prep Items</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('doughtimer')">⏱ Dough Timer</button>
-  <button class="nav-btn" data-staff-visible="false" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Board</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
-  <button class="nav-btn" data-staff-visible="true" data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <button class="nav-btn" data-staff-visible="false" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
+  <button class="nav-btn active" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('staff')">Staff</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('recipes')">Recipe Library</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('standing')">📋 Standing Tasks</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('weekly')">📅 Weekly Schedule</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
+  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('board')">🛫 Today's Board</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('channels')">🏪 Channels</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('orders')">📋 Orders</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('planner')">Daily Planner</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('timeline')">🗓 Timeline</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('schedule')">Schedule</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('inventory')">📦 Inventory</button>
+  <span class="nav-sep" id="nav-sep-foh">☕ Front of House</span>
+  <button class="nav-btn nav-btn-foh" data-nav-area="foh" data-staff-visible="true"  onclick="showPage('opening')">☕ FOH Checklists</button>
+  <button class="nav-btn nav-btn-foh" data-nav-area="foh" data-staff-visible="true"  onclick="showPage('ingredients')">🧂 Ingredients</button>
+  <button class="nav-btn nav-btn-foh" data-nav-area="foh" data-staff-visible="true"  onclick="showPage('prep')">🫙 Prep Items</button>
+  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
+  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Board</button>
+  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
+  <span class="nav-sep" id="nav-sep-bakery">🍞 Bakery</span>
+  <button class="nav-btn nav-btn-bakery" data-nav-area="bakery" data-staff-visible="true"  onclick="showPage('doughtimer')">⏱ Dough Timer</button>
+  <button class="nav-btn nav-btn-bakery" data-nav-area="bakery" data-staff-visible="false" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
+  <button class="nav-btn nav-btn-bakery" data-nav-area="bakery" data-staff-visible="true" data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
+  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
 </div>
 
 <div id="staff-mode-banner" style="display:none;background:var(--accent);color:#1a1209;padding:10px 20px;text-align:center;font-weight:700;font-size:13px;align-items:center;justify-content:center;gap:14px">
@@ -2064,6 +2114,12 @@
 <!-- ======== CHECKLISTS PAGE (Opening / Closing / Baker Morning) ======== -->
 <div class="page staff-page" id="page-opening">
   <div id="ds-banner-opening" style="margin:-24px -28px 24px -28px"></div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+      color:#c87941;background:rgba(200,121,65,0.1);border:1px solid rgba(200,121,65,0.25);
+      border-radius:4px;padding:4px 12px;white-space:nowrap">☕ Front of House</div>
+    <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:26px;color:var(--text)">FOH Checklists</h2>
+  </div>
   <!-- Tab bar -->
   <div style="display:flex;gap:8px;margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:wrap">
     <button id="open-tab-opening" onclick="openSwitchTab('opening')"
@@ -11640,6 +11696,7 @@ function authApplyNav() {
   const isKitchen = isBOH && !isBarista;
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const onclick       = btn.getAttribute('onclick') || '';
+    const area          = btn.getAttribute('data-nav-area') || '';
     const isFreezer     = onclick.includes("'freezer'");
     const isEod         = onclick.includes("'eod'");
     const isIngredients = onclick.includes("'ingredients'");
@@ -11648,10 +11705,14 @@ function authApplyNav() {
     const isStaffBoard  = onclick.includes("'staffboard'");
     const isBoard       = onclick.includes("'board'");
     const isWeekPlan    = onclick.includes("'weekplan'");
-    // Pages visible to all BOH (assistant, barista, baker+)
-    const staffPages   = isFreezer || isEod || isIngredients || isOpening || isDoughTimer || isStaffBoard || isBoard;
-    // Pages visible to kitchen staff only (not baristas)
-    const kitchenPages = isWeekPlan;
+    const isCountSheet  = onclick.includes("'countsheet'");
+    const isFohArea     = area === 'foh';
+    const isBakeryArea  = area === 'bakery';
+    const isSharedArea  = area === 'shared';
+    // Pages visible to all staff (FOH + kitchen)
+    const staffPages = isFreezer || isEod || isIngredients || isOpening || isDoughTimer || isStaffBoard || isBoard || isCountSheet || isFohArea || isSharedArea;
+    // Pages visible to kitchen only (not baristas)
+    const kitchenPages = isWeekPlan || isBakeryArea;
     if (isOwner) {
       btn.style.display = '';
     } else if (isKitchen) {
@@ -11662,6 +11723,12 @@ function authApplyNav() {
       btn.style.display = 'none';
     }
   });
+
+  // Show/hide section separator labels
+  const sepFoh    = document.getElementById('nav-sep-foh');
+  const sepBakery = document.getElementById('nav-sep-bakery');
+  if (sepFoh)    sepFoh.style.display    = (isOwner || isBOH) ? '' : 'none';
+  if (sepBakery) sepBakery.style.display = (isOwner || isKitchen) ? '' : 'none';
 }
 
 // ── Modal ──────────────────────────────────────────────────
