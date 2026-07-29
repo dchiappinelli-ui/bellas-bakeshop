@@ -12520,7 +12520,7 @@ function dtStartBatch() {
   if (!recipe) return;
   const batches  = dtGetBatches();
   const active   = batches.filter(b => b.status === 'active');
-  const num      = batches.filter(b => b.recipeId === recipe.id).length + 1;
+  const num      = batches.filter(b => b.recipeId === recipe.id && b.status === 'active').length + 1;
   const colorIdx = active.length % DT_BATCH_COLORS.length;
   const now      = new Date().toISOString();
   batches.push({
@@ -12720,21 +12720,24 @@ function dtStartTick() {
       const elapsed = log ? (now - new Date(log.startedAt)) / 1000 : 0;
       const scheme  = DT_BATCH_COLORS[(b.colorIdx ?? 0) % DT_BATCH_COLORS.length];
       if (stepEl && log) {
+        const left = step.duration * 60 - elapsed;
+        const over = left < 0;
         if (step.type === 'wait') {
-          const left = Math.max(0, step.duration * 60 - elapsed);
-          stepEl.textContent = dtFmtMMSS(left);
+          stepEl.textContent = dtFmtMMSS(Math.max(0, left));
           stepEl.style.color = left < 60 ? '#b87000' : scheme.done;
         } else {
-          stepEl.textContent = dtFmtMMSS(elapsed);
-          stepEl.style.color = elapsed > step.duration * 60 ? '#cc3300' : '#111';
+          stepEl.textContent = over ? '+' + dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+          stepEl.style.color = over ? '#cc3300' : left < 5*60 ? '#b87000' : '#111';
         }
       }
       if (totalEl) { totalEl.textContent = dtFmtHHMM((now - new Date(b.startedAt)) / 1000); totalEl.style.color = '#111'; }
       // Also update the action alert clock if it's visible
       const actionEl = document.getElementById('dt-action-clock-' + b.id);
       if (actionEl && log) {
-        actionEl.textContent = dtFmtMMSS(elapsed);
-        actionEl.style.color = elapsed > step.duration * 60 ? '#cc3300' : '#111';
+        const aLeft = step.duration * 60 - elapsed;
+        const aOver = aLeft < 0;
+        actionEl.textContent = aOver ? '+' + dtFmtMMSS(-aLeft) : dtFmtMMSS(Math.max(0, aLeft));
+        actionEl.style.color = aOver ? '#cc3300' : aLeft < 5*60 ? '#b87000' : '#111';
       }
       // Update live Est. Finish and late badge
       const adjEl   = document.getElementById('dt-finish-adj-'   + b.id);
@@ -12837,10 +12840,11 @@ function renderDoughTimer() {
           const log    = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
           const scheme = DT_BATCH_COLORS[(b.colorIdx ?? 0) % DT_BATCH_COLORS.length];
           const nowMs   = Date.now();
-          const logStart = log?.startedAt ? new Date(log.startedAt).getTime() : nowMs;
-          const initSecs = Math.floor((nowMs - logStart) / 1000);
-          const overTime = initSecs > step.duration * 60;
-          const initColor = overTime ? '#cc3300' : '#111';
+          const logStart  = log?.startedAt ? new Date(log.startedAt).getTime() : nowMs;
+          const initSecs  = Math.floor((nowMs - logStart) / 1000);
+          const initLeft  = step.duration * 60 - initSecs;
+          const overTime  = initLeft < 0;
+          const initColor = overTime ? '#cc3300' : initLeft < 5*60 ? '#b87000' : '#111';
           return `<div style="background:#fffcf5;border:3px solid ${scheme.border};border-top:4px solid ${scheme.done};
             border-radius:4px;padding:22px 24px;margin-bottom:10px;
             display:flex;align-items:center;gap:24px;flex-wrap:wrap;min-height:76px;
@@ -12853,9 +12857,9 @@ function renderDoughTimer() {
                 Step ${b.currentStepIdx+1} of ${recipe.steps.length} &nbsp;·&nbsp; target ${step.duration} min &nbsp;·&nbsp; started ${dtFmtTime(log?.startedAt)}</div>
             </div>
             <div style="text-align:center;flex-shrink:0;min-width:90px">
-              <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">On Step</div>
-              <div id="dt-action-clock-${b.id}" style="font-size:40px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:${initColor}">${dtFmtMMSS(initSecs)}</div>
-              <div style="font-size:11px;color:#bbb;margin-top:3px">/ ${dtFmtMMSS(step.duration*60)} target</div>
+              <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">${overTime ? '⚠ OVERDUE' : 'Remaining'}</div>
+              <div id="dt-action-clock-${b.id}" style="font-size:40px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:${initColor}">${overTime ? '+'+dtFmtMMSS(initSecs - step.duration*60) : dtFmtMMSS(Math.max(0,initLeft))}</div>
+              <div style="font-size:11px;color:#bbb;margin-top:3px">${step.duration} min target</div>
             </div>
             <button onclick="dtCompleteStep('${b.id}')"
               style="padding:20px 40px;background:#111;color:#fff;border:none;border-radius:4px;
@@ -12995,10 +12999,12 @@ function renderDoughTimer() {
       const step     = recipe.steps[batch.currentStepIdx];
       const log      = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
       const stepSecs = log ? (now - new Date(log.startedAt)) / 1000 : 0;
-      const stepDisplay = step.type === 'wait'
-        ? dtFmtMMSS(Math.max(0, step.duration * 60 - stepSecs))
-        : dtFmtMMSS(stepSecs);
-      const stepLabel   = step.type === 'wait' ? 'left in ' + step.name : 'in ' + step.name;
+      const stepLeft    = step.duration * 60 - stepSecs;
+      const stepOver    = stepLeft < 0;
+      const stepDisplay = stepOver
+        ? '+' + dtFmtMMSS(stepSecs - step.duration * 60)
+        : dtFmtMMSS(Math.max(0, stepLeft));
+      const stepLabel   = stepOver ? 'overdue on ' + step.name : 'left in ' + step.name;
       const totalDisplay = dtFmtHHMM((now - new Date(batch.startedAt)) / 1000);
       const totalDurMs   = recipe.steps.reduce((s, st) => s + st.duration * 60000, 0);
       const originalFinish = new Date(new Date(batch.startedAt).getTime() + totalDurMs);
@@ -13006,9 +13012,11 @@ function renderDoughTimer() {
       const lateMs   = adjustedFinish ? Math.max(0, adjustedFinish.getTime() - originalFinish.getTime()) : 0;
       const lateMins = Math.round(lateMs / 60000);
       const isLate   = lateMins > 0;
-      const stepColor = step.type === 'wait'
-        ? (step.duration * 60 - stepSecs < 60 ? '#b87000' : scheme.done)
-        : (stepSecs > step.duration * 60 ? '#cc3300' : '#111');
+      const stepColor = stepOver
+        ? '#cc3300'
+        : step.type === 'wait'
+          ? (stepLeft < 60 ? '#b87000' : scheme.done)
+          : (stepLeft < 5*60 ? '#b87000' : '#111');
       timerRow = `
         <div style="display:flex;gap:0;background:#fff;border:2px solid ${scheme.border};border-radius:4px;
           overflow:hidden;margin-top:12px">
