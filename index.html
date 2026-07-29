@@ -192,6 +192,35 @@
 
   select option { background: var(--surface2); }
 
+  /* ====== TABLET GLOBAL ====== */
+  /* Page content: use full available width, tighter padding */
+  .page { padding: 24px 28px; max-width: none; }
+
+  /* Nav: taller touch targets */
+  .nav { padding: 10px 16px; gap: 6px; }
+  .nav-btn { padding: 16px 22px; font-size: 14px; min-height: 52px; }
+
+  /* Buttons: large enough for gloved/doughy hands */
+  .btn { padding: 16px 24px; font-size: 16px; min-height: 52px; }
+  .btn-sm { padding: 12px 18px; font-size: 15px; min-height: 44px; }
+
+  /* Inputs / selects: bigger tap zone */
+  input, select, textarea { font-size: 17px; padding: 15px 14px; }
+
+  /* Header: more compact to reclaim vertical space */
+  header { padding: 12px 24px; }
+  header h1 { font-size: 22px; }
+  header span { font-size: 12px; }
+
+  /* Enforce minimum tap target on ALL inline-styled buttons in staff pages */
+  .staff-page button { min-height: 48px; }
+  .staff-page button[style*="font-size:13px"],
+  .staff-page button[style*="font-size: 13px"] { font-size: 15px !important; padding-top: 12px !important; padding-bottom: 12px !important; }
+  .staff-page button[style*="font-size:12px"],
+  .staff-page button[style*="font-size: 12px"] { font-size: 15px !important; padding-top: 12px !important; padding-bottom: 12px !important; }
+  .staff-page button[style*="font-size:10px"],
+  .staff-page button[style*="font-size: 10px"] { font-size: 14px !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+
   /* ====== STAFF PAGE TABLET MODE ====== */
   .staff-page { font-size: 19px; }
 
@@ -1591,7 +1620,7 @@
 
 <!-- ======== END OF DAY PAGE ======== -->
 <!-- ======== DOUGH / SANDWICH TIMER PAGE ======== -->
-<div class="page staff-page" id="page-doughtimer" style="max-width:1000px;margin:0 auto">
+<div class="page staff-page" id="page-doughtimer">
   <h2>⏱ Station Timer</h2>
 
   <!-- Tab switcher -->
@@ -1779,7 +1808,7 @@
 </div>
 
 <!-- ======== BAKE BOARD PAGE ======== -->
-<div class="page staff-page" id="page-weekplan" style="max-width:1400px;margin:0 auto;padding-bottom:60px">
+<div class="page staff-page" id="page-weekplan" style="padding-bottom:60px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
     <div>
       <h2 style="margin-bottom:4px">🗓 Bake Board</h2>
@@ -1880,7 +1909,7 @@
 </div>
 
 <!-- ======== STAFF BOARD PAGE ======== -->
-<div class="page staff-page" id="page-staffboard" style="max-width:800px;margin:0 auto">
+<div class="page staff-page" id="page-staffboard">
   <h2>💬 Staff Board</h2>
   <p class="subtitle">Messages, shift notes, and morning tasks — visible to everyone</p>
 
@@ -1904,7 +1933,7 @@
 
 <div class="page staff-page" id="page-eod">
   <div id="ds-banner-eod" style="margin-bottom:0"></div>
-  <div style="max-width:960px;margin:0 auto;padding:20px 16px">
+  <div style="padding:4px 0">
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -2007,8 +2036,8 @@
 </div>
 
 <!-- ======== CHECKLISTS PAGE (Opening / Closing / Baker Morning) ======== -->
-<div class="page staff-page" id="page-opening" style="padding:16px;max-width:700px;margin:0 auto">
-  <div id="ds-banner-opening" style="margin:-16px -16px 20px -16px"></div>
+<div class="page staff-page" id="page-opening">
+  <div id="ds-banner-opening" style="margin:-24px -28px 24px -28px"></div>
   <!-- Tab bar -->
   <div style="display:flex;gap:8px;margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:wrap">
     <button id="open-tab-opening" onclick="openSwitchTab('opening')"
@@ -2060,7 +2089,7 @@
     <div id="open-progress-bar" style="height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width 0.3s"></div>
   </div>
 
-  <div id="open-checklist" style="display:flex;flex-direction:column;gap:0"></div>
+  <div id="open-checklist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:0 28px;align-items:start"></div>
   <div id="open-last-complete" style="text-align:center;font-size:11px;color:var(--muted);margin-top:24px"></div>
 
   <!-- Side Tasks panel (shown when side tab active) -->
@@ -2089,12 +2118,12 @@
         <button onclick="document.getElementById('side-add-row').style.display='none'" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:10px 14px;font-size:13px;cursor:pointer">Cancel</button>
       </div>
     </div>
-    <div id="side-task-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
+    <div id="side-task-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
   </div>
 </div>
 
-<div class="page staff-page" id="page-ingredients" style="padding:16px;max-width:800px;margin:0 auto">
-  <div id="ds-banner-ingredients" style="margin:-16px -16px 20px -16px"></div>
+<div class="page staff-page" id="page-ingredients">
+  <div id="ds-banner-ingredients" style="margin:-24px -28px 24px -28px"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
     <div>
       <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">🥪 FOH Ingredients</h2>
@@ -2132,13 +2161,13 @@
     </div>
   </div>
 
-  <div id="ing-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px"></div>
+  <div id="ing-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
   <div id="ing-last-submit" style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px"></div>
 </div>
 
 <!-- ======== FREEZER STOCK PAGE ======== -->
-<div class="page staff-page" id="page-freezer" style="padding:16px;max-width:800px;margin:0 auto">
-  <div id="ds-banner-freezer" style="margin:-16px -16px 20px -16px"></div>
+<div class="page staff-page" id="page-freezer">
+  <div id="ds-banner-freezer" style="margin:-24px -28px 24px -28px"></div>
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <div>
@@ -2166,7 +2195,7 @@
        scrollbar-width:none;margin-bottom:20px;padding-bottom:2px"></div>
 
   <!-- Items for selected freezer -->
-  <div id="freezer-items-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  <div id="freezer-items-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;align-items:start"></div>
 
   <!-- Add item row -->
   <div id="freezer-add-row" style="display:none;margin-top:16px;background:var(--surface2);
@@ -2289,7 +2318,7 @@
 </div>
 
 <!-- ======== YIELD RULES PAGE ======== -->
-<div class="page" id="page-yield" style="max-width:860px;margin:0 auto;padding:24px 16px">
+<div class="page" id="page-yield">
 
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
     <div>
@@ -11944,8 +11973,8 @@ function freezerRenderItems(canEdit) {
   let html = '';
   groupOrder.forEach(cat => {
     if (cat) {
-      html += `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;
-        color:var(--muted);margin:16px 0 8px;padding-left:2px">${cat}</div>`;
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;
+        color:var(--muted);margin:16px 0 8px;padding-left:2px;grid-column:1/-1">${cat}</div>`;
     }
     html += groups[cat].map(name => freezerItemCard(freezer.id, name, data, canEdit)).join('');
   });
@@ -11990,8 +12019,8 @@ function freezerItemCard(freezerId, name, data, canEdit) {
                padding:14px 16px;display:flex;align-items:center;gap:12px">
     <div style="width:10px;height:10px;border-radius:50%;background:${statusColor};flex-shrink:0"></div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:15px;font-weight:600;color:var(--text)">${name}</div>
-      <div style="margin-top:2px">${statusDot}${updatedLine}</div>
+      <div style="font-size:17px;font-weight:700;color:var(--text)">${name}</div>
+      <div style="margin-top:4px">${statusDot}${updatedLine}</div>
     </div>
     ${counter}
     ${removeBtn}
@@ -14753,34 +14782,32 @@ function ingRenderGrid(defs, status) {
       const safe   = name.replace(/'/g,"\\'");
       const fresh  = ingFreshnessLabel(entry.receivedDate);
       const updLine = entry.updatedBy
-        ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">
+        ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">
              Updated by ${entry.updatedBy} · ${new Date(entry.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>`
         : '';
       const freshLine = fresh
-        ? `<div style="font-size:10px;color:${fresh.color};margin-top:1px">${fresh.text}</div>`
+        ? `<div style="font-size:12px;color:${fresh.color};margin-top:2px">${fresh.text}</div>`
         : '';
       const freshBtnLabel = entry.receivedDate ? 'Update received' : 'Mark received';
-      // Desktop: click opens picker if date set, else marks today. Right-click always opens picker.
-      // Mobile: tap marks today (if no date), long press opens picker.
       const freshBtn = `<button
         onclick="event.stopPropagation();${entry.receivedDate ? `ingShowDatePicker('${safe}',this)` : `ingMarkReceived('${safe}')`}"
         oncontextmenu="event.preventDefault();event.stopPropagation();ingShowDatePicker('${safe}',this)"
         ontouchstart="event.stopPropagation();ingReceivedTouchStart(event,'${safe}')"
         ontouchend="event.stopPropagation();ingReceivedTouchEnd(event)"
         ontouchmove="ingReceivedTouchEnd(event)"
-        style="margin-top:6px;background:none;border:1px solid var(--border);border-radius:6px;
-               color:var(--muted);font-size:10px;padding:3px 8px;cursor:pointer;line-height:1.4;
-               touch-action:manipulation;-webkit-user-select:none;user-select:none"
+        style="margin-top:10px;background:none;border:1.5px solid var(--border);border-radius:6px;
+               color:var(--muted);font-size:13px;padding:8px 14px;cursor:pointer;line-height:1.4;
+               touch-action:manipulation;-webkit-user-select:none;user-select:none;min-height:40px"
         >📅 ${freshBtnLabel}</button>`;
       return `<div onclick="ingToggle('${safe}')"
-        style="background:${ING_BG[s]};border:1.5px solid ${ING_BORDER[s]};border-radius:4px;
-               padding:14px 12px;cursor:pointer;user-select:none;-webkit-user-select:none;
-               display:flex;flex-direction:column;touch-action:manipulation"
+        style="background:${ING_BG[s]};border:2px solid ${ING_BORDER[s]};border-radius:6px;
+               padding:18px 16px;cursor:pointer;user-select:none;-webkit-user-select:none;
+               display:flex;flex-direction:column;touch-action:manipulation;min-height:110px"
         onmousedown="this.style.opacity=0.7" onmouseup="this.style.opacity=1" ontouchend="this.style.opacity=1">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${name}</div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:16px;color:${ING_COLOR[s]}">●</span>
-          <span style="font-size:12px;font-weight:600;color:${ING_COLOR[s]}">${ING_LABEL[s]}</span>
+        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px">${name}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px;color:${ING_COLOR[s]}">●</span>
+          <span style="font-size:15px;font-weight:700;color:${ING_COLOR[s]}">${ING_LABEL[s]}</span>
         </div>
         ${updLine}${freshLine}${freshBtn}
       </div>`;
