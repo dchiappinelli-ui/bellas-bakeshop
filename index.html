@@ -99,62 +99,14 @@
 
   .nav-btn.active {
     background: var(--accent);
-    color: #1a1209;
-    font-weight: 700;
-  }
-
-  .nav-btn-foh.active {
-    background: #c87941;
     color: #fff;
-  }
-
-  .nav-btn-bakery.active {
-    background: #5c3d1e;
-    color: #e8c99a;
-    border-color: #8b5e35;
+    font-weight: 700;
   }
 
   .nav-btn:hover:not(.active) {
     color: var(--text);
     border-color: var(--border);
     background: var(--surface2);
-  }
-
-  .nav-btn-foh:not(.active) {
-    border-bottom: 2.5px solid rgba(200,121,65,0.45);
-  }
-
-  .nav-btn-bakery:not(.active) {
-    border-bottom: 2.5px solid rgba(139,94,53,0.5);
-  }
-
-  /* Section label chips in the nav */
-  .nav-sep {
-    display: inline-flex;
-    align-items: center;
-    align-self: center;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin: 0 4px;
-    pointer-events: none;
-  }
-
-  #nav-sep-foh {
-    color: #c87941;
-    background: rgba(200,121,65,0.12);
-    border: 1px solid rgba(200,121,65,0.25);
-  }
-
-  #nav-sep-bakery {
-    color: #b5855a;
-    background: rgba(92,61,30,0.35);
-    border: 1px solid rgba(139,94,53,0.4);
   }
 
   .page { display: none; padding: 40px 48px; max-width: 1300px; margin: 0 auto; }
@@ -928,31 +880,33 @@
 </header>
 
 <div class="nav" id="main-nav">
-  <button class="nav-btn active" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('staff')">Staff</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('standing')">📋 Standing Tasks</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('weekly')">📅 Weekly Schedule</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
-  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('board')">🛫 Today's Board</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('channels')">🏪 Channels</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('orders')">📋 Orders</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('planner')">Daily Planner</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('timeline')">🗓 Timeline</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('schedule')">Schedule</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('inventory')">📦 Inventory</button>
-  <span class="nav-sep" id="nav-sep-foh">☕ Front of House</span>
-  <button class="nav-btn nav-btn-foh" data-nav-area="foh" data-staff-visible="true"  onclick="showPage('opening')">☕ FOH Checklists</button>
-  <button class="nav-btn nav-btn-foh" data-nav-area="foh" data-staff-visible="true"  onclick="showPage('ingredients')">🧂 Ingredients</button>
-  <button class="nav-btn nav-btn-foh" data-nav-area="foh" data-staff-visible="true"  onclick="showPage('prep')">🫙 Prep Items</button>
-  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
-  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Board</button>
-  <button class="nav-btn" data-nav-area="shared" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
-  <span class="nav-sep" id="nav-sep-bakery">🍞 Bakery</span>
-  <button class="nav-btn nav-btn-bakery" data-nav-area="bakery" data-staff-visible="true"  onclick="showPage('doughtimer')">⏱ Dough Timer</button>
-  <button class="nav-btn nav-btn-bakery" data-nav-area="bakery" data-staff-visible="false" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
-  <button class="nav-btn nav-btn-bakery" data-nav-area="bakery" data-staff-visible="true" data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <button class="nav-btn" data-nav-area="mgmt" data-staff-visible="false" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
+  <!-- Bakery / BOH — left -->
+  <button class="nav-btn active" data-staff-visible="false" onclick="showPage('staff')">Staff</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('recipes')">Recipe Library</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('standing')">📋 Standing Tasks</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('weekly')">📅 Weekly Schedule</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('planner')">Daily Planner</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('timeline')">🗓 Timeline</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('schedule')">Schedule</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('inventory')">📦 Inventory</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('yield')">♻️ Yield Rules</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('doughtimer')">⏱ Dough Timer</button>
+  <button class="nav-btn" data-staff-visible="false" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
+  <button class="nav-btn" data-staff-visible="true"  data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('prep')">🫙 Prep Items</button>
+  <!-- Shared — middle -->
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('board')">🛫 Today's Board</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Board</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
+  <!-- FOH — right -->
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('channels')">🏪 Channels</button>
+  <button class="nav-btn" data-staff-visible="false" onclick="showPage('orders')">📋 Orders</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('opening')">FOH Checklists</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('ingredients')">🧂 Ingredients</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('stationguide')">📋 Station Guide</button>
 </div>
 
 <div id="staff-mode-banner" style="display:none;background:var(--accent);color:#1a1209;padding:10px 20px;text-align:center;font-weight:700;font-size:13px;align-items:center;justify-content:center;gap:14px">
@@ -1695,19 +1649,9 @@
 </div>
 
 <!-- ======== END OF DAY PAGE ======== -->
-<!-- ======== DOUGH / SANDWICH TIMER PAGE ======== -->
+<!-- ======== DOUGH TIMER PAGE ======== -->
 <div class="page staff-page" id="page-doughtimer">
-  <h2>⏱ Station Timer</h2>
-
-  <!-- Tab switcher -->
-  <div style="display:flex;gap:0;margin-bottom:32px;border:3px solid #111;border-radius:4px;overflow:hidden;flex-wrap:nowrap">
-    <button id="dt-tab-dough" onclick="dtSwitchTab('dough')"
-      style="flex:1;padding:18px 10px;font-size:18px;font-weight:800;border:none;cursor:pointer;
-             touch-action:manipulation;background:#111;color:#fff;min-height:64px">🥖 Dough</button>
-    <button id="dt-tab-sandwich" onclick="dtSwitchTab('sandwich')"
-      style="flex:1;padding:18px 10px;font-size:18px;font-weight:800;border:none;cursor:pointer;
-             touch-action:manipulation;background:#fff;color:#555;border-left:3px solid #111;min-height:64px">🥪 Sandwich</button>
-  </div>
+  <h2>⏱ Dough Timer</h2>
 
   <!-- Dough panel -->
   <div id="dt-panel-dough">
@@ -1727,38 +1671,6 @@
     <div id="dt-matrix"></div>
   </div>
 
-  <!-- Sandwich panel -->
-  <div id="dt-panel-sandwich" style="display:none">
-    <p class="subtitle" style="margin-top:-16px;margin-bottom:24px">Step-by-step timed guide — stay on pace</p>
-    <div id="sw-recipe-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px"></div>
-    <div id="sw-active"></div>
-  </div>
-</div>
-
-<!-- Sandwich Timer Recipe Editor Modal -->
-<div id="sw-editor-modal" style="display:none;position:fixed;inset:0;z-index:99991;
-  background:rgba(0,0,0,0.65);align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px">
-  <div style="background:#fff;border-radius:4px;width:100%;max-width:700px;margin:auto;
-              box-shadow:0 20px 60px rgba(0,0,0,0.4)">
-    <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:22px;font-weight:800">Edit Sandwich Steps</div>
-      <button onclick="swHideEditor()" style="background:none;border:none;color:rgba(255,255,255,0.5);
-        font-size:26px;cursor:pointer;line-height:1">✕</button>
-    </div>
-    <div id="sw-editor-body" style="padding:28px"></div>
-    <div style="padding:18px 28px;border-top:2px solid #eee;display:flex;
-      justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <button onclick="swEditorDelete()" style="padding:13px 22px;border:2px solid #e03030;
-        border-radius:4px;background:#fff;color:#e03030;font-size:15px;font-weight:700;cursor:pointer">
-        🗑 Delete</button>
-      <div style="display:flex;gap:10px">
-        <button onclick="swHideEditor()" style="padding:13px 22px;border:2px solid #ccc;border-radius:4px;
-          background:#fff;color:#777;font-size:15px;cursor:pointer">Cancel</button>
-        <button onclick="swEditorSave()" style="padding:13px 32px;background:#111;color:#fff;border:none;
-          border-radius:4px;font-size:17px;font-weight:800;cursor:pointer">✓ Save</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Dough Timer Alarm Overlay -->
@@ -2114,12 +2026,6 @@
 <!-- ======== CHECKLISTS PAGE (Opening / Closing / Baker Morning) ======== -->
 <div class="page staff-page" id="page-opening">
   <div id="ds-banner-opening" style="margin:-24px -28px 24px -28px"></div>
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-    <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
-      color:#c87941;background:rgba(200,121,65,0.1);border:1px solid rgba(200,121,65,0.25);
-      border-radius:4px;padding:4px 12px;white-space:nowrap">☕ Front of House</div>
-    <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:26px;color:var(--text)">FOH Checklists</h2>
-  </div>
   <!-- Tab bar -->
   <div style="display:flex;gap:8px;margin-bottom:24px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:wrap">
     <button id="open-tab-opening" onclick="openSwitchTab('opening')"
@@ -2303,6 +2209,91 @@
   </div>
 
   <div id="freezer-last-submit" style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px"></div>
+</div>
+
+<!-- ======== FOH STATION GUIDE PAGE ======== -->
+<div class="page" id="page-stationguide">
+  <div id="ds-banner-stationguide" style="margin:-24px -28px 24px -28px"></div>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div>
+      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">📋 Station Guide</h2>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">Step-by-step procedures for drinks, sandwiches &amp; prepared items</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="sg-search" type="search" placeholder="Search…" oninput="sgRender()"
+        style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);
+               border-radius:4px;color:var(--text);font-size:14px;width:180px">
+      <button id="sg-add-btn" onclick="sgOpenEditor(null)"
+        style="display:none;background:var(--accent);color:#1a1209;border:none;border-radius:4px;
+               padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+    </div>
+  </div>
+  <!-- Category tabs -->
+  <div id="sg-cats" style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+       scrollbar-width:none;margin-bottom:20px;padding-bottom:2px;flex-wrap:nowrap"></div>
+  <!-- Card grid -->
+  <div id="sg-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px"></div>
+</div>
+
+<!-- Station Guide — Step-through Modal -->
+<div id="sg-modal" style="display:none;position:fixed;inset:0;z-index:9998;
+     background:var(--bg);flex-direction:column">
+  <!-- Header -->
+  <div style="background:var(--surface);border-bottom:2px solid var(--border);
+              padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div>
+      <div id="sg-modal-title" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--text)"></div>
+      <div id="sg-modal-note" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+    </div>
+    <button onclick="sgCloseModal()" style="background:none;border:none;color:var(--muted);font-size:28px;
+      cursor:pointer;padding:4px 8px;line-height:1;touch-action:manipulation">✕</button>
+  </div>
+  <!-- Step counter -->
+  <div id="sg-modal-counter" style="font-size:12px;color:var(--muted);text-align:center;
+       padding:14px 0 0;font-family:'DM Mono',monospace;flex-shrink:0"></div>
+  <!-- Step content -->
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;overflow:auto">
+    <div style="max-width:520px;width:100%;text-align:center">
+      <div id="sg-modal-icon" style="font-size:72px;line-height:1;margin-bottom:24px"></div>
+      <div id="sg-modal-step" style="font-size:22px;font-weight:600;color:var(--text);line-height:1.45"></div>
+    </div>
+  </div>
+  <!-- Navigation buttons -->
+  <div style="padding:20px 24px;border-top:1px solid var(--border);display:flex;gap:12px;
+       justify-content:center;flex-shrink:0">
+    <button id="sg-prev-btn" onclick="sgPrevStep()"
+      style="flex:1;max-width:160px;padding:20px;background:var(--surface2);color:var(--text);
+             border:1px solid var(--border);border-radius:4px;font-size:18px;font-weight:700;
+             cursor:pointer;touch-action:manipulation;min-height:64px">← Back</button>
+    <button id="sg-next-btn" onclick="sgNextStep()"
+      style="flex:1;max-width:280px;padding:20px;background:var(--accent);color:#1a1209;
+             border:none;border-radius:4px;font-size:18px;font-weight:800;
+             cursor:pointer;touch-action:manipulation;min-height:64px">Next →</button>
+  </div>
+</div>
+
+<!-- Station Guide — Recipe Editor Modal -->
+<div id="sg-editor-modal" style="display:none;position:fixed;inset:0;z-index:9999;
+     background:rgba(0,0,0,0.65);align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px">
+  <div style="background:var(--surface);border-radius:8px;width:100%;max-width:640px;margin:auto;
+              border:1px solid var(--border)">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">Edit Procedure</div>
+      <button onclick="sgCloseEditor()" style="background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer">✕</button>
+    </div>
+    <div id="sg-editor-body" style="padding:20px 24px"></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px">
+      <button onclick="sgEditorDelete()" id="sg-editor-delete-btn"
+        style="padding:10px 18px;border:1px solid #c04040;border-radius:4px;background:transparent;
+               color:#c04040;font-size:13px;font-weight:600;cursor:pointer">🗑 Delete</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="sgCloseEditor()" style="padding:10px 18px;border:1px solid var(--border);border-radius:4px;
+          background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+        <button onclick="sgEditorSave()" style="padding:10px 22px;background:var(--accent);color:#1a1209;border:none;
+          border-radius:4px;font-size:14px;font-weight:700;cursor:pointer">✓ Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ======== PRE-DEPLOY CHECKLIST MODAL ======== -->
@@ -3314,6 +3305,7 @@ function showPageDirect(page) {
   if (page === 'staffboard') renderStaffBoard();
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
+  if (page === 'stationguide') renderStationGuide();
 }
 
 function showPage(page) {
@@ -11705,14 +11697,16 @@ function authApplyNav() {
     const isStaffBoard  = onclick.includes("'staffboard'");
     const isBoard       = onclick.includes("'board'");
     const isWeekPlan    = onclick.includes("'weekplan'");
-    const isCountSheet  = onclick.includes("'countsheet'");
+    const isCountSheet    = onclick.includes("'countsheet'");
+    const isStationGuide  = onclick.includes("'stationguide'");
+    const isPrepPage      = onclick.includes("'prep'");
     const isFohArea     = area === 'foh';
     const isBakeryArea  = area === 'bakery';
     const isSharedArea  = area === 'shared';
     // Pages visible to all staff (FOH + kitchen)
-    const staffPages = isFreezer || isEod || isIngredients || isOpening || isDoughTimer || isStaffBoard || isBoard || isCountSheet || isFohArea || isSharedArea;
+    const staffPages = isFreezer || isEod || isIngredients || isOpening || isDoughTimer || isStaffBoard || isBoard || isCountSheet || isStationGuide || isFohArea || isSharedArea;
     // Pages visible to kitchen only (not baristas)
-    const kitchenPages = isWeekPlan || isBakeryArea;
+    const kitchenPages = isWeekPlan || isPrepPage || isBakeryArea;
     if (isOwner) {
       btn.style.display = '';
     } else if (isKitchen) {
@@ -11724,11 +11718,6 @@ function authApplyNav() {
     }
   });
 
-  // Show/hide section separator labels
-  const sepFoh    = document.getElementById('nav-sep-foh');
-  const sepBakery = document.getElementById('nav-sep-bakery');
-  if (sepFoh)    sepFoh.style.display    = (isOwner || isBOH) ? '' : 'none';
-  if (sepBakery) sepBakery.style.display = (isOwner || isKitchen) ? '' : 'none';
 }
 
 // ── Modal ──────────────────────────────────────────────────
@@ -11995,9 +11984,13 @@ function renderFreezerPage() {
   const session = authGetSession();
   const defs = freezerGetDefs();
 
-  // Default to first freezer the user can see
-  if (!_activeFreezer || !defs.find(f => f.id === _activeFreezer)) {
-    _activeFreezer = defs[0].id;
+  // FOH staff only see FOH freezers; Baker+ see all
+  const canSeeAll = authCanAccess('Baker');
+  const visibleDefs = canSeeAll ? defs : defs.filter(f => FOH_FREEZER_IDS.has(f.id));
+
+  // Default to first visible freezer
+  if (!_activeFreezer || !visibleDefs.find(f => f.id === _activeFreezer)) {
+    _activeFreezer = (visibleDefs[0] || defs[0]).id;
   }
 
   const canEdit = freezerCanEdit(_activeFreezer);
@@ -12010,8 +12003,8 @@ function renderFreezerPage() {
   else { badge.style.display = 'none'; }
 
   // Freezer selector tabs — with FOH / BOH section labels
-  const fohDefs = defs.filter(f =>  FOH_FREEZER_IDS.has(f.id));
-  const bohDefs = defs.filter(f => !FOH_FREEZER_IDS.has(f.id));
+  const fohDefs = visibleDefs.filter(f =>  FOH_FREEZER_IDS.has(f.id));
+  const bohDefs = visibleDefs.filter(f => !FOH_FREEZER_IDS.has(f.id));
 
   function tabBtn(f) {
     const active = _activeFreezer === f.id;
@@ -13637,364 +13630,375 @@ function dtSchedCountdown(isoTime) {
   return s + 's';
 }
 
-// ============ TIMER TAB SWITCHING ============
-let _dtActiveTab = 'dough';
-function dtSwitchTab(tab) {
-  _dtActiveTab = tab;
-  document.getElementById('dt-panel-dough').style.display      = tab === 'dough'    ? '' : 'none';
-  document.getElementById('dt-panel-sandwich').style.display   = tab === 'sandwich' ? '' : 'none';
-  const dBtn = document.getElementById('dt-tab-dough');
-  const sBtn = document.getElementById('dt-tab-sandwich');
-  if (dBtn) { dBtn.style.background = tab==='dough'?'#111':'#fff'; dBtn.style.color = tab==='dough'?'#fff':'#555'; }
-  if (sBtn) { sBtn.style.background = tab==='sandwich'?'#111':'#fff'; sBtn.style.color = tab==='sandwich'?'#fff':'#555'; }
-  if (tab === 'dough')    { renderDoughTimer(); dtStartTick(); }
-  if (tab === 'sandwich') { renderSandwichTimer(); swStartClock(); }
-}
+// ============ FOH STATION GUIDE ============
+const SG_KEY = 'bk_sg_recipes';
+let _sgCat = 'All';
+let _sgModalRecipeId = null;
+let _sgModalStep = 0;
+let _sgEditingRecipe = null;
 
-// ============ SANDWICH TIMER ============
-const SW_RECIPES_KEY = 'bk_sandwich_recipes';
-const SW_SESSION_KEY = 'bk_sandwich_session';
-
-const SW_DEFAULT_RECIPES = [
-  { id:'sw_classic', name:'Classic Sandwich', steps:[
-    { id:'ss1', name:'Pull bread & open',      targetSecs:10 },
-    { id:'ss2', name:'Spread condiments',       targetSecs:20 },
-    { id:'ss3', name:'Layer protein',           targetSecs:15 },
-    { id:'ss4', name:'Add veggies & toppings',  targetSecs:25 },
-    { id:'ss5', name:'Cut & wrap',              targetSecs:20 },
-  ]},
-  { id:'sw_bagel', name:'Bagel Sandwich', steps:[
-    { id:'ss1', name:'Slice & toast bagel',    targetSecs:30 },
-    { id:'ss2', name:'Add spreads',             targetSecs:15 },
-    { id:'ss3', name:'Layer fillings',          targetSecs:20 },
-    { id:'ss4', name:'Wrap & label',            targetSecs:15 },
-  ]},
+const SG_DEFAULT_RECIPES = [
+  // HOT DRINKS
+  { id:'sg_drip', cat:'Hot Drinks', name:'Drip Coffee', icon:'☕', note:'Discard if brewed more than 30 min ago',
+    steps:[
+      { icon:'🕐', text:'Verify coffee was brewed within the last 30 minutes' },
+      { icon:'🥤', text:'Grab the correct cup size (S / M / L)' },
+      { icon:'⬆️', text:'Fill to the line — leave ~1 inch for add-ins' },
+      { icon:'🍵', text:'Ask: "Black, or room for cream and sugar?"' },
+      { icon:'🔒', text:'Snap on the lid and add a sleeve' },
+      { icon:'📣', text:'Call out the order when ready' }
+    ]
+  },
+  { id:'sg_espresso', cat:'Hot Drinks', name:'Espresso Shot', icon:'🫖', note:'Pour and serve within 30 seconds',
+    steps:[
+      { icon:'🔌', text:'Confirm machine is warmed up (portafilter warm to touch)' },
+      { icon:'⚖️', text:'Dose portafilter with 18 g (double shot)' },
+      { icon:'🤜', text:'Tamp evenly with firm, level pressure' },
+      { icon:'🔒', text:'Lock portafilter into the group head' },
+      { icon:'▶️', text:'Start pull — target 25–30 seconds for a double shot' },
+      { icon:'☕', text:'Pour into warmed cup and serve immediately' }
+    ]
+  },
+  { id:'sg_latte', cat:'Hot Drinks', name:'Latte', icon:'🍶', note:'Steam milk to 140–150°F — no hotter',
+    steps:[
+      { icon:'☕', text:'Pull a double espresso shot into the cup' },
+      { icon:'🥛', text:'Pour cold whole milk into the steam pitcher to the spout base' },
+      { icon:'💨', text:'Submerge steam tip just below the surface — stretch then swirl to 140–150°F' },
+      { icon:'🌀', text:'Swirl the pitcher and tap on the counter to pop large bubbles' },
+      { icon:'🍶', text:'Pour steamed milk over espresso in a steady stream' },
+      { icon:'✅', text:'Lid on — call the order' }
+    ]
+  },
+  { id:'sg_cappuccino', cat:'Hot Drinks', name:'Cappuccino', icon:'☕', note:'Equal thirds: espresso / steamed milk / foam',
+    steps:[
+      { icon:'☕', text:'Pull a double espresso into a 6 oz cup' },
+      { icon:'🥛', text:'Steam a small amount of milk — target thick, velvety microfoam' },
+      { icon:'📏', text:'Pour 1/3 steamed milk then 1/3 dry foam on top' },
+      { icon:'✅', text:'Foam should hold its shape — spoon it on if needed' },
+      { icon:'📣', text:'Serve immediately and call the order' }
+    ]
+  },
+  { id:'sg_hotchoc', cat:'Hot Drinks', name:'Hot Chocolate', icon:'🍫', note:'Add an espresso shot for a mocha',
+    steps:[
+      { icon:'🥄', text:'Add 2 tbsp chocolate syrup to the cup' },
+      { icon:'💨', text:'Steam milk to 150°F with a light foam cap' },
+      { icon:'🌀', text:'Pour a splash of hot milk into the cup first and stir to dissolve' },
+      { icon:'🍫', text:'Fill the rest with steamed milk' },
+      { icon:'🍦', text:'Top with whipped cream if requested' }
+    ]
+  },
+  { id:'sg_chai', cat:'Hot Drinks', name:'Chai Latte', icon:'🫖', note:'Use chai concentrate from the fridge',
+    steps:[
+      { icon:'🫙', text:'Add 2 oz chai concentrate to the cup' },
+      { icon:'🥛', text:'Steam milk to 150°F' },
+      { icon:'🍶', text:'Fill the rest of the cup with steamed milk' },
+      { icon:'🌿', text:'Dust with a pinch of cinnamon (optional)' },
+      { icon:'📣', text:'Call the order' }
+    ]
+  },
+  // COLD DRINKS
+  { id:'sg_coldbrew', cat:'Cold Drinks', name:'Cold Brew', icon:'🧊', note:'Cold brew is made overnight — check the fridge',
+    steps:[
+      { icon:'🧊', text:'Fill the cup to the top with ice' },
+      { icon:'🫙', text:'Pour cold brew concentrate over ice — fill to about 3/4' },
+      { icon:'💧', text:'Top with filtered water, or leave room for cream' },
+      { icon:'🥤', text:'Add a straw and lid' },
+      { icon:'📣', text:'Call the order' }
+    ]
+  },
+  { id:'sg_icedlatte', cat:'Cold Drinks', name:'Iced Latte', icon:'🥤', note:'Pour hot espresso over ice — it flash-chills it',
+    steps:[
+      { icon:'🧊', text:'Fill the cup to the top with ice' },
+      { icon:'☕', text:'Pull a double espresso shot' },
+      { icon:'⬇️', text:'Pour the hot espresso directly over the ice' },
+      { icon:'🥛', text:'Fill the rest with cold milk' },
+      { icon:'🥤', text:'Stir gently, add a straw and lid' }
+    ]
+  },
+  // SMOOTHIES
+  { id:'sg_smoothie_tropical', cat:'Smoothies', name:'Tropical Smoothie', icon:'🍍', note:'Smoothie bags are in the Bakery Chest Freezer',
+    steps:[
+      { icon:'❄️', text:'Grab one Smoothie – Tropical bag from the Bakery Chest Freezer' },
+      { icon:'🥤', text:'Empty the bag into the blender' },
+      { icon:'💧', text:'Add 1/2 cup filtered water or coconut water' },
+      { icon:'▶️', text:'Blend on high for 30–45 seconds until smooth' },
+      { icon:'🥤', text:'Pour into a cup, add a wide straw and lid' }
+    ]
+  },
+  { id:'sg_smoothie_berry', cat:'Smoothies', name:'Mixed Berry Smoothie', icon:'🫐', note:'Smoothie bags are in the Bakery Chest Freezer',
+    steps:[
+      { icon:'❄️', text:'Grab one Smoothie – Mixed Berry bag from the Bakery Chest Freezer' },
+      { icon:'🥤', text:'Empty the bag into the blender' },
+      { icon:'💧', text:'Add 1/2 cup filtered water or oat milk' },
+      { icon:'▶️', text:'Blend on high for 30–45 seconds until smooth' },
+      { icon:'🥤', text:'Pour into a cup, add a wide straw and lid' }
+    ]
+  },
+  // SANDWICHES & PREPARED
+  { id:'sg_crobec', cat:'Sandwiches', name:'Crobec', icon:'🥐', note:'Built on a sliced round croissant — check the daily spec',
+    steps:[
+      { icon:'🥐', text:'Slice a round croissant horizontally (use the serrated knife)' },
+      { icon:'🔥', text:'Toast both halves cut-side down on the panini press — 2 to 3 min' },
+      { icon:'🧈', text:'Spread the condiment on the bottom half per today\'s spec' },
+      { icon:'🥩', text:'Layer the protein — use the posted portion size' },
+      { icon:'🥬', text:'Add greens and any toppings per spec' },
+      { icon:'🥐', text:'Cap with the top half and slice diagonally' },
+      { icon:'🏷️', text:'Wrap in parchment, label with item name and time made' }
+    ]
+  },
+  { id:'sg_avocado_toast', cat:'Sandwiches', name:'Avocado Toast', icon:'🥑', note:'Use sourdough from the bread case',
+    steps:[
+      { icon:'🍞', text:'Slice sourdough about 3/4 inch thick' },
+      { icon:'🔥', text:'Toast until golden and firm' },
+      { icon:'🥑', text:'Halve and pit an avocado — scoop into a small bowl' },
+      { icon:'🧂', text:'Season with salt, lemon juice, and pepper — mash to your liking' },
+      { icon:'🥄', text:'Spread generously onto the toast' },
+      { icon:'🌶️', text:'Add any requested toppings (egg, chili flake, everything bagel seasoning)' }
+    ]
+  },
+  // RETAIL
+  { id:'sg_retail_restock', cat:'Retail', name:'Restock Retail Freezer', icon:'❄️', note:'Check stock every morning during opening',
+    steps:[
+      { icon:'📋', text:'Open the Freezer Stock tab and select the Retail Freezer' },
+      { icon:'❄️', text:'Open the physical Retail Freezer and compare counts to the app' },
+      { icon:'📦', text:'Pull needed items from the Bread or Croissant Freezer in the back' },
+      { icon:'🔄', text:'Place new stock behind existing — always front-load old stock' },
+      { icon:'✏️', text:'Update counts in the Freezer Stock tab when done' }
+    ]
+  },
+  { id:'sg_case_setup', cat:'Retail', name:'Pastry Case Setup', icon:'🫙', note:'Done during the opening checklist',
+    steps:[
+      { icon:'🧹', text:'Wipe the inside of the display case with a clean damp cloth' },
+      { icon:'📋', text:'Check the bake board or daily plan for what is ready' },
+      { icon:'🥐', text:'Stock items front to back — fresh items go behind existing stock' },
+      { icon:'🏷️', text:'Verify all price tags are in place and readable' },
+      { icon:'✅', text:'Text the manager if anything is critically low or missing' }
+    ]
+  },
 ];
 
-let _swSelectedRecipeId = null;
-let _swClockInterval    = null;
-let _swEditingRecipe    = null;
-
-function swGetRecipes() {
+function sgGetRecipes() {
   try {
-    const s = JSON.parse(localStorage.getItem(SW_RECIPES_KEY) || 'null');
-    if (s && s.length) return s;
-    localStorage.setItem(SW_RECIPES_KEY, JSON.stringify(SW_DEFAULT_RECIPES));
-    return SW_DEFAULT_RECIPES;
-  } catch { return SW_DEFAULT_RECIPES; }
+    const s = JSON.parse(localStorage.getItem(SG_KEY) || 'null');
+    if (s && Array.isArray(s) && s.length) return s;
+  } catch {}
+  return SG_DEFAULT_RECIPES;
 }
-function swSaveRecipes(r)  { localStorage.setItem(SW_RECIPES_KEY, JSON.stringify(r)); }
-function swGetSession()    { try { return JSON.parse(localStorage.getItem(SW_SESSION_KEY)||'null'); } catch { return null; } }
-function swSaveSession(s)  { localStorage.setItem(SW_SESSION_KEY, s ? JSON.stringify(s) : 'null'); }
+function sgSaveRecipes(r) { localStorage.setItem(SG_KEY, JSON.stringify(r)); }
 
-function swFmtSecs(s) {
-  const neg = s < 0; const abs = Math.abs(s);
-  const m = Math.floor(abs/60), sec = abs%60;
-  return (neg?'-':'') + (m>0 ? m+':'+String(sec).padStart(2,'0') : String(sec)+'s');
-}
+function renderStationGuide() {
+  const recipes = sgGetRecipes();
+  const cats = ['All', ...new Set(recipes.map(r => r.cat))];
+  if (!cats.includes(_sgCat)) _sgCat = 'All';
 
-function swSelectRecipe(id) { _swSelectedRecipeId = id; renderSandwichTimer(); }
-
-function swStart() {
-  if (!_swSelectedRecipeId) { alert('Select a sandwich type first.'); return; }
-  const recipe = swGetRecipes().find(r => r.id === _swSelectedRecipeId);
-  if (!recipe) return;
-  const now = new Date().toISOString();
-  swSaveSession({
-    id: 'sw_' + Date.now(),
-    recipeId: recipe.id,
-    recipeName: recipe.name,
-    startedAt: now,
-    currentStepIdx: 0,
-    stepLog: [{ stepIdx:0, startedAt:now, completedAt:null }],
-    status: 'active',
-  });
-  swStartClock();
-  renderSandwichTimer();
-}
-
-function swCompleteStep() {
-  const session = swGetSession();
-  if (!session || session.status !== 'active') return;
-  const recipe = swGetRecipes().find(r => r.id === session.recipeId);
-  if (!recipe) return;
-  const now = new Date().toISOString();
-  const log = session.stepLog.find(l => l.stepIdx === session.currentStepIdx);
-  if (log) log.completedAt = now;
-  const next = session.currentStepIdx + 1;
-  if (next >= recipe.steps.length) {
-    session.status = 'complete';
-    session.completedAt = now;
-    swStopClock();
-  } else {
-    session.currentStepIdx = next;
-    session.stepLog.push({ stepIdx:next, startedAt:now, completedAt:null });
-  }
-  swSaveSession(session);
-  renderSandwichTimer();
-}
-
-function swAbandon() {
-  if (!confirm('Clear this session?')) return;
-  swSaveSession(null);
-  swStopClock();
-  renderSandwichTimer();
-}
-
-function swStartClock() {
-  if (_swClockInterval) return;
-  _swClockInterval = setInterval(() => {
-    if (activePage() !== 'doughtimer' || _dtActiveTab !== 'sandwich') return;
-    const session = swGetSession();
-    if (!session || session.status !== 'active') { swStopClock(); return; }
-    const now = Date.now();
-    const totalSecs = Math.floor((now - new Date(session.startedAt)) / 1000);
-    const totalEl = document.getElementById('sw-total-clock');
-    if (totalEl) totalEl.textContent = swFmtSecs(totalSecs);
-    const log = session.stepLog.find(l => l.stepIdx === session.currentStepIdx);
-    if (log) {
-      const stepSecs  = Math.floor((now - new Date(log.startedAt)) / 1000);
-      const recipes   = swGetRecipes();
-      const recipe    = recipes.find(r => r.id === session.recipeId);
-      const target    = recipe?.steps[session.currentStepIdx]?.targetSecs || 0;
-      const over      = stepSecs - target;
-      const color     = over > 5 ? '#cc3300' : over > 0 ? '#b87000' : '#1a7a3a';
-      const stepEl    = document.getElementById('sw-step-clock');
-      const diffEl    = document.getElementById('sw-step-diff');
-      if (stepEl) { stepEl.textContent = swFmtSecs(stepSecs); stepEl.style.color = color; }
-      if (diffEl) {
-        if (over > 0) { diffEl.textContent = '+'+swFmtSecs(over)+' over'; diffEl.style.color='#cc3300'; }
-        else          { diffEl.textContent = swFmtSecs(-over)+' left';    diffEl.style.color='#1a7a3a'; }
-      }
-    }
-  }, 1000);
-}
-function swStopClock() { clearInterval(_swClockInterval); _swClockInterval = null; }
-
-function renderSandwichTimer() {
-  const recipes = swGetRecipes();
-  const session = swGetSession();
-
-  // Recipe selector
-  const selEl = document.getElementById('sw-recipe-selector');
-  if (selEl) selEl.innerHTML = recipes.map(r => {
-    const sel = _swSelectedRecipeId === r.id;
-    return `<div style="display:flex;gap:0">
-      <button onclick="swSelectRecipe('${r.id}')"
-        style="padding:18px 24px;border:3px solid ${sel?'#111':'#ccc'};border-right:none;
-               border-radius:4px 0 0 4px;background:${sel?'#111':'#fff'};
-               color:${sel?'#fff':'#555'};font-size:18px;font-weight:${sel?'800':'600'};
-               cursor:pointer;touch-action:manipulation;min-height:64px;white-space:nowrap">${r.name}</button>
-      <button onclick="swEditRecipe('${r.id}')"
-        style="padding:18px 14px;border:3px solid ${sel?'#111':'#ccc'};border-radius:0 4px 4px 0;
-               background:${sel?'#333':'#f5f5f5'};color:${sel?'#fff':'#888'};font-size:17px;
-               cursor:pointer;min-height:64px">✏️</button>
-    </div>`;
-  }).join('') +
-  `<button onclick="swNewRecipe()"
-     style="padding:18px 22px;border:3px dashed #ccc;border-radius:4px;background:#fff;
-            color:#888;font-size:17px;font-weight:600;cursor:pointer;min-height:64px">+ New</button>`;
-
-  const activeEl = document.getElementById('sw-active');
-  if (!activeEl) return;
-
-  // No session — show start button
-  if (!session || session.status === 'null') {
-    activeEl.innerHTML = `
-      <div style="display:flex;justify-content:center;margin-bottom:32px">
-        <button onclick="swStart()"
-          style="padding:26px 64px;background:#111;color:#fff;border:none;border-radius:4px;
-                 font-size:24px;font-weight:900;cursor:pointer;touch-action:manipulation;min-height:80px">
-          ▶ Start Timer</button>
-      </div>
-      <div style="text-align:center;padding:40px 20px;color:#bbb;font-size:17px;
-        border:3px dashed #ddd;border-radius:4px">
-        Select a sandwich type above, then tap Start Timer</div>`;
-    return;
-  }
-
-  // Complete session — show summary
-  if (session.status === 'complete') {
-    const recipe = recipes.find(r => r.id === session.recipeId) || { steps:[] };
-    const totalSecs = Math.round((new Date(session.completedAt) - new Date(session.startedAt)) / 1000);
-    const targetTotal = recipe.steps.reduce((s,st) => s+st.targetSecs, 0);
-    const over = totalSecs - targetTotal;
-    const color = over > 5 ? '#cc3300' : over > 0 ? '#b87000' : '#1a7a3a';
-    const stepRows = recipe.steps.map((step,idx) => {
-      const log = session.stepLog.find(l => l.stepIdx === idx);
-      if (!log) return '';
-      const actual = log.completedAt ? Math.round((new Date(log.completedAt)-new Date(log.startedAt))/1000) : null;
-      const diff   = actual !== null ? actual - step.targetSecs : null;
-      const dc     = diff === null ? '#999' : diff > 5 ? '#cc3300' : diff > 0 ? '#b87000' : '#1a7a3a';
-      return `<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;
-        border-bottom:1px solid #eee;flex-wrap:wrap">
-        <div style="flex:1;font-size:17px;font-weight:600;min-width:140px">${step.name}</div>
-        <div style="font-size:17px;color:#333;flex-shrink:0">${actual!==null?swFmtSecs(actual):'–'}</div>
-        <div style="font-size:14px;flex-shrink:0;min-width:80px;text-align:right;color:${dc}">
-          ${diff===null?'':diff>0?'+'+swFmtSecs(diff)+' over':swFmtSecs(-diff)+' under'}</div>
-      </div>`;
-    }).join('');
-    activeEl.innerHTML = `
-      <div style="background:#fff;border:3px solid #111;border-radius:4px;overflow:hidden;margin-bottom:20px">
-        <div style="background:#111;color:#fff;padding:20px 28px;text-align:center">
-          <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;
-            color:rgba(255,255,255,0.5);margin-bottom:8px">${session.recipeName} — Complete</div>
-          <div style="font-size:56px;font-weight:900;color:${color}">${swFmtSecs(totalSecs)}</div>
-          <div style="font-size:16px;color:rgba(255,255,255,0.6);margin-top:8px">
-            Target ${swFmtSecs(targetTotal)} &nbsp;·&nbsp;
-            <span style="color:${color}">${over>0?'+'+swFmtSecs(over)+' over':swFmtSecs(-over)+' under target'}</span>
-          </div>
-        </div>
-        ${stepRows}
-      </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <button onclick="swStart()"
-          style="flex:1;padding:20px;background:#111;color:#fff;border:none;border-radius:4px;
-                 font-size:19px;font-weight:800;cursor:pointer;min-height:64px">▶ Start Another</button>
-        <button onclick="swAbandon()"
-          style="padding:20px 28px;border:2px solid #ccc;background:#fff;border-radius:4px;
-                 font-size:16px;color:#888;cursor:pointer">Clear</button>
-      </div>`;
-    return;
-  }
-
-  // Active session
-  const recipe = recipes.find(r => r.id === session.recipeId) || { steps:[] };
-  const step   = recipe.steps[session.currentStepIdx];
-  if (!step) return;
-  const log    = session.stepLog.find(l => l.stepIdx === session.currentStepIdx);
-  const stepSecs  = log ? Math.floor((Date.now() - new Date(log.startedAt)) / 1000) : 0;
-  const totalSecs = Math.floor((Date.now() - new Date(session.startedAt)) / 1000);
-  const over = stepSecs - step.targetSecs;
-  const color = over > 5 ? '#cc3300' : over > 0 ? '#b87000' : '#1a7a3a';
-
-  const upcomingSteps = recipe.steps.slice(session.currentStepIdx + 1).map((s,i) => `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #eee">
-      <div style="background:#eee;color:#999;border-radius:4px;padding:5px 11px;
-        font-size:13px;font-weight:700">${session.currentStepIdx+2+i}</div>
-      <div style="flex:1;font-size:16px;color:#888">${s.name}</div>
-      <div style="font-size:14px;color:#bbb">${swFmtSecs(s.targetSecs)}</div>
-    </div>`).join('');
-
-  const completedSteps = recipe.steps.slice(0, session.currentStepIdx).map((s,i) => {
-    const l = session.stepLog.find(x => x.stepIdx === i);
-    const actual = l?.completedAt ? Math.round((new Date(l.completedAt)-new Date(l.startedAt))/1000) : null;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid #eee;opacity:0.7">
-      <div style="color:#22a855;font-size:20px;width:32px;text-align:center">✓</div>
-      <div style="flex:1;font-size:16px;color:#666">${s.name}</div>
-      <div style="font-size:14px;color:#888">${actual!==null?swFmtSecs(actual):'–'}</div>
-    </div>`;
+  // Category tabs
+  const catsEl = document.getElementById('sg-cats');
+  if (catsEl) catsEl.innerHTML = cats.map(c => {
+    const active = _sgCat === c;
+    return `<button onclick="sgSetCat('${c}')"
+      style="flex-shrink:0;padding:12px 20px;border-radius:4px;
+             border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};
+             background:${active ? 'var(--accent)' : 'var(--surface)'};
+             color:${active ? '#1a1209' : 'var(--text)'};
+             font-size:14px;font-weight:${active ? '700' : '500'};cursor:pointer;
+             white-space:nowrap;touch-action:manipulation;min-height:48px">${c}</button>`;
   }).join('');
 
-  activeEl.innerHTML = `
-    <!-- Current step big card -->
-    <div style="background:#111;color:#fff;border-radius:4px;padding:28px 28px 24px;margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:20px">
-        <div>
-          <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-            color:rgba(255,255,255,0.45);margin-bottom:6px">
-            Step ${session.currentStepIdx+1} of ${recipe.steps.length} — ${session.recipeName}</div>
-          <div style="font-size:32px;font-weight:900">${step.name}</div>
-          <div style="font-size:15px;color:rgba(255,255,255,0.5);margin-top:4px">
-            Target: ${swFmtSecs(step.targetSecs)}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
-            color:rgba(255,255,255,0.45);margin-bottom:4px">Total</div>
-          <div id="sw-total-clock" style="font-size:24px;font-weight:800">${swFmtSecs(totalSecs)}</div>
-        </div>
-      </div>
-      <!-- Step clock -->
-      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:24px">
-        <span id="sw-step-clock" style="font-size:64px;font-weight:900;color:${color};line-height:1">${swFmtSecs(stepSecs)}</span>
-        <div>
-          <div style="font-size:15px;color:rgba(255,255,255,0.5)">/ ${swFmtSecs(step.targetSecs)} target</div>
-          <div id="sw-step-diff" style="font-size:14px;font-weight:700;color:${color}">
-            ${over>5?'+'+swFmtSecs(over)+' over':over>0?swFmtSecs(over)+' over':swFmtSecs(-over)+' left'}</div>
-        </div>
-      </div>
-      <button onclick="swCompleteStep()"
-        style="width:100%;padding:24px;background:#22a855;color:#fff;border:none;border-radius:4px;
-               font-size:26px;font-weight:900;cursor:pointer;touch-action:manipulation;min-height:80px">
-        ✓ Done — Next Step</button>
-    </div>
-    <!-- Step list -->
-    <div style="background:#fff;border:2px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:16px">
-      ${completedSteps}
-      ${upcomingSteps || '<div style="padding:14px 20px;color:#bbb;font-size:15px">No more steps after this one</div>'}
-    </div>
-    <button onclick="swAbandon()"
-      style="padding:13px 22px;border:2px solid #ccc;background:#fff;border-radius:4px;
-             font-size:15px;color:#888;cursor:pointer">✕ Abandon</button>`;
+  // Add button — owner/baker only
+  const addBtn = document.getElementById('sg-add-btn');
+  if (addBtn) addBtn.style.display = authCanAccess('Baker') ? '' : 'none';
 
-  swStartClock();
+  sgRender();
 }
 
-// ============ SANDWICH EDITOR ============
-function swNewRecipe() {
-  _swEditingRecipe = { id:'sw_'+Date.now(), name:'New Sandwich', steps:[
-    { id:'ss_'+Date.now(), name:'Step 1', targetSecs:15 }
-  ]};
-  swShowEditor();
-}
-function swEditRecipe(id) {
-  const r = swGetRecipes().find(r => r.id === id);
-  if (!r) return;
-  _swEditingRecipe = JSON.parse(JSON.stringify(r));
-  swShowEditor();
-}
-function swShowEditor() { swRenderEditor(); document.getElementById('sw-editor-modal').style.display = 'flex'; }
-function swHideEditor() { document.getElementById('sw-editor-modal').style.display = 'none'; _swEditingRecipe = null; }
-function swRenderEditor() {
-  const r = _swEditingRecipe;
-  if (!r) return;
-  const el = document.getElementById('sw-editor-body');
+function sgSetCat(cat) { _sgCat = cat; renderStationGuide(); }
+
+function sgRender() {
+  const recipes = sgGetRecipes();
+  const search = (document.getElementById('sg-search')?.value || '').toLowerCase();
+  const visible = recipes.filter(r => {
+    if (_sgCat !== 'All' && r.cat !== _sgCat) return false;
+    if (search && !r.name.toLowerCase().includes(search) && !r.cat.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  const el = document.getElementById('sg-cards');
   if (!el) return;
-  const total = r.steps.reduce((s,st) => s+st.targetSecs, 0);
-  el.innerHTML = `
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
-        letter-spacing:1px;color:#777;margin-bottom:8px">Name</label>
-      <input type="text" value="${r.name}" oninput="_swEditingRecipe.name=this.value"
-        style="width:100%;font-size:22px;font-weight:700;padding:14px;border:2px solid #ccc;border-radius:4px">
+  if (!visible.length) {
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;font-size:14px">No procedures found</div>`;
+    return;
+  }
+  const canEdit = authCanAccess('Baker');
+  el.innerHTML = visible.map(r => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;
+                display:flex;flex-direction:column">
+      <button onclick="sgOpenModal('${r.id}')"
+        style="background:none;border:none;padding:20px 16px;text-align:center;cursor:pointer;
+               touch-action:manipulation;flex:1;display:flex;flex-direction:column;
+               align-items:center;justify-content:center;gap:8px;width:100%;min-height:120px">
+        <div style="font-size:44px;line-height:1">${r.icon}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3">${r.name}</div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:0.3px">${r.steps.length} steps · ${r.cat}</div>
+      </button>
+      ${canEdit ? `<button onclick="sgOpenEditor('${r.id}')"
+        style="background:var(--surface2);border:none;border-top:1px solid var(--border);
+               color:var(--muted);font-size:12px;padding:8px;cursor:pointer;width:100%">✏️ Edit</button>` : ''}
     </div>
-    <div style="font-size:12px;color:#999;margin-bottom:16px">${r.steps.length} steps · Total target: ${swFmtSecs(total)}</div>
-    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#777;margin-bottom:12px">Steps</div>
-    ${r.steps.map((step,idx) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border:2px solid #ddd;
-        border-radius:4px;margin-bottom:8px;background:#fff;flex-wrap:wrap">
-        <div style="background:#eee;color:#777;border-radius:4px;padding:5px 10px;font-size:14px;font-weight:700;flex-shrink:0">${idx+1}</div>
-        <input type="text" value="${step.name}" oninput="_swEditingRecipe.steps[${idx}].name=this.value"
-          style="flex:2;min-width:120px;font-size:16px;padding:9px 12px;border:1px solid #ddd;border-radius:4px">
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <input type="number" value="${step.targetSecs}" min="1" max="3600"
-            oninput="_swEditingRecipe.steps[${idx}].targetSecs=Math.max(1,parseInt(this.value)||1)"
-            style="width:68px;font-size:16px;padding:9px;border:1px solid #ddd;border-radius:4px;text-align:center">
-          <span style="font-size:13px;color:#999;white-space:nowrap">sec</span>
-        </div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          ${idx>0?`<button onclick="swEditorMove(${idx},-1)" style="padding:7px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↑</button>`:'<span style="width:34px"></span>'}
-          ${idx<r.steps.length-1?`<button onclick="swEditorMove(${idx},1)" style="padding:7px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↓</button>`:'<span style="width:34px"></span>'}
-          <button onclick="swEditorDel(${idx})" style="padding:7px 10px;border:1px solid #fcc;border-radius:4px;background:#fff0f0;color:#c00;cursor:pointer">✕</button>
-        </div>
-      </div>`).join('')}
-    <button onclick="swEditorAdd()" style="width:100%;padding:14px;border:2px dashed #ccc;border-radius:4px;
-      background:#fafafa;font-size:16px;font-weight:600;color:#888;cursor:pointer;margin-top:4px">+ Add Step</button>`;
+  `).join('');
 }
-function swEditorAdd()      { if (!_swEditingRecipe) return; _swEditingRecipe.steps.push({id:'ss_'+Date.now(),name:'New Step',targetSecs:15}); swRenderEditor(); }
-function swEditorDel(idx)   { if (!_swEditingRecipe||_swEditingRecipe.steps.length<=1) return; _swEditingRecipe.steps.splice(idx,1); swRenderEditor(); }
-function swEditorMove(idx,d){ if (!_swEditingRecipe) return; const s=_swEditingRecipe.steps,ni=idx+d; if(ni<0||ni>=s.length)return; [s[idx],s[ni]]=[s[ni],s[idx]]; swRenderEditor(); }
-function swEditorSave() {
-  if (!_swEditingRecipe||!_swEditingRecipe.name.trim()) { alert('Enter a name.'); return; }
-  const recipes=swGetRecipes(), i=recipes.findIndex(r=>r.id===_swEditingRecipe.id);
-  if (i>=0) recipes[i]=_swEditingRecipe; else recipes.push(_swEditingRecipe);
-  swSaveRecipes(recipes); swHideEditor(); renderSandwichTimer();
+
+function sgOpenModal(id) {
+  const r = sgGetRecipes().find(r => r.id === id);
+  if (!r) return;
+  _sgModalRecipeId = id;
+  _sgModalStep = 0;
+  document.getElementById('sg-modal-title').textContent = r.icon + ' ' + r.name;
+  document.getElementById('sg-modal-note').textContent = r.note || '';
+  document.getElementById('sg-modal').style.display = 'flex';
+  sgUpdateStep();
 }
-function swEditorDelete() {
-  if (!_swEditingRecipe||!confirm('Delete this sandwich type?')) return;
-  swSaveRecipes(swGetRecipes().filter(r=>r.id!==_swEditingRecipe.id));
-  if (_swSelectedRecipeId===_swEditingRecipe.id) _swSelectedRecipeId=null;
-  swHideEditor(); renderSandwichTimer();
+
+function sgCloseModal() {
+  document.getElementById('sg-modal').style.display = 'none';
+  _sgModalRecipeId = null;
+}
+
+function sgUpdateStep() {
+  const r = sgGetRecipes().find(r => r.id === _sgModalRecipeId);
+  if (!r) return;
+  const step = r.steps[_sgModalStep];
+  const total = r.steps.length;
+  document.getElementById('sg-modal-counter').textContent = `Step ${_sgModalStep + 1} of ${total}`;
+  document.getElementById('sg-modal-icon').textContent = step.icon;
+  document.getElementById('sg-modal-step').textContent = step.text;
+  const prevBtn = document.getElementById('sg-prev-btn');
+  const nextBtn = document.getElementById('sg-next-btn');
+  prevBtn.style.opacity = _sgModalStep === 0 ? '0.3' : '1';
+  prevBtn.disabled = _sgModalStep === 0;
+  if (_sgModalStep === total - 1) {
+    nextBtn.textContent = '✓ Done';
+    nextBtn.style.background = '#4a9c6e';
+    nextBtn.style.color = '#fff';
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.style.background = 'var(--accent)';
+    nextBtn.style.color = '#1a1209';
+  }
+}
+
+function sgNextStep() {
+  const r = sgGetRecipes().find(r => r.id === _sgModalRecipeId);
+  if (!r) return;
+  if (_sgModalStep >= r.steps.length - 1) { sgCloseModal(); return; }
+  _sgModalStep++;
+  sgUpdateStep();
+}
+
+function sgPrevStep() {
+  if (_sgModalStep <= 0) return;
+  _sgModalStep--;
+  sgUpdateStep();
+}
+
+function sgOpenEditor(id) {
+  const recipes = sgGetRecipes();
+  if (id) {
+    _sgEditingRecipe = JSON.parse(JSON.stringify(recipes.find(r => r.id === id) || {}));
+  } else {
+    _sgEditingRecipe = { id: 'sg_' + Date.now(), cat: '', name: '', icon: '📋', note: '', steps: [{ icon:'👉', text:'' }] };
+  }
+  sgRenderEditor();
+  document.getElementById('sg-editor-modal').style.display = 'flex';
+  document.getElementById('sg-editor-delete-btn').style.display = id ? '' : 'none';
+}
+
+function sgCloseEditor() {
+  document.getElementById('sg-editor-modal').style.display = 'none';
+  _sgEditingRecipe = null;
+}
+
+function sgRenderEditor() {
+  const r = _sgEditingRecipe;
+  const recipes = sgGetRecipes();
+  const cats = [...new Set(recipes.map(r => r.cat))];
+  const el = document.getElementById('sg-editor-body');
+  el.innerHTML = `
+    <div style="display:grid;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">CATEGORY</div>
+          <input id="sge-cat" value="${r.cat}" list="sge-cat-list" placeholder="e.g. Hot Drinks"
+            style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);
+                   border-radius:4px;color:var(--text);font-size:14px;box-sizing:border-box">
+          <datalist id="sge-cat-list">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">ICON (emoji)</div>
+          <input id="sge-icon" value="${r.icon}" maxlength="4"
+            style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);
+                   border-radius:4px;color:var(--text);font-size:20px;box-sizing:border-box">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">NAME</div>
+        <input id="sge-name" value="${r.name}" placeholder="Procedure name"
+          style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);
+                 border-radius:4px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">NOTE (shown at top of card)</div>
+        <input id="sge-note" value="${r.note || ''}" placeholder="Optional reminder or tip"
+          style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);
+                 border-radius:4px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px">STEPS</div>
+        <div id="sge-steps" style="display:grid;gap:6px">
+          ${r.steps.map((s, i) => `
+            <div style="display:flex;gap:6px;align-items:center">
+              <input value="${s.icon}" oninput="sgEditStep(${i},'icon',this.value)" maxlength="4"
+                style="width:42px;padding:8px 4px;text-align:center;background:var(--surface2);
+                       border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:18px">
+              <input value="${s.text}" oninput="sgEditStep(${i},'text',this.value)" placeholder="Step description"
+                style="flex:1;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);
+                       border-radius:4px;color:var(--text);font-size:13px">
+              <button onclick="sgRemoveStep(${i})"
+                style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;
+                       background:transparent;color:var(--muted);cursor:pointer;font-size:14px">✕</button>
+            </div>
+          `).join('')}
+        </div>
+        <button onclick="sgAddStep()"
+          style="margin-top:8px;padding:8px 14px;border:1px dashed var(--border);border-radius:4px;
+                 background:transparent;color:var(--muted);cursor:pointer;font-size:13px;width:100%">+ Add Step</button>
+      </div>
+    </div>
+  `;
+}
+
+function sgEditStep(i, field, val) { if (_sgEditingRecipe) _sgEditingRecipe.steps[i][field] = val; }
+function sgAddStep() { if (_sgEditingRecipe) { _sgEditingRecipe.steps.push({ icon:'👉', text:'' }); sgRenderEditor(); } }
+function sgRemoveStep(i) { if (_sgEditingRecipe) { _sgEditingRecipe.steps.splice(i, 1); sgRenderEditor(); } }
+
+function sgEditorSave() {
+  if (!_sgEditingRecipe) return;
+  _sgEditingRecipe.cat  = document.getElementById('sge-cat').value.trim();
+  _sgEditingRecipe.name = document.getElementById('sge-name').value.trim();
+  _sgEditingRecipe.icon = document.getElementById('sge-icon').value.trim() || '📋';
+  _sgEditingRecipe.note = document.getElementById('sge-note').value.trim();
+  if (!_sgEditingRecipe.name || !_sgEditingRecipe.cat) { alert('Name and category are required.'); return; }
+  const recipes = sgGetRecipes();
+  const i = recipes.findIndex(r => r.id === _sgEditingRecipe.id);
+  if (i >= 0) recipes[i] = _sgEditingRecipe; else recipes.push(_sgEditingRecipe);
+  sgSaveRecipes(recipes);
+  sgCloseEditor();
+  renderStationGuide();
+}
+
+function sgEditorDelete() {
+  if (!_sgEditingRecipe || !confirm('Delete this procedure?')) return;
+  sgSaveRecipes(sgGetRecipes().filter(r => r.id !== _sgEditingRecipe.id));
+  sgCloseEditor();
+  renderStationGuide();
 }
 
 // ============ STAFF BOARD ============
@@ -15842,7 +15846,7 @@ const FB_KEY_PAGE = {
   'bk_staff_board':       () => { if (activePage() === 'staffboard') try { renderStaffBoard(); } catch(e){} },
   'bk_dough_recipes':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
   'bk_dough_batches':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
-  'bk_sandwich_recipes':  () => { if (activePage() === 'doughtimer') try { renderSandwichTimer(); } catch(e){} },
+  'bk_sg_recipes':        () => { if (activePage() === 'stationguide') try { renderStationGuide(); } catch(e){} },
   'bk_week_plan':         () => { if (activePage() === 'weekplan')   try { renderWeekPlan(); wpInitGestures(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
