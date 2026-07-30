@@ -816,6 +816,11 @@
       <div style="font-size:12px;color:var(--muted)">Sign in to continue</div>
     </div>
 
+    <!-- Idle timeout notice (hidden by default) -->
+    <div id="auth-idle-note" style="display:none;margin:12px 20px 0;background:rgba(232,160,69,0.12);border:1px solid rgba(232,160,69,0.35);border-radius:4px;padding:8px 12px;font-size:12px;color:var(--accent);text-align:center">
+      ⏱ Session expired due to inactivity — please sign in again
+    </div>
+
     <!-- Step 1: pick person -->
     <div id="auth-step-pick" style="padding:20px">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Who are you?</div>
@@ -861,11 +866,12 @@
         <div id="auth-chip-name" style="font-size:15px;font-weight:800;color:var(--text);white-space:nowrap"></div>
         <div id="auth-chip-role" style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px"></div>
       </div>
-      <button onclick="authLogout()" title="Sign out"
-        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;margin-left:6px;padding:2px 4px;border-radius:3px"
-        onmouseover="this.style.color='#e57373'" onmouseout="this.style.color='var(--muted)'">⏏</button>
+      <button onclick="authLogout()" title="Lock screen &amp; switch user"
+        style="background:var(--surface);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;margin-left:6px;padding:4px 9px;border-radius:4px;letter-spacing:0.3px"
+        onmouseover="this.style.color='#e57373';this.style.borderColor='#e57373'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">🔒 Switch User</button>
     </div>
     <button id="auth-login-btn" onclick="authShowModal()" class="btn btn-ghost btn-sm" style="white-space:nowrap">🔑 Sign In</button>
+    <span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;letter-spacing:0.5px;cursor:default;white-space:nowrap" title="App version">v1.6</span>
     <span id="fb-sync-indicator" title="Cloud sync status" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:3px 9px;cursor:default;white-space:nowrap">
       <span id="fb-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;transition:background 0.4s"></span>
       <span id="fb-sync-label">Connecting…</span>
@@ -918,6 +924,25 @@
 <div class="page active" id="page-staff">
   <h2>Staff & Capabilities</h2>
   <p class="subtitle">Task-level capability matrix — check off what each person can do, and it drives the scheduler. Update as they learn.</p>
+
+  <!-- Owner-only: session settings -->
+  <div id="session-settings-card" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">⚙️ Session Settings</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text)">Auto-logout after inactivity:</label>
+      <select id="idle-timeout-select" onchange="idleSaveTimeout(this.value)"
+        style="font-size:13px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 10px">
+        <option value="1">1 hour</option>
+        <option value="2">2 hours</option>
+        <option value="4">4 hours</option>
+        <option value="8">8 hours (default)</option>
+        <option value="12">12 hours</option>
+        <option value="24">24 hours</option>
+        <option value="0.25">15 minutes (testing)</option>
+      </select>
+      <span style="font-size:11px;color:var(--muted)">Applies to all staff devices</span>
+    </div>
+  </div>
 
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
     <button class="btn btn-primary btn-sm" onclick="addStaffMember()">+ Add Staff Member</button>
@@ -2224,7 +2249,7 @@
         style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);
                border-radius:4px;color:var(--text);font-size:14px;width:180px">
       <button id="sg-add-btn" onclick="sgOpenEditor(null)"
-        style="display:none;background:var(--accent);color:#1a1209;border:none;border-radius:4px;
+        style="display:none;background:var(--accent);color:#fff;border:none;border-radius:4px;
                padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
     </div>
   </div>
@@ -2266,7 +2291,7 @@
              border:1px solid var(--border);border-radius:4px;font-size:18px;font-weight:700;
              cursor:pointer;touch-action:manipulation;min-height:64px">← Back</button>
     <button id="sg-next-btn" onclick="sgNextStep()"
-      style="flex:1;max-width:280px;padding:20px;background:var(--accent);color:#1a1209;
+      style="flex:1;max-width:280px;padding:20px;background:var(--accent);color:#fff;
              border:none;border-radius:4px;font-size:18px;font-weight:800;
              cursor:pointer;touch-action:manipulation;min-height:64px">Next →</button>
   </div>
@@ -2289,7 +2314,7 @@
       <div style="display:flex;gap:8px">
         <button onclick="sgCloseEditor()" style="padding:10px 18px;border:1px solid var(--border);border-radius:4px;
           background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
-        <button onclick="sgEditorSave()" style="padding:10px 22px;background:var(--accent);color:#1a1209;border:none;
+        <button onclick="sgEditorSave()" style="padding:10px 22px;background:var(--accent);color:#fff;border:none;
           border-radius:4px;font-size:14px;font-weight:700;cursor:pointer">✓ Save</button>
       </div>
     </div>
@@ -2606,10 +2631,13 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.5';
-const AUTH_PINS_KEY    = 'bk_staff_pins';
-const AUTH_SESSION_KEY = 'bk_auth_session';
-const AUTH_ROLES       = ['Anyone', 'Bakery Assistant', 'Barista', 'Baker', 'Head Baker', 'Owner'];
+const APP_VERSION      = '1.6';
+const AUTH_PINS_KEY      = 'bk_staff_pins';
+const AUTH_SESSION_KEY   = 'bk_auth_session';
+const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
+const AUTH_ACTIVITY_KEY  = 'bk_last_activity';
+const AUTH_IDLE_DEFAULT  = 8;
+const AUTH_ROLES         = ['Anyone', 'Bakery Assistant', 'Barista', 'Baker', 'Head Baker', 'Owner'];
 
 // ============ ROLE HIERARCHY ============
 // Ordered lowest → highest. A staff member can perform any task at or below their role level.
@@ -2840,6 +2868,7 @@ function togglePayVisibility() {
 }
 
 function renderStaffPage() {
+  idleInitSettingsCard();
   const tasks = getAllTasks();
 
   // ---- Role Slots ----
@@ -11646,6 +11675,35 @@ function authGetSession() {
 function authSaveSession(s) { localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(s)); }
 function authClearSession() { localStorage.removeItem(AUTH_SESSION_KEY); }
 
+function idleGetTimeoutHours() {
+  const v = parseFloat(localStorage.getItem(AUTH_IDLE_KEY));
+  return (!isNaN(v) && v > 0) ? v : AUTH_IDLE_DEFAULT;
+}
+function idleTouch() {
+  localStorage.setItem(AUTH_ACTIVITY_KEY, Date.now().toString());
+}
+function idleCheck() {
+  if (!authGetSession()) return;
+  const last = parseInt(localStorage.getItem(AUTH_ACTIVITY_KEY) || '0');
+  if (!last) { idleTouch(); return; }
+  const hours = (Date.now() - last) / 3600000;
+  if (hours >= idleGetTimeoutHours()) {
+    // Don't log out if the dough timer has active batches running
+    try {
+      const batches = JSON.parse(localStorage.getItem('bk_dough_batches') || '[]');
+      if (batches.some(b => b.status === 'active')) { idleTouch(); return; }
+    } catch {}
+    authClearSession();
+    authUpdateChip();
+    const modal = document.getElementById('auth-modal');
+    if (modal) {
+      const note = document.getElementById('auth-idle-note');
+      if (note) { note.style.display = 'block'; }
+      modal.style.display = 'flex';
+    }
+  }
+}
+
 function authCurrentUser() { return authGetSession(); }
 function authCurrentRole() { const s = authGetSession(); return s ? s.role : 'Anyone'; }
 
@@ -11856,6 +11914,9 @@ function authPinConfirm() {
   const member = staff.find(s => s.id === _authPickedStaffId);
   if (pins[_authPickedStaffId] === _authPinEntry) {
     authSaveSession({ staffId: member.id, name: member.name, role: member.role });
+    idleTouch();
+    const note = document.getElementById('auth-idle-note');
+    if (note) note.style.display = 'none';
     authHideModal();
     authUpdateChip();
     authRedirectForRole(member.role);
@@ -11868,6 +11929,7 @@ function authPinConfirm() {
 
 function authLogout() {
   authClearSession();
+  localStorage.removeItem(AUTH_ACTIVITY_KEY);
   authUpdateChip();
   authShowModal();
 }
@@ -12498,6 +12560,24 @@ function yieldDeleteRule(id) {
   if (!confirm('Delete this yield rule?')) return;
   yieldSaveRules(yieldGetRules().filter(r => r.id !== id));
   renderYieldPage();
+}
+
+function idleSaveTimeout(val) {
+  localStorage.setItem(AUTH_IDLE_KEY, val);
+}
+
+function idleInitSettingsCard() {
+  const card = document.getElementById('session-settings-card');
+  if (!card) return;
+  const isOwner = authCurrentRole() === 'Owner';
+  card.style.display = isOwner ? 'block' : 'none';
+  if (!isOwner) return;
+  const sel = document.getElementById('idle-timeout-select');
+  if (!sel) return;
+  const current = localStorage.getItem(AUTH_IDLE_KEY) || String(AUTH_IDLE_DEFAULT);
+  // Select matching option, fallback to 8h
+  const opt = Array.from(sel.options).find(o => o.value === current);
+  sel.value = opt ? current : String(AUTH_IDLE_DEFAULT);
 }
 
 function authRedirectForRole(role) {
@@ -13637,6 +13717,227 @@ let _sgModalStep = 0;
 let _sgEditingRecipe = null;
 
 const SG_DEFAULT_RECIPES = [
+
+  // ── BREAKFAST ──────────────────────────────────────────────
+  { id:'sg_crobec_bec', cat:'Breakfast', name:'The Cro-BEC', icon:'🥐', note:'Butter croissant · Bacon · 2 Eggs · White American — $12.95',
+    steps:[
+      { icon:'🥐', text:'Grab a fresh butter croissant and slice horizontally with the serrated knife' },
+      { icon:'🔥', text:'Toast both halves cut-side down on the panini press — 2 to 3 min until golden' },
+      { icon:'🥓', text:'Layer applewood smoked bacon on the bottom half — check posted portion' },
+      { icon:'🍳', text:'Add two farm eggs (scrambled or over-easy — ask if not specified)' },
+      { icon:'🧀', text:'Place white American cheese on top while eggs are still hot so it melts' },
+      { icon:'🥐', text:'Cap with the top half of the croissant' },
+      { icon:'🏷️', text:'Wrap in parchment, label with item name and time, call the order' }
+    ]
+  },
+  { id:'sg_brunch_bliss', cat:'Breakfast', name:'Brunch Bliss', icon:'🐟', note:'Everything round croissant · Salmon · Avocado · Cream Cheese — $16.95',
+    steps:[
+      { icon:'🥐', text:'Grab an everything-seeded round croissant and slice horizontally' },
+      { icon:'🔥', text:'Toast cut-side down on the panini press — 2 to 3 min' },
+      { icon:'🧀', text:'Spread whipped cream cheese generously on both halves' },
+      { icon:'🥑', text:'Fan fresh avocado slices evenly across the bottom half' },
+      { icon:'🐟', text:'Layer smoked salmon on top of the avocado — check portion' },
+      { icon:'🥐', text:'Cap with the top half' },
+      { icon:'🏷️', text:'Wrap in parchment, label with item name and time, call the order' }
+    ]
+  },
+  { id:'sg_berry_croissant', cat:'Breakfast', name:'Berry Breakfast Croissant', icon:'🫐', note:'Cannoli cream · Fresh berries · Chocolate ganache — $8.95',
+    steps:[
+      { icon:'🥐', text:'Take a fresh plain butter croissant — do not slice through, cut a pocket from the top' },
+      { icon:'🍮', text:'Fill with cannoli cream using the pastry bag — do not overfill' },
+      { icon:'🫐', text:'Top with fresh mixed berries (seasonal selection)' },
+      { icon:'🍫', text:'Drizzle chocolate ganache over the berries' },
+      { icon:'🍽️', text:'Plate on a small card or tissue and call the order — do not wrap, serve open' }
+    ]
+  },
+
+  // ── SANDWICHES ─────────────────────────────────────────────
+  { id:'sg_caprese', cat:'Sandwiches', name:'Caprese Croissant', icon:'🍅', note:'Tomato · Basil · Burrata · Balsamic on Butter Croissant — $13.25',
+    steps:[
+      { icon:'🥐', text:'Slice a fresh butter croissant horizontally with the serrated knife' },
+      { icon:'🔥', text:'Lightly toast cut-side down on the panini press — 2 min, just to warm' },
+      { icon:'🍅', text:'Layer fresh tomato slices on the bottom half' },
+      { icon:'🌿', text:'Add fresh basil leaves over the tomato' },
+      { icon:'🧀', text:'Gently tear the burrata and place on top — let it spread a little' },
+      { icon:'🫒', text:'Drizzle balsamic glaze over the burrata' },
+      { icon:'🥐', text:'Cap with the top half, wrap, label, call the order' }
+    ]
+  },
+  { id:'sg_chicken_btb', cat:'Sandwiches', name:"Bella's Chicken BTB", icon:'🍗', note:'Grilled Chicken · Burrata · Tomato · Basil Pesto · Arugula on Focaccia — $16.95',
+    steps:[
+      { icon:'🍞', text:'Cut a portion of house focaccia to serving size' },
+      { icon:'🔥', text:'Toast on the panini press until golden — 3 to 4 min' },
+      { icon:'🍗', text:'Place grilled chicken breast on the bottom — use the pre-sliced/heated portion from prep' },
+      { icon:'🧀', text:'Gently tear burrata and lay on top of chicken' },
+      { icon:'🍅', text:'Add tomato slices' },
+      { icon:'🌿', text:'Spread basil pesto on the top piece of focaccia' },
+      { icon:'🥬', text:'Add a handful of fresh arugula' },
+      { icon:'🏷️', text:'Cap, wrap in parchment, label with item and time, call the order' }
+    ]
+  },
+  { id:'sg_med_bliss', cat:'Sandwiches', name:'Mediterranean Bliss', icon:'🫒', note:'Burrata · Prosciutto · Tomato · Arugula · Pesto · Honey Balsamic on Sourdough — $19.65',
+    steps:[
+      { icon:'🍞', text:'Slice sourdough about 3/4 inch thick — use the Classic Artisan Loaf' },
+      { icon:'🔥', text:'Toast until golden and firm' },
+      { icon:'🌿', text:'Spread fresh basil pesto across the toast' },
+      { icon:'🧀', text:'Gently tear burrata and spread across the pesto layer' },
+      { icon:'🥩', text:'Drape prosciutto slices — do not overlap too tightly, fan them slightly' },
+      { icon:'🍅', text:'Add fresh tomato slices' },
+      { icon:'🥬', text:'Top with a handful of fresh arugula' },
+      { icon:'🍯', text:'Finish with a drizzle of honey balsamic glaze' },
+      { icon:'🏷️', text:'Plate, label with item and time, call the order — open-face, do not wrap' }
+    ]
+  },
+  { id:'sg_turkey_club', cat:'Sandwiches', name:"Bella's Turkey Club", icon:'🦃', note:'Slow-roasted Turkey · Bacon · Arugula · Tomato on Sourdough — $16.00',
+    steps:[
+      { icon:'🍞', text:'Slice two pieces of sourdough about 3/4 inch thick' },
+      { icon:'🔥', text:'Toast both slices until golden and firm' },
+      { icon:'🥬', text:'Layer arugula on the bottom slice' },
+      { icon:'🦃', text:'Add slow-roasted turkey breast — check posted portion size' },
+      { icon:'🥓', text:'Layer applewood smoked bacon on top of turkey' },
+      { icon:'🍅', text:'Add ripe tomato slices' },
+      { icon:'🍞', text:'Cap with the top slice, press gently, and cut diagonally' },
+      { icon:'🏷️', text:'Wrap in parchment, label with item and time, call the order' }
+    ]
+  },
+  { id:'sg_cranberry_chicken', cat:'Sandwiches', name:'Cranberry Walnut Chicken', icon:'🐓', note:'House Chicken Salad on Cranberry Walnut Sourdough — $13.45',
+    steps:[
+      { icon:'🍞', text:'Slice two pieces of Cranberry Walnut Sourdough about 3/4 inch thick' },
+      { icon:'🔥', text:'Toast lightly — or ask customer if they prefer it un-toasted' },
+      { icon:'🥗', text:'Scoop house-made chicken salad onto the bottom slice — check posted portion (approx. 4 oz)' },
+      { icon:'🍞', text:'Cap with the top slice' },
+      { icon:'✂️', text:'Cut diagonally' },
+      { icon:'🏷️', text:'Wrap in parchment, label with item and time, call the order' }
+    ]
+  },
+  { id:'sg_ham_swiss', cat:'Sandwiches', name:'Ham & Swiss Deluxe', icon:'🧀', note:'Ham · Swiss · Arugula · Tomato on All-Butter Croissant — $14.95',
+    steps:[
+      { icon:'🥐', text:'Slice a fresh all-butter croissant horizontally with the serrated knife' },
+      { icon:'🔥', text:'Toast cut-side down on the panini press — 2 to 3 min' },
+      { icon:'🧀', text:'Layer Swiss cheese on the bottom half' },
+      { icon:'🥩', text:'Layer thinly sliced ham on top of the cheese' },
+      { icon:'🥬', text:'Add fresh arugula' },
+      { icon:'🍅', text:'Add fresh tomato slices' },
+      { icon:'🥐', text:'Cap with the top half' },
+      { icon:'🏷️', text:'Wrap in parchment, label with item and time, call the order' }
+    ]
+  },
+
+  // ── TOASTS ─────────────────────────────────────────────────
+  { id:'sg_avo_toast', cat:'Toasts', name:'Avocado Sourdough Toast', icon:'🥑', note:'Avocado · Sea Salt · Pepper on Sourdough — $12.95',
+    steps:[
+      { icon:'🍞', text:'Slice sourdough about 3/4 inch thick' },
+      { icon:'🔥', text:'Toast until golden and firm' },
+      { icon:'🥑', text:'Halve and pit a ripe avocado — scoop into a small bowl' },
+      { icon:'🧂', text:'Season with sea salt and freshly cracked pepper — taste before spreading' },
+      { icon:'🥄', text:'Mash lightly with a fork — keep some texture, do not over-mash' },
+      { icon:'🥑', text:'Spread generously onto the toast' },
+      { icon:'🧂', text:'Finish with a pinch of sea salt flakes on top' },
+      { icon:'🍽️', text:'Plate and call the order — serve open-face, do not wrap' }
+    ]
+  },
+  { id:'sg_ricotta_bruschetta', cat:'Toasts', name:'Ricotta Bruschetta', icon:'🫙', note:'Ricotta · Roasted Vegetables · EVOO · Sea Salt on Olive Sourdough — $14.00',
+    steps:[
+      { icon:'🍞', text:'Slice Olive Sourdough about 3/4 inch thick' },
+      { icon:'🔥', text:'Toast until golden and firm' },
+      { icon:'🫒', text:'Brush generously with extra virgin olive oil while still hot' },
+      { icon:'🧀', text:'Spread premium Ricotta across the full toast' },
+      { icon:'🥗', text:'Top with roasted vegetables from the prep container in the fridge — check freshness' },
+      { icon:'🫒', text:'Drizzle extra virgin olive oil over the top' },
+      { icon:'🧂', text:'Finish with a pinch of sea salt' },
+      { icon:'🍽️', text:'Plate and call the order — serve open-face, do not wrap' }
+    ]
+  },
+
+  // ── COFFEE ─────────────────────────────────────────────────
+  { id:'sg_espresso', cat:'Coffee', name:'Espresso', icon:'🫖', note:'Pour and serve within 30 seconds of pulling — $3.85',
+    steps:[
+      { icon:'🔌', text:'Confirm machine is warmed up — portafilter warm to touch' },
+      { icon:'⚖️', text:'Dose portafilter with 18 g for a double shot' },
+      { icon:'🤜', text:'Tamp evenly with firm, level pressure' },
+      { icon:'🔒', text:'Lock portafilter into the group head' },
+      { icon:'▶️', text:'Start pull — target 25 to 30 seconds for a double' },
+      { icon:'☕', text:'Pour into a warmed 3 oz cup and serve immediately' }
+    ]
+  },
+  { id:'sg_macchiato', cat:'Coffee', name:'Macchiato', icon:'☕', note:'Espresso marked with a small dollop of foam — $4.65',
+    steps:[
+      { icon:'☕', text:'Pull a double espresso into a small cup (same as espresso steps)' },
+      { icon:'🥛', text:'Steam a very small amount of milk to a thick, dry foam' },
+      { icon:'🥄', text:'Spoon one to two dollops of foam directly onto the espresso' },
+      { icon:'📣', text:'Serve immediately — the foam sits on top without mixing' }
+    ]
+  },
+  { id:'sg_cappuccino', cat:'Coffee', name:'Cappuccino', icon:'☕', note:'Equal thirds: espresso / steamed milk / foam — $6.25',
+    steps:[
+      { icon:'☕', text:'Pull a double espresso into a 6 oz cup' },
+      { icon:'🥛', text:'Steam a small amount of milk — target thick, velvety microfoam' },
+      { icon:'📏', text:'Pour 1/3 steamed milk then spoon 1/3 dry foam on top' },
+      { icon:'✅', text:'Foam should hold its shape — spoon extra if needed' },
+      { icon:'📣', text:'Serve immediately and call the order' }
+    ]
+  },
+  { id:'sg_latte', cat:'Coffee', name:'Latte', icon:'🍶', note:'Steam milk to 140–150°F — ask size M or L — $6.30 / $7.25',
+    steps:[
+      { icon:'☕', text:'Pull a double espresso shot into the cup' },
+      { icon:'🥛', text:'Pour cold whole milk into the steam pitcher to the spout base' },
+      { icon:'💨', text:'Submerge steam tip just below the surface — stretch then swirl to 140–150°F' },
+      { icon:'🌀', text:'Swirl the pitcher and tap on the counter to pop large bubbles' },
+      { icon:'🍶', text:'Pour steamed milk over espresso in a steady stream' },
+      { icon:'✅', text:'Lid on — call the order' }
+    ]
+  },
+  { id:'sg_blended_nitro', cat:'Coffee', name:'Blended Nitro', icon:'🧊', note:'Ask size L or XL — $6.95 / $8.25',
+    steps:[
+      { icon:'🧊', text:'Fill the blender with ice to the halfway mark' },
+      { icon:'🫙', text:'Pour cold brew concentrate over the ice (check posted ratio for size)' },
+      { icon:'▶️', text:'Blend on high for 20 to 30 seconds until smooth and frothy' },
+      { icon:'🥤', text:'Pour into the correct cup size — it should be thick and creamy' },
+      { icon:'🥤', text:'Add a wide straw and lid, call the order' }
+    ]
+  },
+
+  // ── SMOOTHIES & DRINKS ─────────────────────────────────────
+  { id:'sg_mixed_berry_smoothie', cat:'Smoothies & Drinks', name:'Mixed Berry Smoothie', icon:'🫐', note:'Smoothie bags from the Bakery Chest Freezer — $9.85',
+    steps:[
+      { icon:'❄️', text:'Grab one Smoothie – Mixed Berry bag from the Bakery Chest Freezer' },
+      { icon:'🥤', text:'Empty the bag into the blender' },
+      { icon:'💧', text:'Add 1/2 cup filtered water or oat milk' },
+      { icon:'▶️', text:'Blend on high for 30 to 45 seconds until smooth' },
+      { icon:'🥤', text:'Pour into the cup, add a wide straw and lid, call the order' }
+    ]
+  },
+  { id:'sg_strawberry_acai', cat:'Smoothies & Drinks', name:'Strawberry Acai', icon:'🍓', note:'Ask size M or L — $5.75 / $6.75',
+    steps:[
+      { icon:'🫙', text:'Add the correct amount of strawberry acai base to the blender (M: 8oz / L: 12oz)' },
+      { icon:'🍓', text:'Add frozen strawberries — check posted portion for size' },
+      { icon:'💧', text:'Add a splash of water or coconut water to help blend' },
+      { icon:'▶️', text:'Blend on high for 30 seconds until smooth' },
+      { icon:'🧊', text:'Pour over ice in the correct cup size' },
+      { icon:'🥤', text:'Add a straw and lid, call the order' }
+    ]
+  },
+
+  // ── RETAIL ─────────────────────────────────────────────────
+  { id:'sg_retail_restock', cat:'Retail', name:'Restock Retail Freezer', icon:'❄️', note:'Check stock every morning during opening',
+    steps:[
+      { icon:'📋', text:'Open the Freezer Stock tab and select the Retail Freezer' },
+      { icon:'❄️', text:'Open the physical Retail Freezer and compare counts to the app' },
+      { icon:'📦', text:'Pull needed items from the Bread or Croissant Freezer in the back' },
+      { icon:'🔄', text:'Place new stock behind existing — always front-load old stock' },
+      { icon:'✏️', text:'Update counts in the Freezer Stock tab when done' }
+    ]
+  },
+  { id:'sg_case_setup', cat:'Retail', name:'Pastry Case Setup', icon:'🫙', note:'Done during the opening checklist',
+    steps:[
+      { icon:'🧹', text:'Wipe the inside of the display case with a clean damp cloth' },
+      { icon:'📋', text:'Check the bake board or daily plan for what is ready' },
+      { icon:'🥐', text:'Stock items front to back — fresh items go behind existing stock' },
+      { icon:'🏷️', text:'Verify all price tags are in place and readable' },
+      { icon:'✅', text:'Text the manager if anything is critically low or missing' }
+    ]
+  },
+
   // HOT DRINKS
   { id:'sg_drip', cat:'Hot Drinks', name:'Drip Coffee', icon:'☕', note:'Discard if brewed more than 30 min ago',
     steps:[
@@ -13798,7 +14099,7 @@ function renderStationGuide() {
       style="flex-shrink:0;padding:12px 20px;border-radius:4px;
              border:2px solid ${active ? 'var(--accent)' : 'var(--border)'};
              background:${active ? 'var(--accent)' : 'var(--surface)'};
-             color:${active ? '#1a1209' : 'var(--text)'};
+             color:${active ? '#fff' : 'var(--text)'};
              font-size:14px;font-weight:${active ? '700' : '500'};cursor:pointer;
              white-space:nowrap;touch-action:manipulation;min-height:48px">${c}</button>`;
   }).join('');
@@ -13880,7 +14181,7 @@ function sgUpdateStep() {
   } else {
     nextBtn.textContent = 'Next →';
     nextBtn.style.background = 'var(--accent)';
-    nextBtn.style.color = '#1a1209';
+    nextBtn.style.color = '#fff';
   }
 }
 
@@ -15934,18 +16235,31 @@ function authBoot() {
   }
   authUpdateChip();
   updateNavDots();
+
+  // Idle timeout — touch on any interaction, check every 60 s
+  ['click','keydown','touchstart','mousemove'].forEach(evt =>
+    document.addEventListener(evt, idleTouch, { passive: true })
+  );
+  setInterval(idleCheck, 60000);
+
   const _bootSession = authGetSession();
   const seenVersion = localStorage.getItem('bk_seen_version');
   if (seenVersion !== APP_VERSION) {
     versionShow(() => {
-      if (!_bootSession) { authShowModal(); } else { authRedirectForRole(_bootSession.role); }
+      if (!_bootSession) { authShowModal(); } else { idleTouch(); authRedirectForRole(_bootSession.role); }
     });
   } else {
-    if (!_bootSession) { authShowModal(); } else { authRedirectForRole(_bootSession.role); }
+    if (!_bootSession) { authShowModal(); } else { idleTouch(); authRedirectForRole(_bootSession.role); }
   }
 }
 
 const VERSION_NOTES = {
+  '1.6': [
+    '🔒 Auto-logout after inactivity — configurable per device (Owner settings on Staff page)',
+    '⏱ Dough Timer keeps session alive while batches are running',
+    '📋 Station Guide populated with full menu procedures for all prepared foods & drinks',
+    '🏷️ Version badge always visible in the header',
+  ],
   '1.5': [
     '⏱ Dough Timer — track concurrent batches with auto stagger suggestions',
     '🥪 Sandwich Timer — step-by-step timed guide for sandwich assembly',
