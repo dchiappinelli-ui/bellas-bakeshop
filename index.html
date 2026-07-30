@@ -898,7 +898,7 @@
   <button class="nav-btn" data-staff-visible="true"  onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-staff-visible="false" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
   <button class="nav-btn" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Board</button>
+  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Message Board</button>
   <button class="nav-btn" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
   <!-- FOH — right -->
   <button class="nav-btn" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
@@ -1898,7 +1898,7 @@
 
 <!-- ======== STAFF BOARD PAGE ======== -->
 <div class="page staff-page" id="page-staffboard">
-  <h2>💬 Staff Board</h2>
+  <h2>💬 Staff Message Board</h2>
   <p class="subtitle">Messages, shift notes, and morning tasks — visible to everyone</p>
 
   <!-- Compose box -->
@@ -3334,6 +3334,7 @@ function showPage(page) {
   if (page === 'staffboard') renderStaffBoard();
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
+  if (page === 'stationguide') renderStationGuide();
   renderStatusBanners(page);
 }
 
@@ -11678,46 +11679,43 @@ function authUpdateChip() {
   authApplyNav();
 }
 
-// Filter nav buttons by data-min-role
+// 3-tier nav filter:
+//   Owner                                        → all pages
+//   BOH  (Bakery Assistant, Baker, Head Baker)   → all pages except Owner-only (same permissions)
+//   FOH  (Barista)                               → FOH + shared pages only
 function authApplyNav() {
-  const role      = authCurrentRole();
-  const isOwner   = role === 'Owner';
-  const isBarista = role === 'Barista';
-  const isBOH     = authCanAccess('Bakery Assistant');
-  // Kitchen staff = any BOH role that isn't a Barista (front-of-house)
-  const isKitchen = isBOH && !isBarista;
+  const role    = authCurrentRole();
+  const isOwner = role === 'Owner';
+  const isFOH   = role === 'Barista';
+  const isBOH   = !isOwner && !isFOH && authCanAccess('Bakery Assistant'); // Bakery Asst, Baker, Head Baker
+
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    const onclick       = btn.getAttribute('onclick') || '';
-    const area          = btn.getAttribute('data-nav-area') || '';
-    const isFreezer     = onclick.includes("'freezer'");
-    const isEod         = onclick.includes("'eod'");
-    const isIngredients = onclick.includes("'ingredients'");
-    const isOpening     = onclick.includes("'opening'");
-    const isDoughTimer  = onclick.includes("'doughtimer'");
-    const isStaffBoard  = onclick.includes("'staffboard'");
-    const isBoard       = onclick.includes("'board'");
-    const isWeekPlan    = onclick.includes("'weekplan'");
-    const isCountSheet    = onclick.includes("'countsheet'");
-    const isStationGuide  = onclick.includes("'stationguide'");
-    const isPrepPage      = onclick.includes("'prep'");
-    const isFohArea     = area === 'foh';
-    const isBakeryArea  = area === 'bakery';
-    const isSharedArea  = area === 'shared';
-    // Pages visible to all staff (FOH + kitchen)
-    const staffPages = isFreezer || isEod || isIngredients || isOpening || isDoughTimer || isStaffBoard || isBoard || isCountSheet || isStationGuide || isFohArea || isSharedArea;
-    // Pages visible to kitchen only (not baristas)
-    const kitchenPages = isWeekPlan || isPrepPage || isBakeryArea;
+    const onclick = btn.getAttribute('onclick') || '';
+
+    // Owner-only (hidden from all staff)
+    const ownerOnly = onclick.includes("'countsheet'");
+
+    // Visible to every logged-in staff member — FOH + BOH + Owner
+    const allStaff = onclick.includes("'freezer'")      ||
+                     onclick.includes("'opening'")       ||
+                     onclick.includes("'ingredients'")   ||
+                     onclick.includes("'stationguide'")  ||
+                     onclick.includes("'staffboard'")    ||
+                     onclick.includes("'eod'");
+
+    // Everything else (not ownerOnly, not allStaff) is BOH + Owner only
+    const bohOnly = !ownerOnly && !allStaff;
+
     if (isOwner) {
       btn.style.display = '';
-    } else if (isKitchen) {
-      btn.style.display = (staffPages || kitchenPages) ? '' : 'none';
-    } else if (isBarista) {
-      btn.style.display = staffPages ? '' : 'none';
+    } else if (isBOH) {
+      btn.style.display = (allStaff || bohOnly) ? '' : 'none';
+    } else if (isFOH) {
+      btn.style.display = allStaff ? '' : 'none';
     } else {
       btn.style.display = 'none';
     }
   });
-
 }
 
 // ── Modal ──────────────────────────────────────────────────
@@ -11741,8 +11739,8 @@ function authHideModal() {
 let _authLoginTab = 'foh';
 
 const AUTH_LOGIN_TABS = [
-  { id:'foh',   label:'☕ Front of House', roles:['Barista','Bakery Assistant'] },
-  { id:'baker', label:'🍞 Bakers',         roles:['Baker','Head Baker'] },
+  { id:'foh',   label:'☕ Front of House', roles:['Barista'] },
+  { id:'baker', label:'🍞 Bakers',         roles:['Bakery Assistant','Baker','Head Baker'] },
   { id:'mgmt',  label:'⭐ Management',      roles:['Owner'] },
 ];
 
@@ -12925,7 +12923,8 @@ function dtStartTick() {
       }
     });
 
-    // Persistent alarm popup for overdue active steps
+    // Persistent alarm popup — BOH only; Barista (FOH) devices never trigger this
+    if (authCurrentRole() === 'Barista' || !authCanAccess('Bakery Assistant')) return;
     batches.filter(b => b.status === 'active').forEach(b => {
       if (_dtAlarmKey) return; // one alarm at a time — wait for baker action
       const recipe = recipes.find(r => r.id === b.recipeId);
@@ -12942,7 +12941,7 @@ function dtStartTick() {
     });
 
     // Every second: update clock displays in-place (no full re-render needed)
-    if (activePage() !== 'doughtimer' || _dtActiveTab !== 'dough') return;
+    if (activePage() !== 'doughtimer') return;
     batches.filter(b => b.status === 'active').forEach(b => {
       const recipe  = recipes.find(r => r.id === b.recipeId);
       if (!recipe) return;
