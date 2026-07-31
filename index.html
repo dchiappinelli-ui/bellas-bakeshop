@@ -1700,7 +1700,7 @@
     <!-- Split view: left batch tabs + right detail panel -->
     <div style="display:flex;gap:0;align-items:flex-start">
       <div id="dt-batch-tabs" style="flex-shrink:0;width:190px;position:relative;z-index:1"></div>
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0;margin-left:-1px">
         <div id="dt-batch-detail"></div>
         <div id="dt-matrix"></div>
       </div>
@@ -2654,7 +2654,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6.2';
+const APP_VERSION      = '1.6.3';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -11956,30 +11956,34 @@ function authUpdateChip() {
 }
 
 // 3-tier nav filter:
-//   Owner                                        → all pages
-//   BOH  (Bakery Assistant, Baker, Head Baker)   → all pages except Owner-only (same permissions)
-//   FOH  (Barista)                               → FOH + shared pages only
+//   Owner         → all pages
+//   Bakery Staff  (Bakery Assistant, Baker, Head Baker) → FOH pages + bakery production pages
+//   FOH / Barista → FOH pages only (no Dough Timer, no production scheduling)
 function authApplyNav() {
   const role    = authCurrentRole();
   const isOwner = role === 'Owner';
   const isFOH   = role === 'Barista';
-  const isBOH   = !isOwner && !isFOH && authCanAccess('Bakery Assistant'); // Bakery Asst, Baker, Head Baker
+  const isBOH   = !isOwner && !isFOH && authCanAccess('Bakery Assistant');
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const onclick = btn.getAttribute('onclick') || '';
 
-    // Owner-only (hidden from all staff)
-    const ownerOnly = onclick.includes("'countsheet'") || onclick.includes("'staff'");
+    // Owner-only pages (hidden from all staff)
+    const ownerOnly = onclick.includes("'staff'")    ||
+                      onclick.includes("'ordering'") ||
+                      onclick.includes("'channels'");
 
-    // Visible to every logged-in staff member — FOH + BOH + Owner
-    const allStaff = onclick.includes("'freezer'")      ||
+    // FOH pages — visible to everyone (FOH, Bakery Staff, Owner)
+    const allStaff = onclick.includes("'board'")        ||
+                     onclick.includes("'checksheet'")    ||
+                     onclick.includes("'orders'")        ||
                      onclick.includes("'opening'")       ||
                      onclick.includes("'ingredients'")   ||
                      onclick.includes("'stationguide'")  ||
                      onclick.includes("'staffboard'")    ||
                      onclick.includes("'eod'");
 
-    // Everything else (not ownerOnly, not allStaff) is BOH + Owner only
+    // Everything else = Bakery Staff + Owner only (production tools)
     const bohOnly = !ownerOnly && !allStaff;
 
     if (isOwner) {
@@ -13395,7 +13399,7 @@ function renderDoughTimer() {
           <div style="font-size:10px;font-weight:900;letter-spacing:2px;opacity:0.7;margin-bottom:1px">
             ACTIVE STEP — BAKER NEEDED</div>
           <div style="font-size:18px;font-weight:900">
-            ${needsAction.length} batch${needsAction.length>1?'es require':'requires'} your attention now</div>
+            ${needsAction.length} batch${needsAction.length>1?'es require':' requires'} your attention now</div>
         </div>
       </div>`;
       alertEl.innerHTML = staggerHtml + actionHeader + needsAction.map(b => {
@@ -13500,8 +13504,8 @@ function renderDoughBatchTabs() {
       const isWait  = step.type === 'wait';
       const clkClr  = over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
       const clkTxt  = over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
-      dotColor       = step.type === 'active' ? '#cc3300' : scheme.done;
-      tabBorderColor = scheme.done; // always matches detail panel accent
+      dotColor       = scheme.border; // batch color — makes each tab visually distinct
+      tabBorderColor = scheme.border;
       stepLabel = step.name;
       clockHtml = `<div id="dt-tab-clock-${b.id}" style="font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;color:${clkClr};margin-top:5px;line-height:1">${clkTxt}</div>`;
     } else if (isSched) {
@@ -13515,17 +13519,17 @@ function renderDoughBatchTabs() {
       clockHtml = `<div style="font-size:11px;color:#aaa;margin-top:3px">${b.completedAt ? dtFmtTime(b.completedAt) : ''}</div>`;
     }
     const selTabStyle = isSel
-      ? `border:4px solid ${tabBorderColor};border-right:4px solid #fff;border-radius:8px 0 0 8px;
-         margin-right:-4px;position:relative;z-index:2;background:#fff;`
-      : `border:2px solid #ddd;border-left:6px solid ${tabBorderColor};border-radius:6px;
+      ? `border:5px solid ${tabBorderColor};border-right:5px solid #fff;border-radius:10px 0 0 10px;
+         margin-right:-5px;position:relative;z-index:2;background:#fff;`
+      : `border:2px solid #d8d8d8;border-left:8px solid ${tabBorderColor};border-radius:8px;
          margin-right:0;position:relative;z-index:1;background:#f8f8f8;`;
     return `<div onclick="dtSelectBatch('${b.id}')" style="${selTabStyle}
-      padding:13px 14px;margin-bottom:10px;cursor:pointer;
-      opacity:${isDone?0.65:1};transition:all 0.12s;box-sizing:border-box">
-      <div style="display:flex;align-items:flex-start;gap:8px">
-        <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:3px;display:inline-block"></span>
+      padding:14px 15px;margin-bottom:10px;cursor:pointer;
+      opacity:${isDone?0.6:1};transition:all 0.12s;box-sizing:border-box">
+      <div style="display:flex;align-items:flex-start;gap:9px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:3px;display:inline-block"></span>
         <div style="min-width:0;flex:1">
-          <div style="font-size:13px;font-weight:900;color:#111;line-height:1.2;word-break:break-word">${b.label}</div>
+          <div style="font-size:13px;font-weight:900;color:${isSel?tabBorderColor:'#333'};line-height:1.2;word-break:break-word">${b.label}</div>
           <div style="font-size:11px;color:#888;margin-top:2px;font-weight:600">${stepLabel}</div>
           ${clockHtml}
         </div>
@@ -13652,7 +13656,7 @@ function renderDoughBatchDetail() {
   const accentClr = isActive ? scheme.border : isDone ? '#4a9c6e' : '#bbb';
   const stepNum   = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length}` : isDone ? '✓ Complete' : 'Scheduled';
   const curStepName = isActive ? recipe.steps[batch.currentStepIdx]?.name : '';
-  detailEl.innerHTML = `<div style="background:#fff;border:4px solid ${accentClr};border-left:none;border-radius:0 8px 8px 8px;margin-bottom:16px;overflow:hidden">
+  detailEl.innerHTML = `<div style="background:#fff;border:5px solid ${accentClr};border-left:none;border-radius:0 10px 10px 10px;margin-bottom:16px;overflow:hidden">
     <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <div style="font-size:20px;font-weight:900;color:#111">${batch.label}</div>
@@ -16508,6 +16512,12 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.3': [
+    '🔒 Simplified to 3-tier access: Owner / Bakery Staff / FOH',
+    '🧑‍🍳 Bakery Staff see all production tools + FOH pages',
+    '☕ FOH / Barista see Today\'s Board, Orders, Ingredients, Checklists & more',
+    '🔑 Owner-only: Staff, Ordering, Channels',
+  ],
   '1.6.2': [
     '⏱ Dough Timer redesigned — vertical batch tabs with live countdown, click for full step detail',
     '🔒 Staff & Capabilities page now Owner-only',
