@@ -1959,6 +1959,7 @@
         <button class="btn btn-ghost" onclick="eodShowTab('dashboard')" id="eod-tab-dashboard" style="">📊 Par Dashboard</button>
         <button class="btn btn-ghost" onclick="eodShowTab('items')"     id="eod-tab-items"   style="">📋 Settings</button>
         <button class="btn btn-ghost" onclick="eodShowTab('square')"    id="eod-tab-square"  style="">🟦 Square</button>
+        <button class="btn btn-ghost" onclick="eodPrintReport()" style="border-color:var(--accent);color:var(--accent);font-weight:700">📄 Full Report</button>
       </div>
     </div>
 
@@ -2553,12 +2554,23 @@ function dsCheckLog(logKey) {
 function dsCheckEod() {
   try {
     const log = JSON.parse(localStorage.getItem('bk_eod_log') || '[]');
-    const today = _dsToday();
-    const entry = log.find(e => e.date === today);
-    if (entry) return { done: true, detail: `Logged by ${entry.by || 'Staff'}` };
-    const last = log[log.length - 1];
-    return { done: false, detail: last ? `Last: ${last.date}` : 'Not logged yet' };
-  } catch { return { done: false, detail: 'Not logged yet' }; }
+    const today     = _dsToday();
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    const cutoffMs  = Date.now() - 20 * 3600000; // green for 20 hours after submission
+
+    // Today's finalized entry
+    const todayEntry = log.find(e => e.date === today && e.submittedAt);
+    if (todayEntry) {
+      return { done: true, detail: `Finalized by ${todayEntry.submittedBy || 'Staff'}` };
+    }
+    // Yesterday's finalized entry still within the 20-hour window (e.g., 10pm close)
+    const yEntry = log.find(e => e.date === yesterday && e.submittedAt);
+    if (yEntry && new Date(yEntry.submittedAt).getTime() > cutoffMs) {
+      return { done: true, detail: `Finalized by ${yEntry.submittedBy || 'Staff'} (yesterday)` };
+    }
+    const last = log.filter(e => e.submittedAt).slice(-1)[0];
+    return { done: false, detail: last ? `Last: ${last.date} by ${last.submittedBy || 'Staff'}` : 'Not submitted yet' };
+  } catch { return { done: false, detail: 'Not submitted yet' }; }
 }
 
 // Map page id → array of status checks for that page
@@ -11410,6 +11422,176 @@ function eodSubmitLog() {
 }
 
 // ── Square API sync ───────────────────────────────────────
+// ── Full End-of-Day Report ────────────────────────────────
+function eodPrintReport() {
+  const today     = new Date().toISOString().slice(0,10);
+  const todayFmt  = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const now       = new Date().toLocaleString('en-US',{hour:'numeric',minute:'2-digit'});
+
+  // ── EOD log entry ──
+  const eodLog    = eodGetLog();
+  const entry     = eodLog.find(e => e.date === today) || {};
+  const locs      = eodGetLocations();
+  const dayType   = entry.dayType || '—';
+  const notes     = entry.notes   || '—';
+  const subBy     = entry.submittedBy || null;
+  const subAt     = entry.submittedAt ? new Date(entry.submittedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : null;
+
+  // ── Checklists ──
+  function clCheck(logKey) {
+    try {
+      const log = JSON.parse(localStorage.getItem(logKey) || '[]');
+      const e = log.slice().reverse().find(x => x.date === today);
+      return e ? `${e.checked}/${e.total} · ${e.ts} by ${e.by}` : 'Not completed today';
+    } catch { return 'No data'; }
+  }
+
+  // ── Freezer stock ──
+  let freezerHtml = '';
+  try {
+    const defs = JSON.parse(localStorage.getItem('bk_freezer_defs') || 'null') || [];
+    const data = JSON.parse(localStorage.getItem('bk_freezer')      || '{}');
+    const lastSubmit = localStorage.getItem('bk_freezer_last_submit') || 'Not submitted';
+    defs.forEach(f => {
+      if (!f.items?.length) return;
+      freezerHtml += `<h3 style="margin:16px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:#555">${f.name}</h3>
+        <table><thead><tr><th>Item</th><th>Count</th><th>Status</th><th>Updated by</th></tr></thead><tbody>`;
+      f.items.forEach(name => {
+        const k = `${f.id}::${name}`;
+        const d = data[k] || {};
+        const c = d.count !== null && d.count !== undefined ? d.count : '—';
+        const status = c === '—' ? '' : c === 0 ? 'Empty' : c <= 3 ? 'Low' : 'Stocked';
+        const col    = c === '—' ? '#999' : c === 0 ? '#c0392b' : c <= 3 ? '#e67e22' : '#27ae60';
+        const by     = d.updatedBy ? `${d.updatedBy} · ${new Date(d.updatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : '—';
+        freezerHtml += `<tr><td>${name}</td><td style="text-align:center;font-weight:700">${c}</td>
+          <td><span style="color:${col};font-weight:600">${status}</span></td><td style="font-size:11px;color:#777">${by}</td></tr>`;
+      });
+      freezerHtml += `</tbody></table>`;
+    });
+    freezerHtml = `<div style="font-size:11px;color:#777;margin-bottom:8px">Last submitted: ${lastSubmit}</div>` + freezerHtml;
+  } catch { freezerHtml = '<p>No data</p>'; }
+
+  // ── Ingredient status ──
+  let ingHtml = '';
+  try {
+    const defs   = JSON.parse(localStorage.getItem('bk_ing_defs')  || 'null') || [];
+    const status = JSON.parse(localStorage.getItem('bk_ingredients')|| '{}');
+    const last   = localStorage.getItem('bk_ing_last_submit') || 'Not submitted';
+    const cats = {}, catOrder = [];
+    defs.forEach(d => { if (!cats[d.cat]) { cats[d.cat] = []; catOrder.push(d.cat); } cats[d.cat].push(d.name); });
+    const lbl = { green:'Good', yellow:'Order Soon', red:'Order Now' };
+    const col = { green:'#27ae60', yellow:'#e67e22', red:'#c0392b' };
+    catOrder.forEach(cat => {
+      ingHtml += `<tr style="background:#f5f5f5"><td colspan="3" style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;padding:6px 10px;color:#555">${cat}</td></tr>`;
+      cats[cat].forEach(name => {
+        const e = status[name] || {};
+        const s = e.status || 'green';
+        const by = e.updatedBy ? `${e.updatedBy} · ${new Date(e.updatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : '—';
+        ingHtml += `<tr><td style="padding:6px 10px">${name}</td>
+          <td style="padding:6px 10px"><span style="color:${col[s]};font-weight:700">${lbl[s]}</span></td>
+          <td style="padding:6px 10px;font-size:11px;color:#777">${by}</td></tr>`;
+      });
+    });
+    ingHtml = `<div style="font-size:11px;color:#777;margin-bottom:8px">Last submitted: ${last}</div>
+      <table><thead><tr><th>Item</th><th>Status</th><th>Updated by</th></tr></thead><tbody>${ingHtml}</tbody></table>`;
+  } catch { ingHtml = '<p>No data</p>'; }
+
+  // ── Location closing counts ──
+  let locHtml = '';
+  locs.forEach(loc => {
+    const counts = entry.locations?.[loc.id]?.counts || {};
+    if (!loc.items.length) return;
+    locHtml += `<h3 style="margin:16px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:#555">${loc.name}</h3>
+      <table><thead><tr><th>Item</th><th style="text-align:center">Remaining</th></tr></thead><tbody>`;
+    loc.items.forEach(name => {
+      const v = counts[name] !== undefined ? counts[name] : '—';
+      locHtml += `<tr><td style="padding:7px 10px">${name}</td><td style="text-align:center;padding:7px 10px;font-weight:700;font-size:16px;color:${v===0?'#27ae60':v==='—'?'#999':'#1a1209'}">${v}</td></tr>`;
+    });
+    locHtml += `</tbody></table>`;
+  });
+  if (!locHtml) locHtml = '<p style="color:#999">No closing counts entered today.</p>';
+
+  // ── Staff board posts from today ──
+  let sbHtml = '';
+  try {
+    const posts = JSON.parse(localStorage.getItem('bk_staff_board') || '[]');
+    const todayPosts = posts.filter(p => p.timestamp && new Date(p.timestamp).toISOString().slice(0,10) === today);
+    if (todayPosts.length) {
+      sbHtml = todayPosts.map(p => {
+        const t = new Date(p.timestamp).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+        return `<div style="border-left:3px solid #c8a45a;padding:8px 14px;margin-bottom:8px;background:#fdf8f0">
+          <div style="font-size:13px;color:#1a1209">${p.text}</div>
+          <div style="font-size:11px;color:#999;margin-top:4px">${p.by || 'Staff'} · ${t}${p.type && p.type!=='general' ? ' · '+p.type : ''}</div>
+        </div>`;
+      }).join('');
+    } else { sbHtml = '<p style="color:#999">No posts today.</p>'; }
+  } catch { sbHtml = '<p>No data</p>'; }
+
+  // ── Build the page ──
+  const section = (title, content) => `
+    <div style="margin:28px 0 0;page-break-inside:avoid">
+      <div style="background:#1a1209;color:#e8a045;padding:8px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:4px 4px 0 0">${title}</div>
+      <div style="border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;padding:16px">${content}</div>
+    </div>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>EOD Report — Bella's Bake Shop — ${today}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:32px;color:#1a1209;font-size:13px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:16px;border-bottom:3px solid #1a1209}
+    .logo{font-family:cursive;font-size:36px;color:#c8a45a;line-height:1}
+    .meta{text-align:right;font-size:12px;color:#555;line-height:1.8}
+    h2{font-size:20px;margin:0 0 4px}
+    h3{margin:0 0 4px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#888;padding:6px 10px;border-bottom:2px solid #ddd;text-align:left;font-weight:600}
+    td{padding:7px 10px;border-bottom:1px solid #eee}
+    tr:last-child td{border-bottom:none}
+    tr:hover{background:#fafafa}
+    .stamp{display:inline-block;padding:4px 12px;border-radius:4px;font-weight:700;font-size:12px}
+    @media print{body{padding:16px}button{display:none}}
+  </style></head><body>
+  <div class="header">
+    <div>
+      <div class="logo">Bella's</div>
+      <h2>End of Day Report</h2>
+      <div style="font-size:13px;color:#555">${todayFmt}</div>
+    </div>
+    <div class="meta">
+      <div><strong>Day type:</strong> ${dayType}</div>
+      <div><strong>Notes:</strong> ${notes}</div>
+      <div><strong>Generated:</strong> ${now}</div>
+      ${subBy ? `<div><strong>Finalized:</strong> ${subAt} by ${subBy}</div>` : '<div style="color:#c0392b"><strong>⚠ Not yet finalized</strong></div>'}
+    </div>
+  </div>
+  <div style="text-align:center;margin-bottom:8px"><button onclick="window.print()" style="padding:10px 28px;background:#1a1209;color:#e8a045;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">🖨 Print / Save PDF</button></div>
+
+  ${section('☀️ Checklist Summary', `
+    <table><tbody>
+      <tr><td style="font-weight:700;width:160px">Opening</td><td>${clCheck('bk_cl_log_opening')}</td></tr>
+      <tr><td style="font-weight:700">Baker Morning</td><td>${clCheck('bk_cl_log_baker')}</td></tr>
+      <tr><td style="font-weight:700">Closing</td><td>${clCheck('bk_cl_log_closing')}</td></tr>
+    </tbody></table>`)}
+
+  ${section('📊 Closing Counts by Location', locHtml)}
+
+  ${section('❄️ Freezer Stock at Close', freezerHtml)}
+
+  ${section('🧂 Ingredient Status', ingHtml)}
+
+  ${section('💬 Staff Board — Today', sbHtml)}
+
+  <div style="margin-top:40px;font-size:10px;color:#bbb;text-align:center;border-top:1px solid #eee;padding-top:12px">
+    Bella's Bake Shop · End of Day Report · ${todayFmt} · Generated ${now}
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 let _eodSyncTimer = null;
 
 function eodStartAutoSyncTimer() {
@@ -12213,7 +12395,7 @@ function freezerItemCard(freezerId, name, data, canEdit) {
     <div style="width:10px;height:10px;border-radius:50%;background:${statusColor};flex-shrink:0"></div>
     <div style="flex:1;min-width:0">
       <div style="font-size:17px;font-weight:700;color:var(--text)">${name}</div>
-      <div id="fz-meta-${safeKey}" style="margin-top:4px">${statusDot}${updatedLine}</div>
+      <div id="fz-meta-${freezerHtmlId(key)}" style="margin-top:4px">${statusDot}${updatedLine}</div>
     </div>
     ${counter}
     ${removeBtn}
@@ -12229,6 +12411,8 @@ function freezerAdjust(freezerId, name, delta) {
   const input = document.getElementById('fz-' + CSS.escape(key));
   if (input) input.value = newVal;
 }
+
+function freezerHtmlId(key) { return key.replace(/[^a-zA-Z0-9]/g, '_'); }
 
 function freezerFlashSaved(el) {
   if (!el) return;
@@ -12250,7 +12434,7 @@ function freezerSetVal(freezerId, name, val) {
   freezerSaveData(data);
 
   // Update "Updated by" line in-place so staff see confirmation immediately
-  const metaEl = document.getElementById('fz-meta-' + CSS.escape(key));
+  const metaEl = document.getElementById('fz-meta-' + freezerHtmlId(key));
   if (metaEl) {
     const statusColor = num === 0 ? '#e57373' : num <= 3 ? '#e8a045' : '#4a9c6e';
     const statusDot = `<span style="color:${statusColor};font-weight:600;font-size:11px">${num === 0 ? 'Empty' : num <= 3 ? 'Low' : 'Stocked'}</span>`;
