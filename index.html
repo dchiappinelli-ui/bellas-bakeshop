@@ -2882,7 +2882,7 @@ function setHourlyRate(staffId, val) {
 }
 
 function renderStaffPage() {
-  if (!authCanAccess('Owner')) { showPage('board'); return; }
+  if (!authCanAccess('Owner')) return;
   idleInitSettingsCard();
   const tasks = getAllTasks();
 
