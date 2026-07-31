@@ -182,6 +182,9 @@
     width: 100%;
     transition: border-color 0.15s;
   }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
 
   input:focus, select:focus, textarea:focus {
     outline: none;
@@ -949,8 +952,7 @@
     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sq-staff-csv').click()">📥 Import from Square CSV</button>
     <input type="file" id="sq-staff-csv" accept=".csv" style="display:none" onchange="squareStaffImport(this)">
     <span style="font-size:11px;color:var(--muted)">Capabilities are drawn from your Recipe Library stage skills — add recipes to expand the matrix</span>
-    <button id="pay-toggle-btn" class="btn btn-ghost btn-sm" onclick="togglePayVisibility()" style="margin-left:auto">👁 Show Pay</button>
-    <button class="btn btn-ghost btn-sm" onclick="printCapabilityMatrix()">🖨 Print Capability Matrix</button>
+    <button class="btn btn-ghost btn-sm" onclick="printCapabilityMatrix()" style="margin-left:auto">🖨 Print Capability Matrix</button>
   </div>
 
   <!-- Capability Matrix Table -->
@@ -1680,8 +1682,9 @@
 
   <!-- Dough panel -->
   <div id="dt-panel-dough">
-    <p class="subtitle" style="margin-top:-16px;margin-bottom:24px">Track concurrent dough batches — tap Done at each step</p>
-    <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:28px">
+    <p class="subtitle" style="margin-top:-16px;margin-bottom:20px">Track concurrent dough batches — tap Done at each step</p>
+    <!-- Controls: recipe selector + start buttons -->
+    <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:16px">
       <div id="dt-recipe-selector" style="display:flex;gap:8px;flex-wrap:wrap;flex:1"></div>
       <button onclick="dtStartBatch()"
         style="padding:18px 32px;background:#111;color:#fff;border:none;border-radius:4px;
@@ -1692,8 +1695,16 @@
                font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation;
                min-height:64px;white-space:nowrap;flex-shrink:0">⏰ Schedule</button>
     </div>
-    <div id="dt-alerts"></div>
-    <div id="dt-matrix"></div>
+    <!-- Alerts: full-width, shown only when baker action needed -->
+    <div id="dt-alerts" style="margin-bottom:12px"></div>
+    <!-- Split view: left batch tabs + right detail panel -->
+    <div style="display:flex;gap:0;align-items:flex-start">
+      <div id="dt-batch-tabs" style="flex-shrink:0;width:190px;margin-right:16px"></div>
+      <div style="flex:1;min-width:0">
+        <div id="dt-batch-detail"></div>
+        <div id="dt-matrix"></div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -2643,7 +2654,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6.1';
+const APP_VERSION      = '1.6.2';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2870,16 +2881,8 @@ function setHourlyRate(staffId, val) {
   saveStaff();
 }
 
-let _payVisible = false;
-
-function togglePayVisibility() {
-  _payVisible = !_payVisible;
-  const btn = document.getElementById('pay-toggle-btn');
-  if (btn) btn.textContent = _payVisible ? '🙈 Hide Pay' : '👁 Show Pay';
-  renderStaffPage();
-}
-
 function renderStaffPage() {
+  if (!authCanAccess('Owner')) { showPage('board'); return; }
   idleInitSettingsCard();
   const tasks = getAllTasks();
 
@@ -2918,7 +2921,7 @@ function renderStaffPage() {
           <div style="height:100%;width:${pct}%;background:${slot.color};border-radius:2px;transition:width 0.3s"></div>
         </div>
         ${assigned ? `<div style="margin-top:8px;font-size:11px;color:var(--muted)">
-          <span style="color:${assigned.color}">●</span> ${assigned.name} · ${_payVisible ? `$${assigned.hourlyRate}/hr · ` : ''}${assigned.role}
+          <span style="color:${assigned.color}">●</span> ${assigned.name} · ${assigned.role}
         </div>` : '<div style="margin-top:8px;font-size:11px;color:var(--warn)">⚠ No one assigned</div>'}
       </div>`;
     }).join('');
@@ -3029,20 +3032,6 @@ function renderStaffPage() {
 
       ${overrideCount > 0 ? `<div style="margin-top:10px;font-size:11px;color:var(--warn)">⚡ ${overrideCount} task-level override${overrideCount>1?'s':''} active</div>` : ''}
 
-      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:12px;color:var(--muted)">💰 Hourly Rate</span>
-        ${_payVisible
-          ? `<div style="display:flex;align-items:center;gap:4px">
-               <span style="font-size:12px;color:var(--muted)">$</span>
-               <input type="number" value="${m.hourlyRate || 15}" min="0" step="0.5"
-                 onchange="setHourlyRate('${m.id}',this.value)"
-                 style="width:60px;padding:4px 6px;background:var(--surface2);border:1px solid var(--border);color:var(--accent);border-radius:4px;font-size:13px;font-weight:600;text-align:right">
-               <span style="font-size:12px;color:var(--muted)">/hr</span>
-             </div>`
-          : `<span style="font-size:13px;font-weight:600;color:var(--muted);letter-spacing:2px">$••/hr</span>`
-        }
-      </div>
       ${(()=>{ const pins=authGetPins(); const hasPin=!!pins[m.id];
         return authCanAccess('Head Baker')
           ? `<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
@@ -11980,7 +11969,7 @@ function authApplyNav() {
     const onclick = btn.getAttribute('onclick') || '';
 
     // Owner-only (hidden from all staff)
-    const ownerOnly = onclick.includes("'countsheet'");
+    const ownerOnly = onclick.includes("'countsheet'") || onclick.includes("'staff'");
 
     // Visible to every logged-in staff member — FOH + BOH + Owner
     const allStaff = onclick.includes("'freezer'")      ||
@@ -12951,6 +12940,7 @@ const DT_BATCH_COLORS = [
 ];
 
 let _dtSelectedRecipeId  = null;
+let _dtSelectedBatchId   = null;
 let _dtTickInterval      = null;
 let _dtEditingRecipe     = null;
 let _dtAudioCtx          = null;
@@ -13296,6 +13286,15 @@ function dtStartTick() {
         }
       }
       if (totalEl) { totalEl.textContent = dtFmtHHMM((now - new Date(b.startedAt)) / 1000); totalEl.style.color = '#111'; }
+      // Update tab clock (left rail)
+      const tabClockEl = document.getElementById('dt-tab-clock-' + b.id);
+      if (tabClockEl && log && step) {
+        const tLeft = step.duration * 60 - elapsed;
+        const tOver = tLeft < 0;
+        const isWait = step.type === 'wait';
+        tabClockEl.textContent = tOver ? '+'+dtFmtMMSS(-tLeft) : dtFmtMMSS(Math.max(0, tLeft));
+        tabClockEl.style.color = tOver ? '#cc3300' : tLeft < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
+      }
       // Also update the action alert clock if it's visible
       const actionEl = document.getElementById('dt-action-clock-' + b.id);
       if (actionEl && log) {
@@ -13446,229 +13445,220 @@ function renderDoughTimer() {
     }
   }
 
-  // — Matrix —
-  const matEl = document.getElementById('dt-matrix');
-  if (!matEl) return;
-  const scheduled = batches.filter(b => b.status === 'scheduled').sort((a,z) => new Date(a.scheduledStartAt)-new Date(z.scheduledStartAt));
-  const shown = [...scheduled, ...active, ...done].slice(0, 12);
-  if (!shown.length) {
-    matEl.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aaa;font-size:18px;
-      border:3px dashed #ddd;border-radius:4px">
-      Select a dough type above and tap <strong style="color:#111">▶ Start Batch</strong></div>`;
-    return;
+  // — Batch tabs + detail view —
+  const allBatches = batches.filter(b => b.status !== 'abandoned');
+  if (!_dtSelectedBatchId || !allBatches.find(b => b.id === _dtSelectedBatchId)) {
+    const firstActive = active[0];
+    _dtSelectedBatchId = firstActive?.id || allBatches[0]?.id || null;
   }
-
-  const now = Date.now();
-  const matHeader = `<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
-    <div style="flex:1;height:2px;background:#e0e0e0"></div>
-    <div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#aaa;text-transform:uppercase;
-      white-space:nowrap;flex-shrink:0">
-      Batch Progress${active.length ? ' · ' + active.length + ' active' : ''}${done.length ? ' · ' + done.length + ' done' : ''}${scheduled.length ? ' · ' + scheduled.length + ' scheduled' : ''}
-    </div>
-    <div style="flex:1;height:2px;background:#e0e0e0"></div>
-  </div>`;
-  matEl.innerHTML = matHeader + shown.map((batch, batchIdx) => {
-    const recipe   = recipes.find(r => r.id === batch.recipeId);
-    if (!recipe) return '';
-    const isActive    = batch.status === 'active';
-    const isScheduled = batch.status === 'scheduled';
-
-    // — Scheduled batch card —
-    if (isScheduled) {
-      const scheme   = DT_BATCH_COLORS[(batch.colorIdx ?? batchIdx) % DT_BATCH_COLORS.length];
-      const startMs  = new Date(batch.scheduledStartAt).getTime();
-      const msUntil  = startMs - now;
-      const isReady  = msUntil <= 0;
-      const cdText   = isReady ? '⏰ Time to start!' : 'Starts in ' + dtSchedCountdown(batch.scheduledStartAt);
-      const cdColor  = isReady ? '#cc3300' : msUntil <= 5*60000 ? '#b87000' : '#555';
-      const stepRows = recipe.steps.map((step, idx) => {
-        const plannedTime = batch.stepTimes?.[idx] ? dtFmtTime(batch.stepTimes[idx]) : '—';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;
-          border-bottom:1px solid #f0f0f0;font-size:13px">
-          <div style="width:26px;height:26px;border-radius:50%;background:#eee;border:2px solid #ccc;
-            display:flex;align-items:center;justify-content:center;font-size:11px;
-            font-weight:800;color:#888;flex-shrink:0">${idx+1}</div>
-          <div style="flex:1;color:#333;font-weight:600">${step.name}</div>
-          <div style="color:#888;font-size:12px">${step.duration}m · ${step.type}</div>
-          <div style="font-weight:800;color:#111;min-width:48px;text-align:right">${plannedTime}</div>
-        </div>`;
-      }).join('');
-      return `<div style="background:#fff;border:3px solid ${isReady?scheme.border:'#bbb'};
-        border-left:6px solid ${isReady?scheme.done:'#bbb'};border-radius:4px;
-        margin-bottom:16px;overflow:hidden;opacity:${isReady?1:0.92}">
-        <div style="padding:16px 20px;border-bottom:2px solid #eee;background:var(--surface2,#f2f2f2)">
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <div style="flex:1">
-              <div style="font-size:21px;font-weight:900;color:#111;line-height:1.1">${batch.label}</div>
-              <div style="font-size:13px;color:#777;margin-top:4px">⏰ Scheduled · ${dtFmtTime(batch.scheduledStartAt)}</div>
-            </div>
-            <span style="padding:5px 14px;border-radius:4px;font-size:12px;font-weight:800;
-              background:${isReady?'#fff3e0':'#f5f5f5'};
-              color:${isReady?'#b87000':'#888'};border:2px solid ${isReady?'#f0a800':'#ccc'}">
-              ${isReady?'⏰ NOW':'⏳ Scheduled'}</span>
-          </div>
-          <div style="margin-top:14px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-            <div id="dt-sched-cd-${batch.id}"
-              style="font-size:22px;font-weight:900;color:${cdColor};font-variant-numeric:tabular-nums">${cdText}</div>
-            <div style="flex:1"></div>
-            <button onclick="dtStartScheduled('${batch.id}')"
-              style="padding:14px 28px;background:${isReady?'#111':'#fff'};color:${isReady?'#fff':'#111'};
-                border:3px solid #111;border-radius:4px;font-size:17px;font-weight:900;
-                cursor:pointer;touch-action:manipulation;white-space:nowrap;flex-shrink:0">▶ Start Now</button>
-            <button onclick="dtCancelScheduled('${batch.id}')"
-              style="padding:14px 20px;background:#fff;border:2px solid #ccc;
-                border-radius:4px;color:#999;font-size:14px;cursor:pointer;flex-shrink:0">Cancel</button>
-          </div>
-        </div>
-        <div style="padding:12px 20px">${stepRows}</div>
-      </div>`;
-    }
-
-    const scheme   = DT_BATCH_COLORS[(batch.colorIdx ?? batchIdx) % DT_BATCH_COLORS.length];
-    const hdr      = isActive ? scheme.header : '#666';
-    const bdr      = isActive ? scheme.border : '#bbb';
-
-    // Step tiles
-    const steps = recipe.steps.map((step, idx) => {
-      const isDone    = idx < batch.currentStepIdx || batch.status === 'complete';
-      const isCurrent = idx === batch.currentStepIdx && isActive;
-      const log       = batch.stepLog.find(l => l.stepIdx === idx);
-      let bg, border, textColor, inner;
-      if (isDone) {
-        bg = scheme.done; border = scheme.done; textColor = '#fff';
-        inner = `<div style="font-size:22px;font-weight:900">✓</div>
-                 <div style="font-size:10px;margin-top:3px;opacity:0.85;text-align:center">${step.name}</div>`;
-      } else if (isCurrent && step.type === 'wait') {
-        const left = dtMinutesLeft(log, step);
-        bg='#1a4a8a'; border='#1a4a8a'; textColor='#fff';
-        inner = `<div style="font-size:20px;font-weight:900">${left}m</div>
-                 <div style="font-size:10px;margin-top:3px;opacity:0.85;text-align:center">${step.name}</div>`;
-      } else if (isCurrent && step.type === 'active') {
-        bg='#cc3300'; border='#cc3300'; textColor='#fff';
-        inner = `<div style="font-size:18px">▶</div>
-                 <div style="font-size:10px;margin-top:3px;font-weight:800;text-align:center">${step.name}</div>`;
-      } else {
-        bg='#f2f2f2'; border='#ddd'; textColor=step.type==='wait'?'#bbb':'#aaa';
-        inner = `<div style="font-size:10px;font-weight:${step.type==='wait'?'400':'600'};
-                   text-align:center;color:${textColor}">${step.name}</div>
-                 <div style="font-size:10px;margin-top:3px;color:#ccc">${step.duration}m</div>`;
-      }
-      return `<div style="flex-shrink:0;width:76px;min-height:76px;border-radius:4px;border:2px solid ${border};
-        background:${bg};color:${textColor};display:flex;flex-direction:column;align-items:center;
-        justify-content:center;padding:6px 4px">${inner}</div>`;
-    }).join('');
-
-    // Timer row values (computed now; clock interval updates the live ones)
-    let timerRow = '';
-    if (isActive) {
-      const step     = recipe.steps[batch.currentStepIdx];
-      const log      = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
-      const stepSecs = log ? (now - new Date(log.startedAt)) / 1000 : 0;
-      const stepLeft    = step.duration * 60 - stepSecs;
-      const stepOver    = stepLeft < 0;
-      const stepDisplay = stepOver
-        ? '+' + dtFmtMMSS(stepSecs - step.duration * 60)
-        : dtFmtMMSS(Math.max(0, stepLeft));
-      const stepLabel   = stepOver ? 'overdue on ' + step.name : 'left in ' + step.name;
-      const totalDisplay = dtFmtHHMM((now - new Date(batch.startedAt)) / 1000);
-      const totalDurMs   = recipe.steps.reduce((s, st) => s + st.duration * 60000, 0);
-      const originalFinish = new Date(new Date(batch.startedAt).getTime() + totalDurMs);
-      const adjustedFinish = dtProjectedFinish(batch, recipe);
-      const lateMs   = adjustedFinish ? Math.max(0, adjustedFinish.getTime() - originalFinish.getTime()) : 0;
-      const lateMins = Math.round(lateMs / 60000);
-      const isLate   = lateMins > 0;
-      const stepColor = stepOver
-        ? '#cc3300'
-        : step.type === 'wait'
-          ? (stepLeft < 60 ? '#b87000' : scheme.done)
-          : (stepLeft < 5*60 ? '#b87000' : '#111');
-      timerRow = `
-        <div style="display:flex;gap:0;background:#fff;border:2px solid ${scheme.border};border-radius:4px;
-          overflow:hidden;margin-top:12px">
-          <div style="flex:1;padding:11px 14px;border-right:1px solid #eee">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:#999;margin-bottom:3px">Stage</div>
-            <div id="dt-step-clock-${batch.id}"
-              style="font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:${stepColor}">${stepDisplay}</div>
-            <div style="font-size:10px;color:#aaa;margin-top:3px">${stepLabel}</div>
-          </div>
-          <div style="flex:1;padding:11px 14px;border-right:1px solid #eee">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:#999;margin-bottom:3px">Total</div>
-            <div id="dt-total-elapsed-${batch.id}"
-              style="font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:#111">${totalDisplay}</div>
-            <div style="font-size:10px;color:#aaa;margin-top:3px">since ${dtFmtTime(batch.startedAt)}</div>
-          </div>
-          <div style="flex:1;padding:11px 14px">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:#999;margin-bottom:3px">Est. Finish</div>
-            <div id="dt-finish-adj-${batch.id}"
-              style="font-size:24px;font-weight:900;line-height:1;color:${isLate?'#cc3300':'#111'}">${adjustedFinish?dtFmtTime(adjustedFinish.toISOString()):'—'}</div>
-            <div id="dt-finish-badge-${batch.id}"
-              style="font-size:10px;font-weight:700;margin-top:3px;color:${isLate?'#cc3300':'#2a7a48'}">
-              ${isLate
-                ? `⚠ ${lateMins} min behind · was ${dtFmtTime(originalFinish.toISOString())}`
-                : `✓ On schedule · ${dtFmtTime(originalFinish.toISOString())}`}
-            </div>
-          </div>
-        </div>`;
+  const matEl = document.getElementById('dt-matrix');
+  if (matEl) {
+    if (!allBatches.length) {
+      matEl.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aaa;font-size:18px;
+        border:3px dashed #ddd;border-radius:4px">
+        Select a dough type above and tap <strong style="color:#111">▶ Start Batch</strong></div>`;
     } else {
-      const totalSecs = batch.completedAt
-        ? (new Date(batch.completedAt) - new Date(batch.startedAt)) / 1000
-        : (now - new Date(batch.startedAt)) / 1000;
-      timerRow = `
-        <div style="display:flex;gap:0;background:#fff;border:2px solid #ddd;border-radius:4px;
-          overflow:hidden;margin-top:12px">
-          <div style="flex:1;padding:10px 14px;border-right:1px solid #eee">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:#999;margin-bottom:3px">Started</div>
-            <div style="font-size:18px;font-weight:800;color:#555">${dtFmtTime(batch.startedAt)}</div>
-          </div>
-          <div style="flex:1;padding:10px 14px;border-right:1px solid #eee">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:#999;margin-bottom:3px">Total Time</div>
-            <div style="font-size:18px;font-weight:800;color:#555">${dtFmtHHMM(totalSecs)}</div>
-          </div>
-          <div style="flex:1;padding:10px 14px">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
-              color:#999;margin-bottom:3px">Finished</div>
-            <div style="font-size:18px;font-weight:800;color:#555">${batch.completedAt ? dtFmtTime(batch.completedAt) : 'Abandoned'}</div>
-          </div>
-        </div>`;
+      matEl.innerHTML = '';
     }
+  }
+  renderDoughBatchTabs();
+  renderDoughBatchDetail();
+}
 
-    const stepNum = isActive
-      ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length} — ${recipe.steps[batch.currentStepIdx]?.name}`
-      : (batch.status === 'complete' ? '✓ Complete' : 'Abandoned');
-    const statusBadge = !isActive
-      ? `<span style="padding:5px 12px;border-radius:4px;font-size:12px;font-weight:800;
-           background:${batch.status==='complete'?'#e8f5ee':'#f5f5f5'};
-           color:${batch.status==='complete'?'#1a6e3a':'#999'};border:2px solid ${batch.status==='complete'?'#22a855':'#ccc'}">
-           ${batch.status==='complete'?'✓ Done':'Abandoned'}</span>` : '';
+function dtSelectBatch(id) {
+  _dtSelectedBatchId = id;
+  renderDoughBatchTabs();
+  renderDoughBatchDetail();
+}
 
-    return `<div style="background:#fff;border:3px solid ${bdr};border-left:6px solid ${isActive?scheme.done:'#ccc'};
-      border-radius:4px;margin-bottom:16px;overflow:hidden">
-      <div style="padding:16px 20px;border-bottom:2px solid #eee;background:var(--surface2,#f2f2f2)">
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-          <div style="flex:1">
-            <div style="font-size:21px;font-weight:900;color:#111;line-height:1.1">${batch.label}</div>
-            <div style="font-size:13px;color:#777;margin-top:4px">${stepNum}</div>
-          </div>
-          ${statusBadge}
-          ${isActive ? `<button onclick="dtAbandonBatch('${batch.id}')"
-            style="padding:8px 16px;background:#fff;border:2px solid #ccc;
-              border-radius:4px;color:#999;font-size:13px;cursor:pointer;flex-shrink:0">Abandon</button>` : ''}
+function renderDoughBatchTabs() {
+  const tabEl = document.getElementById('dt-batch-tabs');
+  if (!tabEl) return;
+  const batches = dtGetBatches();
+  const recipes = dtGetRecipes();
+  const now = Date.now();
+  const active    = batches.filter(b => b.status === 'active').sort((a,z) => new Date(a.startedAt)-new Date(z.startedAt));
+  const scheduled = batches.filter(b => b.status === 'scheduled').sort((a,z) => new Date(a.scheduledStartAt)-new Date(z.scheduledStartAt));
+  const done      = batches.filter(b => b.status === 'complete').sort((a,z) => new Date(z.completedAt)-new Date(a.completedAt));
+  const all = [...active, ...scheduled, ...done];
+  if (!all.length) { tabEl.innerHTML = ''; return; }
+  tabEl.innerHTML = all.map(b => {
+    const recipe  = recipes.find(r => r.id === b.recipeId);
+    if (!recipe) return '';
+    const scheme  = DT_BATCH_COLORS[(b.colorIdx ?? 0) % DT_BATCH_COLORS.length];
+    const isSel   = _dtSelectedBatchId === b.id;
+    const isActv  = b.status === 'active';
+    const isDone  = b.status === 'complete';
+    const isSched = b.status === 'scheduled';
+    let dotColor, stepLabel, clockHtml;
+    if (isActv) {
+      const step    = recipe.steps[b.currentStepIdx];
+      const log     = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
+      const elapsed = log ? (now - new Date(log.startedAt)) / 1000 : 0;
+      const left    = step.duration * 60 - elapsed;
+      const over    = left < 0;
+      const isWait  = step.type === 'wait';
+      const clkClr  = over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
+      const clkTxt  = over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+      dotColor  = step.type === 'active' ? '#cc3300' : scheme.done;
+      stepLabel = step.name;
+      clockHtml = `<div id="dt-tab-clock-${b.id}" style="font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;color:${clkClr};margin-top:5px;line-height:1">${clkTxt}</div>`;
+    } else if (isSched) {
+      const msUntil = new Date(b.scheduledStartAt).getTime() - now;
+      dotColor  = '#bbb';
+      stepLabel = `${recipe.steps.length} steps planned`;
+      clockHtml = `<div style="font-size:12px;font-weight:700;color:${msUntil<=0?'#cc3300':'#888'};margin-top:4px">⏰ ${msUntil > 0 ? 'in ' + dtSchedCountdown(b.scheduledStartAt) : 'Now!'}</div>`;
+    } else {
+      dotColor  = '#4a9c6e';
+      stepLabel = '✓ Complete';
+      clockHtml = `<div style="font-size:11px;color:#aaa;margin-top:3px">${b.completedAt ? dtFmtTime(b.completedAt) : ''}</div>`;
+    }
+    const bdrClr = isSel ? dotColor : '#e0e0e0';
+    const bgClr  = isSel ? (isActv ? '#fafafa' : isDone ? '#f7fbf8' : '#fafafa') : '#fff';
+    return `<div onclick="dtSelectBatch('${b.id}')" style="
+      border:2px solid ${bdrClr};border-left:4px solid ${isSel ? dotColor : 'transparent'};
+      border-radius:4px;padding:12px 13px;margin-bottom:8px;cursor:pointer;
+      background:${bgClr};opacity:${isDone?0.75:1};transition:border-color 0.12s">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:3px;display:inline-block"></span>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:900;color:#111;line-height:1.2;word-break:break-word">${b.label}</div>
+          <div style="font-size:11px;color:#888;margin-top:2px;font-weight:600">${stepLabel}</div>
+          ${clockHtml}
         </div>
-        ${timerRow}
       </div>
-      <div style="display:flex;gap:6px;overflow-x:auto;padding:14px 12px;
-        -webkit-overflow-scrolling:touch;scrollbar-width:none">${steps}</div>
     </div>`;
   }).join('') +
-  (done.length ? `<button onclick="dtClearDone()"
-    style="padding:13px 22px;background:#f2f2f2;border:2px solid #ddd;border-radius:4px;
-      font-size:15px;color:#888;cursor:pointer;margin-top:4px">
-    Clear ${done.length} completed batch${done.length>1?'es':''}</button>` : '');
+  (done.length ? `<button onclick="dtClearDone()" style="width:100%;margin-top:4px;padding:9px;background:#f2f2f2;
+    border:2px solid #ddd;border-radius:4px;font-size:12px;color:#888;cursor:pointer">
+    Clear ${done.length} done</button>` : '');
+}
+
+function renderDoughBatchDetail() {
+  const detailEl = document.getElementById('dt-batch-detail');
+  if (!detailEl) return;
+  if (!_dtSelectedBatchId) { detailEl.innerHTML = ''; return; }
+  const batches = dtGetBatches();
+  const recipes = dtGetRecipes();
+  const batch   = batches.find(b => b.id === _dtSelectedBatchId);
+  if (!batch) { detailEl.innerHTML = ''; return; }
+  const recipe  = recipes.find(r => r.id === batch.recipeId);
+  if (!recipe)  { detailEl.innerHTML = ''; return; }
+  const now      = Date.now();
+  const isActive = batch.status === 'active';
+  const isDone   = batch.status === 'complete';
+  const isSched  = batch.status === 'scheduled';
+  const scheme   = DT_BATCH_COLORS[(batch.colorIdx ?? 0) % DT_BATCH_COLORS.length];
+  // Step timeline
+  const stepsHtml = recipe.steps.map((step, idx) => {
+    const isDoneStep = idx < batch.currentStepIdx || batch.status === 'complete';
+    const isCur  = idx === batch.currentStepIdx && isActive;
+    const log    = batch.stepLog.find(l => l.stepIdx === idx);
+    let iconBg, iconClr, icon, nameClr, timeStr;
+    if (isDoneStep) {
+      iconBg=''; iconClr='#fff'; icon='✓'; iconBg=scheme.done; nameClr='#999';
+      timeStr = log?.completedAt ? `${dtFmtTime(log.startedAt)} → ${dtFmtTime(log.completedAt)}` : '';
+    } else if (isCur) {
+      iconBg = step.type==='active' ? '#cc3300' : '#1a4a8a'; iconClr='#fff';
+      icon   = step.type==='active' ? '▶' : '⏱'; nameClr='#111';
+      timeStr = log?.startedAt ? `Started ${dtFmtTime(log.startedAt)}` : '';
+    } else {
+      iconBg='#f0f0f0'; iconClr='#bbb'; icon=String(idx+1); nameClr='#aaa';
+      timeStr = batch.stepTimes?.[idx] ? `~${dtFmtTime(batch.stepTimes[idx])}` : `${step.duration}m`;
+    }
+    const rowBg = isCur ? (step.type==='active' ? 'rgba(204,51,0,0.05)' : 'rgba(26,74,138,0.05)') : 'transparent';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${rowBg};border-radius:4px;margin-bottom:3px">
+      <div style="width:30px;height:30px;border-radius:50%;background:${iconBg};color:${iconClr};
+        display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:${isCur?'900':'600'};color:${nameClr}">${step.name}</div>
+        <div style="font-size:11px;color:#bbb;margin-top:1px">${step.type} · ${step.duration} min</div>
+      </div>
+      <div style="font-size:12px;color:#aaa;text-align:right;flex-shrink:0;min-width:80px">${timeStr}</div>
+      ${isCur && step.type==='active' ? `<button onclick="dtCompleteStep('${batch.id}')"
+        style="padding:10px 20px;background:#111;color:#fff;border:none;border-radius:4px;
+               font-size:15px;font-weight:900;cursor:pointer;touch-action:manipulation;
+               flex-shrink:0;min-height:44px;white-space:nowrap">✓ Done</button>` : ''}
+    </div>`;
+  }).join('');
+  // Metrics row
+  let metricsHtml = '';
+  if (isActive) {
+    const step    = recipe.steps[batch.currentStepIdx];
+    const log     = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
+    const elapsed = log ? (now - new Date(log.startedAt)) / 1000 : 0;
+    const left    = step.duration * 60 - elapsed;
+    const over    = left < 0;
+    const isWait  = step.type === 'wait';
+    const stepClr = over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : '#111';
+    const stepTxt = over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+    const totalTxt      = dtFmtHHMM((now - new Date(batch.startedAt)) / 1000);
+    const adjustedFinish = dtProjectedFinish(batch, recipe);
+    const totalDurMs    = recipe.steps.reduce((s, st) => s + st.duration * 60000, 0);
+    const origFinish    = new Date(new Date(batch.startedAt).getTime() + totalDurMs);
+    const lateMs        = adjustedFinish ? Math.max(0, adjustedFinish.getTime() - origFinish.getTime()) : 0;
+    const lateMins      = Math.round(lateMs / 60000);
+    const isLate        = lateMins > 0;
+    metricsHtml = `<div style="display:flex;gap:0;border:2px solid ${scheme.border};border-radius:4px;overflow:hidden;margin-bottom:12px">
+      <div style="flex:1;padding:12px 14px;border-right:1px solid #eee">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">${over?'⚠ OVERDUE':isWait?'Wait Left':'Step Left'}</div>
+        <div id="dt-step-clock-${batch.id}" style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;color:${stepClr};line-height:1">${stepTxt}</div>
+        <div style="font-size:10px;color:#aaa;margin-top:2px">${step.name}</div>
+      </div>
+      <div style="flex:1;padding:12px 14px;border-right:1px solid #eee">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">Total</div>
+        <div id="dt-total-elapsed-${batch.id}" style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;color:#111;line-height:1">${totalTxt}</div>
+        <div style="font-size:10px;color:#aaa;margin-top:2px">since ${dtFmtTime(batch.startedAt)}</div>
+      </div>
+      <div style="flex:1;padding:12px 14px">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">Est. Finish</div>
+        <div id="dt-finish-adj-${batch.id}" style="font-size:26px;font-weight:900;line-height:1;color:${isLate?'#cc3300':'#111'}">${adjustedFinish?dtFmtTime(adjustedFinish.toISOString()):'—'}</div>
+        <div id="dt-finish-badge-${batch.id}" style="font-size:10px;font-weight:700;margin-top:2px;color:${isLate?'#cc3300':'#2a7a48'}">${isLate?`⚠ ${lateMins}m behind`:'✓ On schedule'}</div>
+      </div>
+    </div>`;
+  } else if (isDone) {
+    const totalSecs = batch.completedAt ? (new Date(batch.completedAt)-new Date(batch.startedAt))/1000 : 0;
+    metricsHtml = `<div style="display:flex;gap:0;border:2px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:12px">
+      <div style="flex:1;padding:12px 14px;border-right:1px solid #eee">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">Started</div>
+        <div style="font-size:20px;font-weight:800;color:#555">${dtFmtTime(batch.startedAt)}</div>
+      </div>
+      <div style="flex:1;padding:12px 14px;border-right:1px solid #eee">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">Total Time</div>
+        <div style="font-size:20px;font-weight:800;color:#555">${dtFmtHHMM(totalSecs)}</div>
+      </div>
+      <div style="flex:1;padding:12px 14px">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">Finished</div>
+        <div style="font-size:20px;font-weight:800;color:#4a9c6e">${dtFmtTime(batch.completedAt)}</div>
+      </div>
+    </div>`;
+  } else if (isSched) {
+    const startMs = new Date(batch.scheduledStartAt).getTime();
+    const msUntil = startMs - now;
+    metricsHtml = `<div style="display:flex;align-items:center;gap:16px;border:2px solid #ddd;border-radius:4px;padding:14px 18px;margin-bottom:12px">
+      <div style="flex:1">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Scheduled Start</div>
+        <div style="font-size:22px;font-weight:900;color:${msUntil<=0?'#cc3300':'#111'}">${dtFmtTime(batch.scheduledStartAt)}</div>
+        <div id="dt-sched-cd-${batch.id}" style="font-size:14px;color:${msUntil<=0?'#cc3300':'#888'};margin-top:4px">${msUntil>0?'Starts in '+dtSchedCountdown(batch.scheduledStartAt):'⏰ Time to start!'}</div>
+      </div>
+      <button onclick="dtStartScheduled('${batch.id}')" style="padding:16px 28px;background:${msUntil<=0?'#111':'#fff'};color:${msUntil<=0?'#fff':'#111'};border:3px solid #111;border-radius:4px;font-size:17px;font-weight:900;cursor:pointer;touch-action:manipulation;flex-shrink:0">▶ Start Now</button>
+      <button onclick="dtCancelScheduled('${batch.id}')" style="padding:16px 20px;background:#fff;border:2px solid #ccc;border-radius:4px;color:#999;font-size:14px;cursor:pointer;flex-shrink:0">Cancel</button>
+    </div>`;
+  }
+  // Header
+  const accentClr = isActive ? scheme.done : isDone ? '#4a9c6e' : '#bbb';
+  const stepNum   = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length}` : isDone ? '✓ Complete' : 'Scheduled';
+  const curStepName = isActive ? recipe.steps[batch.currentStepIdx]?.name : '';
+  detailEl.innerHTML = `<div style="background:#fff;border:2px solid ${accentClr};border-left:5px solid ${accentClr};border-radius:4px;margin-bottom:16px;overflow:hidden">
+    <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:20px;font-weight:900;color:#111">${batch.label}</div>
+        <div style="font-size:12px;color:#888;margin-top:3px">${recipe.name} · ${stepNum}${curStepName?' — '+curStepName:''}</div>
+      </div>
+      ${isActive ? `<button onclick="dtAbandonBatch('${batch.id}')" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;color:#999;font-size:12px;cursor:pointer;flex-shrink:0">Abandon</button>` : ''}
+    </div>
+    <div style="padding:12px 8px">${metricsHtml}${stepsHtml}</div>
+  </div>`;
 }
 
 // — Recipe Editor —
@@ -16515,6 +16505,12 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.2': [
+    '⏱ Dough Timer redesigned — vertical batch tabs with live countdown, click for full step detail',
+    '🔒 Staff & Capabilities page now Owner-only',
+    '💰 Pay rate removed from all staff views',
+    '🔢 Freezer number inputs no longer show redundant browser spinner arrows',
+  ],
   '1.6.1': [
     '✓ Global "Saved by [Name]" toast across all save actions app-wide',
     '❄️ Freezer counts save instantly on every keystroke with per-item confirmation',
