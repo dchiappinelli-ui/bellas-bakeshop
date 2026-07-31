@@ -871,7 +871,7 @@
         onmouseover="this.style.color='#e57373';this.style.borderColor='#e57373'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">🔒 Switch User</button>
     </div>
     <button id="auth-login-btn" onclick="authShowModal()" class="btn btn-ghost btn-sm" style="white-space:nowrap">🔑 Sign In</button>
-    <span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;letter-spacing:0.5px;cursor:default;white-space:nowrap" title="App version">v1.6</span>
+    <span id="app-version-badge" style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;letter-spacing:0.5px;cursor:default;white-space:nowrap" title="App version"></span>
     <span id="fb-sync-indicator" title="Cloud sync status" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:3px 9px;cursor:default;white-space:nowrap">
       <span id="fb-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;transition:background 0.4s"></span>
       <span id="fb-sync-label">Connecting…</span>
@@ -2643,7 +2643,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6';
+const APP_VERSION      = '1.6.1';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -16494,6 +16494,8 @@ function authBoot() {
   }
   authUpdateChip();
   updateNavDots();
+  const _vBadge = document.getElementById('app-version-badge');
+  if (_vBadge) _vBadge.textContent = 'v' + APP_VERSION;
 
   // Idle timeout — touch on any interaction, check every 60 s
   ['click','keydown','touchstart','mousemove'].forEach(evt =>
@@ -16513,6 +16515,14 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.1': [
+    '✓ Global "Saved by [Name]" toast across all save actions app-wide',
+    '❄️ Freezer counts save instantly on every keystroke with per-item confirmation',
+    '📊 EOD counts restore on navigation — no more reset to zero',
+    '📄 Full EOD Report — checklists, freezer, ingredients, staff board in one print',
+    '📊 EOD banner stays green 20 hrs after submission, only turns red when truly needed',
+    '🔢 Granular patch versioning — badge always reflects current build',
+  ],
   '1.6': [
     '🔒 Auto-logout after inactivity — configurable per device (Owner settings on Staff page)',
     '⏱ Dough Timer keeps session alive while batches are running',
