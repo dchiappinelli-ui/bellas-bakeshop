@@ -911,8 +911,8 @@
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
   <button class="nav-btn" data-foh="true" onclick="showPage('staffboard')">💬 Staff Message Board</button>
-  <button class="nav-btn" data-foh="true" onclick="showPage('eod')">📊 End of Day</button>
-  <button class="nav-btn" data-foh="true" onclick="showPage('orders')">📋 Orders</button>
+  <button class="nav-btn" data-foh-only="true" onclick="showPage('eod')">📊 End of Day</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('orders')">📋 Orders</button>
   <button class="nav-btn" data-foh="true" onclick="showPage('opening')">FOH Checklists</button>
   <button class="nav-btn" data-foh="true" onclick="showPage('ingredients')">🧂 Ingredients</button>
   <button class="nav-btn" data-foh="true" onclick="showPage('stationguide')">📋 Station Guide</button>
@@ -11958,8 +11958,9 @@ function authUpdateChip() {
 // Declarative nav filter — permissions live on the buttons, not in code:
 //   data-min-role="Owner"  → Owner only
 //   data-foh="true"        → FOH (Barista) + Bakery Staff + Owner
+//   data-foh-only="true"   → FOH (Barista) + Owner only; Bakery Staff cannot see
 //   data-min-role="Baker"  → Baker, Head Baker, Owner only
-//   (no attrs)             → Bakery Staff (Bakery Asst, Baker, Head Baker) + Owner; NOT FOH
+//   (no attrs)             → Bakery Staff + Owner; NOT FOH
 function authApplyNav() {
   const role    = authCurrentRole();
   const isOwner = role === 'Owner';
@@ -11969,15 +11970,16 @@ function authApplyNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const minRole   = btn.getAttribute('data-min-role');
     const fohAccess = btn.getAttribute('data-foh') === 'true';
+    const fohOnly   = btn.getAttribute('data-foh-only') === 'true';
 
     if (minRole === 'Owner') {
       btn.style.display = isOwner ? '' : 'none';
     } else if (isOwner) {
       btn.style.display = '';
     } else if (isBOH) {
-      btn.style.display = (!minRole || authCanAccess(minRole)) ? '' : 'none';
+      btn.style.display = (!fohOnly && (!minRole || authCanAccess(minRole))) ? '' : 'none';
     } else if (isFOH) {
-      btn.style.display = fohAccess ? '' : 'none';
+      btn.style.display = (fohAccess || fohOnly) ? '' : 'none';
     } else {
       btn.style.display = 'none';
     }
@@ -13642,7 +13644,7 @@ function renderDoughBatchDetail() {
   const accentClr = isActive ? scheme.border : isDone ? '#4a9c6e' : '#bbb';
   const stepNum   = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length}` : isDone ? '✓ Complete' : 'Scheduled';
   const curStepName = isActive ? recipe.steps[batch.currentStepIdx]?.name : '';
-  detailEl.innerHTML = `<div style="background:#fff;border:5px solid ${accentClr};border-left:none;border-radius:0 10px 10px 10px;margin-bottom:16px;overflow:hidden">
+  detailEl.innerHTML = `<div style="background:#fff;border:5px solid ${accentClr};border-radius:0 10px 10px 10px;margin-bottom:16px;overflow:hidden">
     <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <div style="font-size:20px;font-weight:900;color:#111">${batch.label}</div>
