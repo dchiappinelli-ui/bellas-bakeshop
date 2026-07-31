@@ -13490,7 +13490,7 @@ function renderDoughBatchTabs() {
     const isActv  = b.status === 'active';
     const isDone  = b.status === 'complete';
     const isSched = b.status === 'scheduled';
-    let dotColor, stepLabel, clockHtml;
+    let dotColor, tabBorderColor, stepLabel, clockHtml;
     if (isActv) {
       const step    = recipe.steps[b.currentStepIdx];
       const log     = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
@@ -13500,27 +13500,28 @@ function renderDoughBatchTabs() {
       const isWait  = step.type === 'wait';
       const clkClr  = over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
       const clkTxt  = over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
-      dotColor  = step.type === 'active' ? '#cc3300' : scheme.done;
+      dotColor       = step.type === 'active' ? '#cc3300' : scheme.done;
+      tabBorderColor = scheme.done; // always matches detail panel accent
       stepLabel = step.name;
       clockHtml = `<div id="dt-tab-clock-${b.id}" style="font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;color:${clkClr};margin-top:5px;line-height:1">${clkTxt}</div>`;
     } else if (isSched) {
       const msUntil = new Date(b.scheduledStartAt).getTime() - now;
-      dotColor  = '#bbb';
+      dotColor  = '#bbb'; tabBorderColor = '#bbb';
       stepLabel = `${recipe.steps.length} steps planned`;
       clockHtml = `<div style="font-size:12px;font-weight:700;color:${msUntil<=0?'#cc3300':'#888'};margin-top:4px">⏰ ${msUntil > 0 ? 'in ' + dtSchedCountdown(b.scheduledStartAt) : 'Now!'}</div>`;
     } else {
-      dotColor  = '#4a9c6e';
+      dotColor  = '#4a9c6e'; tabBorderColor = '#4a9c6e';
       stepLabel = '✓ Complete';
       clockHtml = `<div style="font-size:11px;color:#aaa;margin-top:3px">${b.completedAt ? dtFmtTime(b.completedAt) : ''}</div>`;
     }
     const selTabStyle = isSel
-      ? `border:3px solid ${dotColor};border-right:3px solid #fff;border-radius:6px 0 0 6px;
-         margin-right:-3px;position:relative;z-index:2;background:#fff;`
-      : `border:2px solid #d0d0d0;border-left:5px solid ${dotColor};border-radius:6px;
-         margin-right:0;position:relative;z-index:1;background:#f5f5f5;`;
+      ? `border:4px solid ${tabBorderColor};border-right:4px solid #fff;border-radius:8px 0 0 8px;
+         margin-right:-4px;position:relative;z-index:2;background:#fff;`
+      : `border:2px solid #ddd;border-left:6px solid ${tabBorderColor};border-radius:6px;
+         margin-right:0;position:relative;z-index:1;background:#f8f8f8;`;
     return `<div onclick="dtSelectBatch('${b.id}')" style="${selTabStyle}
-      padding:12px 13px;margin-bottom:8px;cursor:pointer;
-      opacity:${isDone?0.7:1};transition:border-color 0.12s;box-sizing:border-box">
+      padding:13px 14px;margin-bottom:10px;cursor:pointer;
+      opacity:${isDone?0.65:1};transition:all 0.12s;box-sizing:border-box">
       <div style="display:flex;align-items:flex-start;gap:8px">
         <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:3px;display:inline-block"></span>
         <div style="min-width:0;flex:1">
@@ -13648,10 +13649,10 @@ function renderDoughBatchDetail() {
     </div>`;
   }
   // Header
-  const accentClr = isActive ? scheme.done : isDone ? '#4a9c6e' : '#bbb';
+  const accentClr = isActive ? scheme.border : isDone ? '#4a9c6e' : '#bbb';
   const stepNum   = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length}` : isDone ? '✓ Complete' : 'Scheduled';
   const curStepName = isActive ? recipe.steps[batch.currentStepIdx]?.name : '';
-  detailEl.innerHTML = `<div style="background:#fff;border:3px solid ${accentClr};border-left:none;border-radius:0 6px 6px 6px;margin-bottom:16px;overflow:hidden">
+  detailEl.innerHTML = `<div style="background:#fff;border:4px solid ${accentClr};border-left:none;border-radius:0 8px 8px 8px;margin-bottom:16px;overflow:hidden">
     <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <div style="font-size:20px;font-weight:900;color:#111">${batch.label}</div>
