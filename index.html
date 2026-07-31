@@ -889,33 +889,33 @@
 </header>
 
 <div class="nav" id="main-nav">
-  <!-- Bakery / BOH — left -->
-  <button class="nav-btn active" data-staff-visible="false" onclick="showPage('staff')">Staff</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('standing')">📋 Standing Tasks</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('weekly')">📅 Weekly Schedule</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('planner')">Daily Planner</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('timeline')">🗓 Timeline</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('schedule')">Schedule</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('inventory')">📦 Inventory</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('yield')">♻️ Yield Rules</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('doughtimer')">⏱ Dough Timer</button>
-  <button class="nav-btn" data-staff-visible="false" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
-  <button class="nav-btn" data-staff-visible="true"  data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('prep')">🫙 Prep Items</button>
-  <!-- Shared — middle -->
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('board')">🛫 Today's Board</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('staffboard')">💬 Staff Message Board</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('eod')">📊 End of Day</button>
-  <!-- FOH — right -->
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('ordering')">🛒 Ordering</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('channels')">🏪 Channels</button>
-  <button class="nav-btn" data-staff-visible="false" onclick="showPage('orders')">📋 Orders</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('opening')">FOH Checklists</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('ingredients')">🧂 Ingredients</button>
-  <button class="nav-btn" data-staff-visible="true"  onclick="showPage('stationguide')">📋 Station Guide</button>
+  <!-- Owner only -->
+  <button class="nav-btn active" data-min-role="Owner" onclick="showPage('staff')">Staff</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('ordering')">🛒 Ordering</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
+  <!-- Bakery Staff active tabs -->
+  <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
+  <button class="nav-btn" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
+  <button class="nav-btn" data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
+  <!-- Owner only until finalized -->
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('standing')">📋 Standing Tasks</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('weekly')">📅 Weekly Schedule</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('planner')">Daily Planner</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('timeline')">🗓 Timeline</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('schedule')">Schedule</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('inventory')">📦 Inventory</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('prep')">🫙 Prep Items</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
+  <button class="nav-btn" data-foh="true" onclick="showPage('staffboard')">💬 Staff Message Board</button>
+  <button class="nav-btn" data-foh="true" onclick="showPage('eod')">📊 End of Day</button>
+  <button class="nav-btn" data-foh="true" onclick="showPage('orders')">📋 Orders</button>
+  <button class="nav-btn" data-foh="true" onclick="showPage('opening')">FOH Checklists</button>
+  <button class="nav-btn" data-foh="true" onclick="showPage('ingredients')">🧂 Ingredients</button>
+  <button class="nav-btn" data-foh="true" onclick="showPage('stationguide')">📋 Station Guide</button>
 </div>
 
 <div id="staff-mode-banner" style="display:none;background:var(--accent);color:#1a1209;padding:10px 20px;text-align:center;font-weight:700;font-size:13px;align-items:center;justify-content:center;gap:14px">
@@ -2654,7 +2654,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6.3';
+const APP_VERSION      = '1.6.5';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -11955,10 +11955,11 @@ function authUpdateChip() {
   authApplyNav();
 }
 
-// 3-tier nav filter:
-//   Owner         → all pages
-//   Bakery Staff  (Bakery Assistant, Baker, Head Baker) → FOH pages + bakery production pages
-//   FOH / Barista → FOH pages only (no Dough Timer, no production scheduling)
+// Declarative nav filter — permissions live on the buttons, not in code:
+//   data-min-role="Owner"  → Owner only
+//   data-foh="true"        → FOH (Barista) + Bakery Staff + Owner
+//   data-min-role="Baker"  → Baker, Head Baker, Owner only
+//   (no attrs)             → Bakery Staff (Bakery Asst, Baker, Head Baker) + Owner; NOT FOH
 function authApplyNav() {
   const role    = authCurrentRole();
   const isOwner = role === 'Owner';
@@ -11966,32 +11967,17 @@ function authApplyNav() {
   const isBOH   = !isOwner && !isFOH && authCanAccess('Bakery Assistant');
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    const onclick = btn.getAttribute('onclick') || '';
+    const minRole   = btn.getAttribute('data-min-role');
+    const fohAccess = btn.getAttribute('data-foh') === 'true';
 
-    // Owner-only pages (hidden from all staff)
-    const ownerOnly = onclick.includes("'staff'")    ||
-                      onclick.includes("'ordering'") ||
-                      onclick.includes("'channels'");
-
-    // FOH pages — visible to everyone (FOH, Bakery Staff, Owner)
-    const allStaff = onclick.includes("'board'")        ||
-                     onclick.includes("'checksheet'")    ||
-                     onclick.includes("'orders'")        ||
-                     onclick.includes("'opening'")       ||
-                     onclick.includes("'ingredients'")   ||
-                     onclick.includes("'stationguide'")  ||
-                     onclick.includes("'staffboard'")    ||
-                     onclick.includes("'eod'");
-
-    // Everything else = Bakery Staff + Owner only (production tools)
-    const bohOnly = !ownerOnly && !allStaff;
-
-    if (isOwner) {
+    if (minRole === 'Owner') {
+      btn.style.display = isOwner ? '' : 'none';
+    } else if (isOwner) {
       btn.style.display = '';
     } else if (isBOH) {
-      btn.style.display = (allStaff || bohOnly) ? '' : 'none';
+      btn.style.display = (!minRole || authCanAccess(minRole)) ? '' : 'none';
     } else if (isFOH) {
-      btn.style.display = allStaff ? '' : 'none';
+      btn.style.display = fohAccess ? '' : 'none';
     } else {
       btn.style.display = 'none';
     }
@@ -16512,6 +16498,17 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.5': [
+    '🧑‍🍳 Bakery Staff now see only active tabs: Dough Timer, Bake Board, Freezer Stock, Staff Board',
+    '🔒 Unfinished production tabs hidden until ready — Owner can still access all',
+    '☕ FOH / Barista: Orders, Checklists, Ingredients, Station Guide, Staff Board, EOD',
+  ],
+  '1.6.4': [
+    '🔒 Permissions now declared directly on nav buttons — easy to see and adjust',
+    '👤 Owner only: Staff, Ordering, Channels',
+    '🧑‍🍳 Bakery Staff: all production tools + FOH pages',
+    '☕ FOH / Barista: Today\'s Board, Orders, Ingredients, Checklists, Station Guide, Staff Board, EOD',
+  ],
   '1.6.3': [
     '🔒 Simplified to 3-tier access: Owner / Bakery Staff / FOH',
     '🧑‍🍳 Bakery Staff see all production tools + FOH pages',
