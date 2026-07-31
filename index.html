@@ -1699,7 +1699,7 @@
     <div id="dt-alerts" style="margin-bottom:12px"></div>
     <!-- Split view: left batch tabs + right detail panel -->
     <div style="display:flex;gap:0;align-items:flex-start">
-      <div id="dt-batch-tabs" style="flex-shrink:0;width:190px;margin-right:16px"></div>
+      <div id="dt-batch-tabs" style="flex-shrink:0;width:190px;position:relative;z-index:1"></div>
       <div style="flex:1;min-width:0">
         <div id="dt-batch-detail"></div>
         <div id="dt-matrix"></div>
@@ -13513,12 +13513,14 @@ function renderDoughBatchTabs() {
       stepLabel = '✓ Complete';
       clockHtml = `<div style="font-size:11px;color:#aaa;margin-top:3px">${b.completedAt ? dtFmtTime(b.completedAt) : ''}</div>`;
     }
-    const bdrClr = isSel ? dotColor : '#e0e0e0';
-    const bgClr  = isSel ? (isActv ? '#fafafa' : isDone ? '#f7fbf8' : '#fafafa') : '#fff';
-    return `<div onclick="dtSelectBatch('${b.id}')" style="
-      border:2px solid ${bdrClr};border-left:4px solid ${isSel ? dotColor : 'transparent'};
-      border-radius:4px;padding:12px 13px;margin-bottom:8px;cursor:pointer;
-      background:${bgClr};opacity:${isDone?0.75:1};transition:border-color 0.12s">
+    const selTabStyle = isSel
+      ? `border:3px solid ${dotColor};border-right:3px solid #fff;border-radius:6px 0 0 6px;
+         margin-right:-3px;position:relative;z-index:2;background:#fff;`
+      : `border:2px solid #d0d0d0;border-left:5px solid ${dotColor};border-radius:6px;
+         margin-right:0;position:relative;z-index:1;background:#f5f5f5;`;
+    return `<div onclick="dtSelectBatch('${b.id}')" style="${selTabStyle}
+      padding:12px 13px;margin-bottom:8px;cursor:pointer;
+      opacity:${isDone?0.7:1};transition:border-color 0.12s;box-sizing:border-box">
       <div style="display:flex;align-items:flex-start;gap:8px">
         <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:3px;display:inline-block"></span>
         <div style="min-width:0;flex:1">
@@ -13649,7 +13651,7 @@ function renderDoughBatchDetail() {
   const accentClr = isActive ? scheme.done : isDone ? '#4a9c6e' : '#bbb';
   const stepNum   = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length}` : isDone ? '✓ Complete' : 'Scheduled';
   const curStepName = isActive ? recipe.steps[batch.currentStepIdx]?.name : '';
-  detailEl.innerHTML = `<div style="background:#fff;border:2px solid ${accentClr};border-left:5px solid ${accentClr};border-radius:4px;margin-bottom:16px;overflow:hidden">
+  detailEl.innerHTML = `<div style="background:#fff;border:3px solid ${accentClr};border-left:none;border-radius:0 6px 6px 6px;margin-bottom:16px;overflow:hidden">
     <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <div style="font-size:20px;font-weight:900;color:#111">${batch.label}</div>
