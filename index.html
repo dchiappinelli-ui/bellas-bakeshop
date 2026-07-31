@@ -2654,7 +2654,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6.5';
+const APP_VERSION      = '1.6.6';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -16500,6 +16500,12 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.6': [
+    '🔵 Dough Timer detail panel now has a full border on all sides',
+    '☕ Baristas: removed Today\'s Board, Order Check Sheet, and Orders tabs',
+    '🧑‍🍳 Bakery Staff narrowed to active tabs: Dough Timer, Bake Board, Freezer Stock + FOH tabs',
+    '🔒 Orders moved to Owner-only until finalized',
+  ],
   '1.6.5': [
     '🧑‍🍳 Bakery Staff now see only active tabs: Dough Timer, Bake Board, Freezer Stock, Staff Board',
     '🔒 Unfinished production tabs hidden until ready — Owner can still access all',
