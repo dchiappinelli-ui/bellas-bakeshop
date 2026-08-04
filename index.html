@@ -2204,8 +2204,11 @@
            border:1px solid var(--border);border-radius:4px;padding:3px 10px"></div>
       <div id="freezer-autosave-ind" style="font-size:12px;color:var(--muted);opacity:0;transition:opacity 0.4s">✓ Saved</div>
       <button onclick="freezerGenerateReport()"
-        style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;
-               padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer">📄 Report</button>
+        style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px 0 0 4px;
+               padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer">📄 Print Sheet</button><button onclick="freezerPrintAll()"
+        title="Print a sheet for every freezer"
+        style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-left:none;border-radius:0 4px 4px 0;
+               padding:10px 12px;font-size:13px;cursor:pointer">All</button>
     </div>
   </div>
 
@@ -2654,7 +2657,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6.6';
+const APP_VERSION      = '1.6.7';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -12499,88 +12502,109 @@ function freezerRemoveItem(freezerId, name) {
   freezerRenderItems(authCanAccess('Baker'));
 }
 
-function freezerGenerateReport() {
-  const defs = freezerGetDefs();
-  const data = freezerGetData();
+function freezerGenerateReport(freezerId) {
+  const defs  = freezerGetDefs();
+  const data  = freezerGetData();
+  const fid   = freezerId || _activeFreezer;
+  const freezer = defs.find(f => f.id === fid);
+  if (!freezer) return;
+
+  const session   = authGetSession();
+  const printedBy = session ? session.name : 'Staff';
   const now = new Date().toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
-  const last = localStorage.getItem('bk_freezer_last_submit') || 'Not yet submitted';
 
-  let body = '';
-  defs.forEach(f => {
-    if (!f.items.length) return;
-    const cats = f.itemCategories || {};
-    const groups = {};
-    const groupOrder = [];
-    f.items.forEach(name => {
-      const cat = cats[name] || 'General';
-      if (!groups[cat]) { groups[cat] = []; groupOrder.push(cat); }
-      groups[cat].push(name);
+  // Group items by category
+  const cats = freezer.itemCategories || {};
+  const groups = {};
+  const groupOrder = [];
+  freezer.items.forEach(name => {
+    const cat = cats[name] || 'General';
+    if (!groups[cat]) { groups[cat] = []; groupOrder.push(cat); }
+    groups[cat].push(name);
+  });
+
+  let rows = '';
+  groupOrder.forEach(cat => {
+    rows += `<tr class="cat-row"><td colspan="6">${cat}</td></tr>`;
+    groups[cat].forEach(name => {
+      const entry = data[freezerKey(freezer.id, name)] || {};
+      const count = entry.count !== undefined && entry.count !== null ? entry.count : '—';
+      const cls   = entry.count == null ? '' : entry.count === 0 ? 'empty' : entry.count <= 3 ? 'low' : '';
+      rows += `<tr>
+        <td class="item-name">${name}</td>
+        <td class="count-cell ${cls}">${count}</td>
+        <td class="writein"></td>
+        <td class="writein"></td>
+        <td class="writein"></td>
+        <td class="notes"></td>
+      </tr>`;
     });
-
-    body += `<div class="freezer-section">
-      <h2>${f.name}</h2>`;
-
-    groupOrder.forEach(cat => {
-      body += `<div class="cat-header">${cat}</div>`;
-      body += `<table><thead><tr><th>Item</th><th>Count</th><th>Status</th><th>Last Updated By</th><th>When</th></tr></thead><tbody>`;
-      groups[cat].forEach(name => {
-        const entry = data[freezerKey(f.id, name)] || {};
-        const count = entry.count !== undefined && entry.count !== null ? entry.count : '—';
-        const status = entry.count === null || entry.count === undefined ? 'Not counted'
-          : entry.count === 0 ? 'Empty' : entry.count <= 3 ? 'Low' : 'Stocked';
-        const statusClass = entry.count === 0 ? 'empty' : entry.count <= 3 ? 'low' : 'ok';
-        const updatedBy = entry.updatedBy || '—';
-        const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
-        body += `<tr><td>${name}</td><td style="text-align:center;font-weight:700">${count}</td>
-          <td><span class="status ${statusClass}">${status}</span></td><td>${updatedBy}</td><td style="color:#666;font-size:12px">${updatedAt}</td></tr>`;
-      });
-      body += `</tbody></table>`;
-    });
-
-    body += `</div>`;
   });
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Freezer Stock Report — Bella's Bake Shop</title>
+  <title>${freezer.name} — Bella's Bake Shop</title>
   <style>
-    body { font-family: Georgia, serif; max-width: 860px; margin: 0 auto; padding: 32px; color: #1a1209; }
-    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; border-bottom:2px solid #1a1209; padding-bottom:16px; }
-    .header h1 { font-size:24px; margin:0; }
-    .header .meta { font-size:12px; color:#555; text-align:right; line-height:1.8; }
-    .freezer-section { margin-bottom:28px; }
-    h2 { font-size:16px; background:#1a1209; color:#fff; padding:8px 12px; margin:0 0 0 0; border-radius:4px 4px 0 0; }
-    .cat-header { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#888; padding:10px 12px 4px; }
-    table { width:100%; border-collapse:collapse; margin-bottom:8px; }
-    th { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#888; padding:6px 10px; border-bottom:1px solid #ddd; text-align:left; }
-    td { padding:8px 10px; border-bottom:1px solid #eee; font-size:13px; }
-    tr:last-child td { border-bottom:none; }
-    .status { padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700; }
-    .status.ok { background:#d4edda; color:#2d6a4f; }
-    .status.low { background:#fff3cd; color:#856404; }
-    .status.empty { background:#f8d7da; color:#721c24; }
-    .status.Not.counted { background:#f0f0f0; color:#888; }
-    .footer { margin-top:32px; font-size:11px; color:#aaa; text-align:center; border-top:1px solid #eee; padding-top:12px; }
-    @media print { body { padding:16px; } }
+    @page { size: letter portrait; margin: 0.5in; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 13px; }
+    .header { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:3px solid #111; padding-bottom:10px; margin-bottom:14px; }
+    .header h1 { margin:0 0 2px; font-size:22px; font-weight:900; letter-spacing:-0.3px; }
+    .header .bakery { font-size:12px; color:#555; }
+    .header .meta { font-size:11px; color:#555; text-align:right; line-height:1.9; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.7px;
+               color:#555; padding:5px 8px 6px; border-bottom:2px solid #111; text-align:left; }
+    thead th.center { text-align:center; }
+    tr { height:36px; }
+    tr.cat-row { height:auto; }
+    tr.cat-row td { background:#f0f0f0; font-size:10px; font-weight:700; text-transform:uppercase;
+                    letter-spacing:0.8px; color:#666; padding:5px 8px; border-top:6px solid #fff; }
+    td { padding:0 8px; border-bottom:1px solid #ddd; vertical-align:bottom; }
+    td.item-name { font-size:13px; font-weight:600; padding-bottom:7px; }
+    td.count-cell { text-align:center; font-size:20px; font-weight:900; width:58px; padding-bottom:4px; }
+    td.count-cell.empty { color:#cc2200; }
+    td.count-cell.low   { color:#b87000; }
+    td.writein { width:82px; border-left:1px solid #e0e0e0; }
+    td.notes   { width:130px; border-left:1px solid #e0e0e0; }
+    .write-line { border-bottom:1px solid #bbb; margin:0 6px 6px; height:18px; }
+    .footer { margin-top:18px; font-size:10px; color:#aaa; text-align:center;
+              border-top:1px solid #eee; padding-top:8px; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
   </style>
   </head><body>
   <div class="header">
     <div>
-      <h1>❄️ Freezer Stock Report</h1>
-      <div style="font-size:13px;color:#555;margin-top:4px">Bella's Bake Shop</div>
+      <h1>❄️ ${freezer.name}</h1>
+      <div class="bakery">Bella's Bake Shop &nbsp;·&nbsp; ${freezer.items.length} items</div>
     </div>
     <div class="meta">
-      <div><strong>Generated:</strong> ${now}</div>
-      <div><strong>Last submitted:</strong> ${last}</div>
+      <div><strong>Printed:</strong> ${now}</div>
+      <div><strong>By:</strong> ${printedBy}</div>
     </div>
   </div>
-  ${body}
-  <div class="footer">Bella's Bake Shop · Freezer Stock · Generated by Bakery Scheduler</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="center">Count</th>
+        <th class="center">Update 1</th>
+        <th class="center">Update 2</th>
+        <th class="center">Update 3</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">Bella's Bake Shop &nbsp;·&nbsp; ${freezer.name} &nbsp;·&nbsp; ${now}</div>
   <script>window.onload=()=>window.print()<\/script>
   </body></html>`;
 
   const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function freezerPrintAll() {
+  freezerGetDefs().forEach(f => freezerGenerateReport(f.id));
 }
 
 function freezerSubmit() {
@@ -16500,6 +16524,10 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.7': [
+    '📄 Freezer print sheet redesigned — per-freezer, with current count + 3 write-in columns for day updates',
+    '🖨️ "Print Sheet" prints active freezer; "All" button prints every freezer at once',
+  ],
   '1.6.6': [
     '🔵 Dough Timer detail panel now has a full border on all sides',
     '☕ Baristas: removed Today\'s Board, Order Check Sheet, and Orders tabs',
