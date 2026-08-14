@@ -19,6 +19,7 @@
 <title>Bella's Bake Shop</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Great+Vibes&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap');
 
@@ -1851,6 +1852,10 @@
         style="padding:10px 18px;border:2px solid #111;border-radius:4px;background:#fff;
           color:#111;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
           white-space:nowrap">Copy to Next Week →</button>
+      <button onclick="wpOpenPushModal()"
+        style="padding:10px 18px;border:2px solid #1a4a8a;border-radius:4px;background:#1a4a8a;
+          color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
+          white-space:nowrap">📤 Push to Dough Timer</button>
     </div>
   </div>
   <div id="wp-board"
@@ -1889,6 +1894,14 @@
         style="width:100%;font-size:16px;padding:12px 14px;border:2px solid #ccc;
           border-radius:4px;box-sizing:border-box;margin-bottom:18px">
       <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:8px">Dough Timer Recipe
+        <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — links to ⏱ timer)</span></label>
+      <select id="wp-item-dt-recipe"
+        style="width:100%;font-size:15px;padding:11px 14px;border:2px solid #ccc;
+          border-radius:4px;box-sizing:border-box;margin-bottom:18px;background:#fff;color:#333">
+        <option value="">— Not linked —</option>
+      </select>
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
         letter-spacing:1px;color:#777;margin-bottom:8px">Category
         <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
       <div id="wp-cat-picker" style="display:flex;flex-wrap:wrap;gap:7px"></div>
@@ -1906,6 +1919,30 @@
           style="padding:12px 28px;background:#111;color:#fff;border:none;border-radius:4px;
             font-size:16px;font-weight:800;cursor:pointer">✓ Save</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bake Board — Push to Dough Timer modal -->
+<div id="wp-push-modal"
+  style="display:none;position:fixed;inset:0;z-index:99994;background:rgba(0,0,0,0.65);
+    align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:520px;max-height:90vh;
+              display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="background:#1a4a8a;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:20px;font-weight:800">📤 Push to Dough Timer</div>
+        <div id="wp-push-day-label" style="font-size:13px;opacity:0.75;margin-top:2px"></div>
+      </div>
+      <button onclick="wpClosePushModal()"
+        style="background:none;border:none;color:rgba(255,255,255,0.6);font-size:26px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div id="wp-push-list" style="padding:20px 28px;overflow-y:auto;flex:1"></div>
+    <div style="padding:16px 28px;border-top:2px solid #eee;display:flex;justify-content:flex-end;gap:10px;flex-shrink:0">
+      <button onclick="wpClosePushModal()"
+        style="padding:12px 20px;border:2px solid #ccc;border-radius:4px;background:#fff;color:#777;font-size:15px;cursor:pointer">Cancel</button>
+      <button onclick="wpConfirmPush()"
+        style="padding:12px 28px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;font-size:16px;font-weight:800;cursor:pointer">⏱ Schedule All</button>
     </div>
   </div>
 </div>
@@ -2209,8 +2246,17 @@
         title="Print a sheet for every freezer"
         style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-left:none;border-radius:0 4px 4px 0;
                padding:10px 12px;font-size:13px;cursor:pointer">All</button>
+      <button id="freezer-scan-btn" onclick="freezerScanSheet()"
+        title="Photograph a filled-in count sheet to auto-update counts"
+        style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;
+               padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer">📷 Scan Sheet</button>
+      <input id="freezer-scan-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="freezerScanFileChosen(event)">
     </div>
   </div>
+
+  <!-- Scan results toast -->
+  <div id="freezer-scan-toast" style="display:none;background:var(--surface2);border:1px solid var(--accent);
+       border-radius:4px;padding:10px 16px;font-size:13px;color:var(--text);margin-bottom:16px"></div>
 
   <!-- Read-only notice -->
   <div id="freezer-readonly-notice" style="display:none;background:var(--surface2);border:1px solid var(--border);
@@ -2535,6 +2581,28 @@
   </div>
 </div>
 
+<!-- Freezer Scan Review Modal -->
+<div id="freezer-scan-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);
+     align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;
+              width:480px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">⚠️ Double-Check These Items</div>
+      <button onclick="freezerScanCloseModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
+    </div>
+    <div style="padding:12px 24px 0;font-size:12px;color:var(--muted)">
+      These items were hard to read or looked off — confirm or fix the count before applying.
+    </div>
+    <div id="freezer-scan-modal-rows" style="padding:16px 24px;display:flex;flex-direction:column;gap:12px"></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="freezerScanCloseModal()"
+        style="padding:10px 20px;border:1px solid var(--border);background:none;color:var(--muted);border-radius:4px;cursor:pointer;font-size:14px">Skip Remaining</button>
+      <button onclick="freezerScanApplyReviewed()"
+        style="padding:10px 24px;background:var(--accent);color:#1a1209;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer">Apply These</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SCRIPT ======== -->
 <script>
 
@@ -2657,7 +2725,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.6.7';
+const APP_VERSION      = '1.6.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -12300,13 +12368,17 @@ function renderFreezerPage() {
   acAttach(document.getElementById('freezer-add-input'));
   freezerPopulateCatSelect();
 
-  // Last submit
+  // Last submit / last scan
   const last = localStorage.getItem('bk_freezer_last_submit');
-  document.getElementById('freezer-last-submit').textContent = last ? `Last submitted: ${last}` : '';
+  const lastScan = localStorage.getItem('bk_freezer_last_scan');
+  document.getElementById('freezer-last-submit').textContent =
+    [last ? `Last submitted: ${last}` : '', lastScan ? `Last scanned: ${lastScan}` : ''].filter(Boolean).join('  ·  ');
 }
 
 function freezerSelectFreezer(id) {
   _activeFreezer = id;
+  const toast = document.getElementById('freezer-scan-toast');
+  if (toast) toast.style.display = 'none';
   renderFreezerPage();
 }
 
@@ -12622,6 +12694,138 @@ function freezerSubmit() {
   renderFreezerPage();
   const btn = document.getElementById('freezer-submit-btn');
   if (btn) { btn.textContent = '✓ Submitted!'; btn.style.background='#2d7a52'; setTimeout(()=>{ btn.textContent='✓ Submit Count'; btn.style.background='#4a9c6e'; }, 2000); }
+}
+
+// ============================================================
+// FREEZER SHEET SCAN (Claude vision via Cloud Function)
+// ============================================================
+let _freezerScanFlagged = []; // items awaiting manual review from the last scan
+
+function freezerScanSheet() {
+  if (!authCanAccess('Baker')) { alert('Sign in as Baker or higher to scan a sheet.'); return; }
+  if (!_fbFunctions) { alert('Cloud sync isn\'t connected — can\'t reach the scan service.'); return; }
+  document.getElementById('freezer-scan-input').click();
+}
+
+function freezerScanFileChosen(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+  freezerScanDownscale(file).then(base64 => {
+    freezerScanRun(_activeFreezer, base64);
+  }).catch(e => {
+    alert('Could not read that photo: ' + e.message);
+  });
+}
+
+// Downscale + compress the photo client-side (max ~1600px, JPEG ~0.8) so the
+// callable payload stays small regardless of the phone's native photo size.
+function freezerScanDownscale(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.onload = () => { img.src = reader.result; };
+    img.onerror = () => reject(new Error('decode failed'));
+    img.onload = () => {
+      const maxDim = 1600;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]); // strip data: prefix
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function freezerScanSetBtnState(loading) {
+  const btn = document.getElementById('freezer-scan-btn');
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? '⏳ Reading sheet…' : '📷 Scan Sheet';
+  btn.style.opacity = loading ? '0.6' : '1';
+}
+
+function freezerScanRun(freezerId, imageBase64) {
+  freezerScanSetBtnState(true);
+  const scanFreezerSheet = _fbFunctions.httpsCallable('scanFreezerSheet');
+  scanFreezerSheet({ freezerId, imageBase64 })
+    .then(res => {
+      freezerScanSetBtnState(false);
+      freezerApplyScanResults(freezerId, res.data.results || []);
+    })
+    .catch(e => {
+      freezerScanSetBtnState(false);
+      console.warn('scanFreezerSheet error:', e);
+      alert('Could not read that sheet: ' + (e.message || 'unknown error'));
+    });
+}
+
+function freezerApplyScanResults(freezerId, results) {
+  const session = authGetSession();
+  const by = session ? session.name : 'Scan';
+  const applied = [];
+  const flagged = [];
+
+  results.forEach(r => {
+    if (!r || !r.name || r.count === null || r.count === undefined) return;
+    if (r.confidence === 'high') {
+      freezerSetVal(freezerId, r.name, r.count);
+      applied.push(r.name);
+    } else {
+      flagged.push(r);
+    }
+  });
+
+  freezerRenderItems(freezerCanEdit(freezerId));
+
+  const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  localStorage.setItem('bk_freezer_last_scan', `${ts} by ${by}`);
+
+  const toast = document.getElementById('freezer-scan-toast');
+  if (toast) {
+    toast.style.display = 'block';
+    toast.textContent = `✓ Auto-applied ${applied.length} item${applied.length !== 1 ? 's' : ''}` +
+      (flagged.length ? ` · ${flagged.length} need${flagged.length === 1 ? 's' : ''} a quick check` : '');
+  }
+
+  if (flagged.length) {
+    freezerScanOpenReviewModal(freezerId, flagged);
+  }
+}
+
+function freezerScanOpenReviewModal(freezerId, flagged) {
+  _freezerScanFlagged = flagged.map(r => ({ ...r, freezerId }));
+  const rows = document.getElementById('freezer-scan-modal-rows');
+  rows.innerHTML = _freezerScanFlagged.map((r, i) => `
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${r.name}</div>
+        ${r.note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${r.note}</div>` : ''}
+      </div>
+      <input type="number" min="0" id="fz-scan-review-${i}" value="${r.count !== null && r.count !== undefined ? r.count : ''}" placeholder="—"
+        style="width:70px;padding:8px;text-align:center;background:var(--surface2);border:1px solid var(--border);
+               border-radius:4px;color:var(--text);font-size:14px">
+    </div>`).join('');
+  document.getElementById('freezer-scan-modal').style.display = 'flex';
+}
+
+function freezerScanCloseModal() {
+  document.getElementById('freezer-scan-modal').style.display = 'none';
+  _freezerScanFlagged = [];
+}
+
+function freezerScanApplyReviewed() {
+  _freezerScanFlagged.forEach((r, i) => {
+    const input = document.getElementById('fz-scan-review-' + i);
+    const val = input ? parseInt(input.value) : NaN;
+    if (!isNaN(val) && val >= 0) freezerSetVal(r.freezerId, r.name, val);
+  });
+  freezerRenderItems(freezerCanEdit(_activeFreezer));
+  freezerScanCloseModal();
 }
 
 // ============================================================
@@ -15993,6 +16197,13 @@ function wpOpenItemModal(day, itemId) {
   document.getElementById('wp-item-qty').value   = item?.qty   || '';
   document.getElementById('wp-item-note').value  = item?.note  || '';
   document.getElementById('wp-item-delete-btn').style.display = item ? '' : 'none';
+  // Populate Dough Timer recipe dropdown
+  const dtSel = document.getElementById('wp-item-dt-recipe');
+  if (dtSel) {
+    const recipes = dtGetRecipes();
+    dtSel.innerHTML = '<option value="">— Not linked —</option>' +
+      recipes.map(r => `<option value="${r.id}"${item?.dtRecipeId===r.id?' selected':''}>${r.name}</option>`).join('');
+  }
   _wpEditCategory = item?.category || null;
   const catPicker = document.getElementById('wp-cat-picker');
   if (catPicker) {
@@ -16025,17 +16236,18 @@ function wpSelectCat(key) {
 function wpSaveItem() {
   const name = (document.getElementById('wp-item-name').value || '').trim();
   if (!name) { alert('Enter an item name.'); return; }
-  const qty  = (document.getElementById('wp-item-qty').value  || '').trim();
-  const note = (document.getElementById('wp-item-note').value || '').trim();
-  const cat  = _wpEditCategory || null;
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const weekData  = wpGetWeek(mondayStr);
-  const dayItems  = weekData[_wpEditDay].items;
+  const qty        = (document.getElementById('wp-item-qty').value  || '').trim();
+  const note       = (document.getElementById('wp-item-note').value || '').trim();
+  const cat        = _wpEditCategory || null;
+  const dtRecipeId = document.getElementById('wp-item-dt-recipe')?.value || null;
+  const mondayStr  = wpMondayStr(_wpWeekMonday);
+  const weekData   = wpGetWeek(mondayStr);
+  const dayItems   = weekData[_wpEditDay].items;
   if (_wpEditItemId) {
     const item = dayItems.find(i => i.id === _wpEditItemId);
-    if (item) { item.name = name; item.qty = qty; item.note = note; item.category = cat; }
+    if (item) { item.name = name; item.qty = qty; item.note = note; item.category = cat; item.dtRecipeId = dtRecipeId || null; }
   } else {
-    dayItems.push({ id: 'wpi_' + Date.now(), name, qty, note, category: cat });
+    dayItems.push({ id: 'wpi_' + Date.now(), name, qty, note, category: cat, dtRecipeId: dtRecipeId || null });
   }
   wpSaveWeek(mondayStr, weekData);
   wpCloseItemModal();
@@ -16050,6 +16262,119 @@ function wpDeleteItem() {
   wpCloseItemModal();
   renderWeekPlan();
 }
+// — Push to Dough Timer —
+function wpOpenPushModal() {
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const recipes   = dtGetRecipes();
+
+  // Default push day = tomorrow relative to today; clamp to visible week
+  const todayDow = new Date().getDay(); // 0=Sun
+  const dowMap   = { mon:1, tue:2, wed:3, thu:4, fri:5, sat:6, sun:0 };
+  const tmrwDow  = (new Date().getDay() + 1) % 7;
+  const pushDay  = WP_DAYS.find(d => dowMap[d] === tmrwDow) || WP_DAYS[0];
+
+  // Default start time: 5:00 AM tomorrow
+  const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
+  const tmrwDate = tmrw.toISOString().slice(0,10);
+  const defaultTime = '05:00';
+
+  document.getElementById('wp-push-day-label').textContent =
+    WP_DAY_NAMES[pushDay] + ' · ' + new Date(tmrwDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+  const dayItems = weekData[pushDay]?.items || [];
+  const linked   = dayItems.filter(i => i.dtRecipeId);
+  const unlinked = dayItems.filter(i => !i.dtRecipeId);
+
+  let html = '';
+  if (!dayItems.length) {
+    html = `<div style="color:#888;text-align:center;padding:24px">No items on the Bake Board for ${WP_DAY_NAMES[pushDay]}.</div>`;
+  } else {
+    if (linked.length) {
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:#1a4a8a;margin-bottom:12px">Ready to schedule</div>`;
+      linked.forEach((item, idx) => {
+        const recipe = recipes.find(r => r.id === item.dtRecipeId);
+        const batchCount = Math.max(1, parseInt((item.qty||'').match(/\d+/)?.[0] || '1'));
+        html += `<div style="background:#f0f4ff;border:1.5px solid #b0c4f0;border-radius:6px;padding:14px 16px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:800;color:#111">${item.name}</div>
+              <div style="font-size:12px;color:#1a4a8a;margin-top:2px">⏱ ${recipe?.name || '—'} · ${batchCount} batch${batchCount>1?'es':''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              <label style="font-size:11px;color:#666;font-weight:700">Start</label>
+              <input type="date" id="wp-push-date-${idx}" value="${tmrwDate}"
+                style="font-size:13px;padding:6px 8px;border:1.5px solid #ccc;border-radius:4px">
+              <input type="time" id="wp-push-time-${idx}" value="${defaultTime}"
+                style="font-size:13px;padding:6px 8px;border:1.5px solid #ccc;border-radius:4px;width:90px">
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+    if (unlinked.length) {
+      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:#999;margin:${linked.length?'16px':0} 0 12px">No recipe linked — edit item to connect</div>`;
+      unlinked.forEach(item => {
+        html += `<div style="background:#fafafa;border:1.5px solid #e0e0e0;border-radius:6px;padding:12px 16px;margin-bottom:8px;opacity:0.6">
+          <div style="font-size:14px;font-weight:700;color:#666">${item.name}${item.qty?' · '+item.qty:''}</div>
+        </div>`;
+      });
+    }
+  }
+
+  // Store linked items + index for confirm step
+  window._wpPushLinked = linked;
+  window._wpPushTmrwDate = tmrwDate;
+
+  document.getElementById('wp-push-list').innerHTML = html;
+  document.getElementById('wp-push-modal').style.display = 'flex';
+}
+
+function wpClosePushModal() {
+  document.getElementById('wp-push-modal').style.display = 'none';
+}
+
+function wpConfirmPush() {
+  const linked  = window._wpPushLinked || [];
+  const recipes = dtGetRecipes();
+  const batches = dtGetBatches();
+  let scheduled = 0;
+
+  linked.forEach((item, idx) => {
+    const recipe = recipes.find(r => r.id === item.dtRecipeId);
+    if (!recipe) return;
+    const dateVal = document.getElementById(`wp-push-date-${idx}`)?.value;
+    const timeVal = document.getElementById(`wp-push-time-${idx}`)?.value || '05:00';
+    const [h, m] = timeVal.split(':').map(Number);
+    const [yr, mo, dy] = (dateVal || window._wpPushTmrwDate).split('-').map(Number);
+    const batchCount = Math.max(1, parseInt((item.qty||'').match(/\d+/)?.[0] || '1'));
+
+    for (let b = 0; b < batchCount; b++) {
+      const startTime = new Date(yr, mo-1, dy, h, m + b*30, 0, 0);
+      const colorIdx  = (batches.length + b) % DT_BATCH_COLORS.length;
+      const num       = batches.filter(x => x.recipeId === recipe.id).length + b + 1;
+      const stepTimes = [];
+      let t = startTime.getTime();
+      recipe.steps.forEach(s => { stepTimes.push(new Date(t).toISOString()); t += s.duration * 60000; });
+      batches.push({
+        id: 'batch_' + Date.now() + '_' + b,
+        recipeId: recipe.id, recipeName: recipe.name,
+        label: recipe.name + ' Batch ' + num,
+        colorIdx, scheduledStartAt: startTime.toISOString(),
+        stepTimes, warn5min: true,
+        startedAt: null, currentStepIdx: 0, stepLog: [], status: 'scheduled',
+      });
+      scheduled++;
+    }
+  });
+
+  if (!scheduled) { alert('No linked recipes to schedule.'); return; }
+  dtSaveBatches(batches);
+  dtStartTick();
+  wpClosePushModal();
+  toastBy(`${scheduled} batch${scheduled>1?'es':''} scheduled in Dough Timer`);
+}
+
 function wpMoveItem(day, itemId, dir) {
   const mondayStr = wpMondayStr(_wpWeekMonday);
   const weekData  = wpGetWeek(mondayStr);
@@ -16384,7 +16709,7 @@ function wpCloseBakerPicker() {
 
 // Keys that sync across devices
 const FB_SYNC_KEYS = new Set([
-  'bk_freezer', 'bk_freezer_defs', 'bk_freezer_last_submit',
+  'bk_freezer', 'bk_freezer_defs', 'bk_freezer_last_submit', 'bk_freezer_last_scan',
   'bk_ingredients', 'bk_ing_defs', 'bk_ing_last_submit',
   'bk_cl_state_opening', 'bk_cl_state_closing', 'bk_cl_state_baker',
   'bk_cl_defs_opening',  'bk_cl_defs_closing',  'bk_cl_defs_baker',
@@ -16403,6 +16728,7 @@ const FB_KEY_PAGE = {
   'bk_freezer':           () => { if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
   'bk_freezer_defs':      () => { if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
   'bk_freezer_last_submit':()=>{ if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
+  'bk_freezer_last_scan': () => { if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
   'bk_ingredients':       () => { if (activePage() === 'ingredients') try { renderIngredientsPage();  } catch(e){} },
   'bk_ing_defs':          () => { if (activePage() === 'ingredients') try { renderIngredientsPage();  } catch(e){} },
   'bk_ing_last_submit':   () => { if (activePage() === 'ingredients') try { renderIngredientsPage();  } catch(e){} },
@@ -16429,6 +16755,7 @@ function activePage() {
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 const _fbWriteTimers = {};
 let _fbDb = null;
+let _fbFunctions = null;
 let _fbIgnoreKeys = new Set(); // keys we just received from Firestore — don't echo back
 let _fbLastSync = null;
 let _fbSyncDotTimer = null;
@@ -16524,6 +16851,15 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.6.9': [
+    '🔗 Bake Board items can now link to a Dough Timer recipe — set it in the item editor',
+    '📤 "Push to Dough Timer" button schedules tomorrow\'s linked doughs with one tap',
+    '⏱ Multiple batches stagger 30 min apart; date and start time adjustable before confirming',
+  ],
+  '1.6.8': [
+    '📷 "Scan Sheet" on Freezer Stock — photograph a filled-in count sheet and Claude reads the handwritten numbers back in',
+    '✅ Clearly-readable counts auto-apply; anything hard to read gets flagged in a quick review popup',
+  ],
   '1.6.7': [
     '📄 Freezer print sheet redesigned — per-freezer, with current count + 3 write-in columns for day updates',
     '🖨️ "Print Sheet" prints active freezer; "All" button prints every freezer at once',
@@ -16632,6 +16968,7 @@ function fbUploadLocalData() {
     firebase.initializeApp(FB_CONFIG);
     const db = firebase.firestore();
     _fbDb = db;
+    _fbFunctions = firebase.functions();
     fbSetSyncStatus('connecting');
 
     // Pull all sync keys from Firestore before boot
