@@ -739,6 +739,10 @@
   .printable-schedule { display: none; }
 
   /* ── Dough Timer alarm overlay ── */
+  @keyframes fbSavePulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.7; }
+  }
   @keyframes dtAlarmPulse {
     0%, 100% { background: #c03000; }
     50%       { background: #e04500; }
@@ -876,10 +880,16 @@
     </div>
     <button id="auth-login-btn" onclick="authShowModal()" class="btn btn-ghost btn-sm" style="white-space:nowrap">🔑 Sign In</button>
     <span id="app-version-badge" style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;letter-spacing:0.5px;cursor:default;white-space:nowrap" title="App version"></span>
-    <span id="fb-sync-indicator" title="Cloud sync status" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:3px 9px;cursor:default;white-space:nowrap">
+    <span id="fb-sync-indicator" onclick="fbFlushNow()" title="Click to save now" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:3px 9px;cursor:pointer;white-space:nowrap">
       <span id="fb-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;transition:background 0.4s"></span>
       <span id="fb-sync-label">Connecting…</span>
     </span>
+    <button id="fb-save-btn" onclick="fbFlushNow()"
+      style="display:none;background:#d4a017;color:#1a1a1a;border:none;border-radius:4px;
+             padding:3px 12px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;
+             animation:fbSavePulse 1.5s ease-in-out infinite">
+      ☁ Save Now
+    </button>
     <button onclick="showDeployChecklist()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Pre-deploy checklist">🚀 Deploy</button>
     <button onclick="toggleFullscreen()" id="fs-btn" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Fullscreen (F11)">⛶ Fullscreen</button>
     <button onclick="exportFullBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Backup">💾 Backup</button>
@@ -1272,6 +1282,7 @@
     <span id="inv-save-indicator" style="font-size:12px;color:var(--success);display:flex;align-items:center;gap:4px">✓ All counts saved</span>
     <button class="btn btn-ghost btn-sm" onclick="setStaffPin()" title="Change the PIN required to exit Staff Mode">🔑 Change Staff PIN</button>
     <button class="btn btn-ghost btn-sm" onclick="printInventorySheet()" style="margin-left:auto">🖨 Print Inventory Sheet</button>
+    <button class="btn btn-ghost btn-sm" onclick="eodOrderSheet()">📋 EOD Order Sheet</button>
   </div>
 
   <!-- Summary strip -->
@@ -1695,6 +1706,10 @@
         style="padding:18px 26px;background:#fff;color:#111;border:3px solid #111;border-radius:4px;
                font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation;
                min-height:64px;white-space:nowrap;flex-shrink:0">⏰ Schedule</button>
+      <button onclick="dtClearAll()"
+        style="padding:18px 20px;background:#fff;color:#c0392b;border:3px solid #c0392b;border-radius:4px;
+               font-size:15px;font-weight:800;cursor:pointer;touch-action:manipulation;
+               min-height:64px;white-space:nowrap;flex-shrink:0">🗑 Clear All</button>
     </div>
     <!-- Alerts: full-width, shown only when baker action needed -->
     <div id="dt-alerts" style="margin-bottom:12px"></div>
@@ -2197,7 +2212,9 @@
       <span style="font-size:12px;display:flex;align-items:center;gap:4px"><span style="color:#4a9c6e">●</span> Good</span>
       <div id="ing-autosave-ind" style="font-size:12px;color:var(--muted);opacity:0;transition:opacity 0.4s">✓ Saved</div>
       <button onclick="ingAddRow()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">+ Add Item</button>
-      <button onclick="ingGenerateReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">📄 Report</button>
+      <button onclick="ingPrintSheet()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">📄 Print Sheet</button>
+      <button onclick="eodOrderSheet()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">📋 EOD Order Sheet</button>
+      <button onclick="ingGenerateReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">📊 Status Report</button>
       <button id="ing-submit-btn" onclick="ingSubmit()" style="background:#4a9c6e;color:#fff;border:none;border-radius:4px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">✓ Mark Complete</button>
     </div>
   </div>
@@ -2393,7 +2410,7 @@
         style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
     </div>
     <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
-      <p style="font-size:13px;color:var(--muted);margin:0">Complete these steps before uploading a new version to Netlify.</p>
+      <p style="font-size:13px;color:var(--muted);margin:0">Complete these steps before pushing a new version to GitHub.</p>
 
       <!-- Step 1 -->
       <div style="display:flex;align-items:center;gap:14px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px 16px">
@@ -2413,8 +2430,8 @@
         <div id="deploy-check-2" style="width:24px;height:24px;border-radius:50%;border:2px solid var(--border);
              flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px"></div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">Upload new file to Netlify</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Drag <strong>bakery_scheduler_53.html</strong> onto the Deploys tab at app.netlify.com</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Push index.html to GitHub</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Commit and push <strong>index.html</strong> to the <strong>dchiappinelli-ui/bellas-bakeshop</strong> repo — GitHub Pages deploys automatically</div>
         </div>
         <button onclick="deployStepCheck(2)"
           style="background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:8px 14px;
@@ -2725,7 +2742,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.7.0';
+const APP_VERSION      = '1.7.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -14026,6 +14043,15 @@ function dtSchedule() {
   document.getElementById('dt-schedule-modal').style.display = 'flex';
 }
 function dtHideSchedule() { document.getElementById('dt-schedule-modal').style.display = 'none'; }
+function dtClearAll() {
+  const batches = dtGetBatches();
+  if (!batches.length) { toastBy('No batches to clear.'); return; }
+  if (!confirm(`Clear all ${batches.length} batch${batches.length>1?'es':''}? This cannot be undone.`)) return;
+  dtSaveBatches([]);
+  _dtSelectedBatchId = null;
+  renderDoughTimer();
+  toastBy('All batches cleared.');
+}
 
 function dtSetSchedMode(mode) {
   _dtSchedMode = mode;
@@ -15476,43 +15502,46 @@ function openRemoveTask(taskId) {
 const ING_KEY      = 'bk_ingredients';
 const ING_DEFS_KEY = 'bk_ing_defs';
 
-// { name, cat } — order within each category matters
+// { name, cat, par } — order within each category matters; par=0 means no par set yet
 const ING_DEFAULT_DEFS = [
   // Meat
-  { name:'Turkey',        cat:'Meat' },
-  { name:'Ham',           cat:'Meat' },
-  { name:'Prosciutto',    cat:'Meat' },
-  { name:'Chicken',       cat:'Meat' },
-  { name:'Chicken Salad', cat:'Meat' },
-  { name:'Bacon',         cat:'Meat' },
+  { name:'Turkey',          cat:'Meat',       par:0 },
+  { name:'Ham',             cat:'Meat',       par:0 },
+  { name:'Prosciutto',      cat:'Meat',       par:0 },
+  { name:'Chicken',         cat:'Meat',       par:0 },
+  { name:'Chicken Salad',   cat:'Meat',       par:0 },
+  { name:'Bacon',           cat:'Meat',       par:0 },
   // Seafood
-  { name:'Smoked Salmon', cat:'Seafood' },
+  { name:'Smoked Salmon',   cat:'Seafood',    par:0 },
   // Cheese
-  { name:'Swiss',         cat:'Cheese' },
-  { name:'Burrata',       cat:'Cheese' },
-  { name:'Ricotta',       cat:'Cheese' },
-  { name:'American Cheese', cat:'Cheese' },
+  { name:'Swiss',           cat:'Cheese',     par:0 },
+  { name:'Burrata',         cat:'Cheese',     par:0 },
+  { name:'Ricotta',         cat:'Cheese',     par:0 },
+  { name:'American Cheese', cat:'Cheese',     par:0 },
   // Produce
-  { name:'Arugula',       cat:'Produce' },
-  { name:'Tomato',        cat:'Produce' },
-  { name:'Avocado',       cat:'Produce' },
-  { name:'Basil',         cat:'Produce' },
-  { name:'Blueberries',   cat:'Produce' },
-  { name:'Strawberries',  cat:'Produce' },
-  { name:'Lemon',         cat:'Produce' },
+  { name:'Arugula',         cat:'Produce',    par:0 },
+  { name:'Tomato',          cat:'Produce',    par:0 },
+  { name:'Avocado',         cat:'Produce',    par:0 },
+  { name:'Basil',           cat:'Produce',    par:0 },
+  { name:'Blueberries',     cat:'Produce',    par:0 },
+  { name:'Strawberries',    cat:'Produce',    par:0 },
+  { name:'Lemon',           cat:'Produce',    par:0 },
   // Bread
-  { name:'Focaccia',      cat:'Bread' },
+  { name:'Focaccia',        cat:'Bread',      par:0 },
   // Condiments
-  { name:'Pesto',         cat:'Condiments' },
-  { name:'Balsamic Glaze',cat:'Condiments' },
-  { name:'Honey',         cat:'Condiments' },
-  { name:'Olive Oil',     cat:'Condiments' },
-  { name:'Mayo',          cat:'Condiments' },
-  { name:'Mustard',       cat:'Condiments' },
+  { name:'Pesto',           cat:'Condiments', par:0 },
+  { name:'Balsamic Glaze',  cat:'Condiments', par:0 },
+  { name:'Honey',           cat:'Condiments', par:0 },
+  { name:'Olive Oil',       cat:'Condiments', par:0 },
+  { name:'Mayo',            cat:'Condiments', par:0 },
+  { name:'Mustard',         cat:'Condiments', par:0 },
 ];
 
 function ingGetDefs() {
-  return JSON.parse(localStorage.getItem(ING_DEFS_KEY) || 'null') || ING_DEFAULT_DEFS;
+  const saved = JSON.parse(localStorage.getItem(ING_DEFS_KEY) || 'null');
+  const defs  = saved || ING_DEFAULT_DEFS;
+  defs.forEach(d => { if (d.par === undefined) d.par = 0; });
+  return defs;
 }
 function ingGetStatus() {
   const raw = JSON.parse(localStorage.getItem(ING_KEY) || '{}');
@@ -15628,12 +15657,216 @@ function ingGenerateReport() {
   w.document.close();
 }
 
+function ingPrintSheet() {
+  const defs   = ingGetDefs();
+  const status = ingGetStatus();
+  const today  = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const cats = [], groups = {}, defMap = {};
+  defs.forEach(d => {
+    defMap[d.name] = d;
+    if (!groups[d.cat]) { groups[d.cat] = []; cats.push(d.cat); }
+    groups[d.cat].push(d.name);
+  });
+
+  let tbody = '';
+  cats.forEach(cat => {
+    tbody += `<tr><td colspan="4" style="background:#1a1a1a;color:white;padding:4px 8px;font-size:9.5px;font-weight:bold;text-transform:uppercase;letter-spacing:1px">${cat}</td></tr>`;
+    groups[cat].forEach((name, i) => {
+      const def   = defMap[name] || { par:0 };
+      const entry = status[name] || {};
+      const qty   = (entry.qty !== null && entry.qty !== undefined) ? entry.qty : '';
+      const par   = def.par > 0 ? def.par : '—';
+      tbody += `<tr style="${i%2 ? 'background:#fafafa' : ''}">
+        <td style="padding:5px 8px;font-size:11px;font-weight:600;border-bottom:1px solid #ddd">${name}</td>
+        <td style="text-align:center;border-bottom:1px solid #ddd;font-size:11px;color:#555">${par}</td>
+        <td style="text-align:center;border-bottom:1px solid #ddd">
+          <span style="display:inline-block;width:54px;height:22px;border:1.5px solid #999;background:white;vertical-align:middle">
+            ${qty !== '' ? `<span style="font-size:13px;font-weight:bold;padding:0 4px">${qty}</span>` : ''}
+          </span>
+        </td>
+        <td style="border-bottom:1px solid #ddd;padding:4px 6px">
+          <span style="display:inline-block;width:140px;height:14px;border-bottom:1px solid #ccc;vertical-align:middle"></span>
+        </td>
+      </tr>`;
+    });
+  });
+
+  const html = `<!DOCTYPE html><html><head><title>FOH Ingredients Count Sheet</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;font-size:10px;color:#1a1a1a;background:white;padding:0.35in}
+h1{font-size:20px;letter-spacing:-0.5px;margin-bottom:2px}
+h2{font-size:10.5px;font-weight:normal;color:#555;margin-bottom:10px}
+.fields{display:flex;gap:20px;margin-bottom:8px;font-size:9px}
+.field{display:flex;align-items:flex-end;gap:4px}
+.field label{font-weight:bold}
+.field span{border-bottom:1px solid #999;display:inline-block;min-width:100px;height:12px}
+.legend{font-size:8px;color:#666;background:#f5f5f5;border:1px solid #ddd;padding:3px 8px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+th{background:#e8e8e8;padding:4px 8px;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-bottom:2px solid #1a1a1a}
+th:not(:first-child){text-align:center}
+.sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border-top:2px solid #1a1a1a;padding-top:8px;margin-top:14px;font-size:9px}
+.sig label{font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:12px}
+.sig-line{border-bottom:1px solid #999}
+@media print{body{padding:0.25in;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<h1>Bella's Bake Shop</h1>
+<h2>FOH Ingredients Count Sheet — <strong>FRESH ITEMS</strong></h2>
+<div class="fields">
+  <div class="field"><label>Date:</label><span>${today}</span></div>
+  <div class="field"><label>Staff:</label><span></span></div>
+  <div class="field"><label>Time:</label><span style="min-width:70px"></span></div>
+</div>
+<div class="legend">Write count in box · Par = target level · Flag anything low or damaged in Notes · Pre-filled counts from app if available</div>
+<table>
+  <thead><tr><th>Item</th><th>Par</th><th>Count</th><th>Notes / Condition</th></tr></thead>
+  <tbody>${tbody}</tbody>
+</table>
+<div class="sig">
+  <div><label>Counted by</label><div class="sig-line"></div></div>
+  <div><label>Checked by</label><div class="sig-line"></div></div>
+  <div><label>Action taken</label><div class="sig-line"></div></div>
+</div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); }
+}
+
+function eodOrderSheet() {
+  const today   = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const dayName = new Date().toLocaleDateString('en-US',{weekday:'long'});
+  const session = authGetSession();
+  const by      = session ? session.name : '';
+
+  // Kitchen items below par
+  const kitchenRows = [];
+  PRODUCTS.forEach(p => {
+    const st  = invState[p.name];
+    if (!st) return;
+    const par = (st.par && st.par[dayName]) ? parseFloat(st.par[dayName]) : 0;
+    const on  = parseFloat(st.onHand) || 0;
+    const frz = parseFloat(st.frozen) || 0;
+    const total = p.cat === 'FREEZER' ? frz : on;
+    if (par > 0 && total < par) {
+      kitchenRows.push({ cat: p.cat, name: p.name, have: total, par, need: Math.ceil(par - total) });
+    }
+  });
+
+  // FOH items flagged
+  const defs   = ingGetDefs();
+  const status = ingGetStatus();
+  const defMap = {};
+  defs.forEach(d => defMap[d.name] = d);
+  const fohRows = [];
+  defs.forEach(def => {
+    const entry = status[def.name] || { status:'green' };
+    const s = entry.status || 'green';
+    if (s === 'red' || s === 'yellow') {
+      fohRows.push({
+        cat: def.cat, name: def.name,
+        qty: (entry.qty !== null && entry.qty !== undefined) ? entry.qty : '—',
+        par: (def.par > 0) ? def.par : '—',
+        status: s, statusLabel: ING_LABEL[s],
+      });
+    }
+  });
+
+  function groupRows(rows, keyFn, cols, headerBg) {
+    const cats = [...new Set(rows.map(keyFn))];
+    if (!rows.length) return `<tr><td colspan="${cols}" style="text-align:center;color:#888;padding:10px;font-style:italic">Nothing flagged</td></tr>`;
+    let out = '';
+    cats.forEach(cat => {
+      out += `<tr><td colspan="${cols}" style="background:${headerBg};padding:3px 8px;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.8px;color:#444">${cat}</td></tr>`;
+      rows.filter(r => keyFn(r) === cat).forEach((r, i) => {
+        if (cols === 4) {
+          const statusColor = '#555';
+          out += `<tr style="${i%2?'background:#fafafa':''}">
+            <td style="padding:5px 8px;font-size:11px;border-bottom:1px solid #e0e0e0">${r.name}</td>
+            <td style="text-align:center;border-bottom:1px solid #e0e0e0;font-size:11px">${r.have}</td>
+            <td style="text-align:center;border-bottom:1px solid #e0e0e0;font-size:11px">${r.par}</td>
+            <td style="border-bottom:1px solid #e0e0e0;padding:4px 6px"><span style="display:inline-block;width:130px;height:14px;border-bottom:1px solid #ccc"></span></td>
+          </tr>`;
+        } else {
+          const sc = r.status === 'red' ? '#a00' : '#8a6a00';
+          out += `<tr style="${i%2?'background:#fafafa':''}">
+            <td style="padding:5px 8px;font-size:11px;border-bottom:1px solid #e0e0e0">${r.name}</td>
+            <td style="text-align:center;border-bottom:1px solid #e0e0e0"><span style="font-size:10px;font-weight:bold;color:${sc}">${r.statusLabel}</span></td>
+            <td style="text-align:center;border-bottom:1px solid #e0e0e0;font-size:11px">${r.qty}</td>
+            <td style="text-align:center;border-bottom:1px solid #e0e0e0;font-size:11px">${r.par}</td>
+            <td style="border-bottom:1px solid #e0e0e0;padding:4px 6px"><span style="display:inline-block;width:110px;height:14px;border-bottom:1px solid #ccc"></span></td>
+          </tr>`;
+        }
+      });
+    });
+    return out;
+  }
+
+  const kitchenBody = groupRows(kitchenRows, r => r.cat, 4, '#ebebeb');
+  const fohBody     = groupRows(fohRows, r => r.cat, 5, '#ebebeb');
+  const totalItems  = kitchenRows.length + fohRows.length;
+
+  const html = `<!DOCTYPE html><html><head><title>EOD Order Sheet — Bella's</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;font-size:10px;color:#1a1a1a;background:white;padding:0.35in}
+h1{font-size:20px;letter-spacing:-0.5px;margin-bottom:2px}
+h2{font-size:10.5px;font-weight:normal;color:#555}
+.fields{display:flex;gap:20px;margin:8px 0;font-size:9px}
+.field{display:flex;align-items:flex-end;gap:4px}
+.field label{font-weight:bold}
+.field span{border-bottom:1px solid #999;display:inline-block;min-width:100px;height:12px}
+.legend{font-size:8px;color:#666;background:#f5f5f5;border:1px solid #ddd;padding:3px 8px;margin-bottom:6px}
+.sec-hdr{background:#1a1a1a;color:white;padding:5px 10px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-top:12px}
+table{width:100%;border-collapse:collapse;margin-bottom:0}
+th{background:#e0e0e0;padding:4px 8px;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-bottom:2px solid #1a1a1a}
+th:not(:first-child){text-align:center}
+.sig{display:grid;grid-template-columns:1fr 1fr;gap:16px;border-top:2px solid #1a1a1a;padding-top:8px;margin-top:14px;font-size:9px}
+.sig label{font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:12px}
+.sig-line{border-bottom:1px solid #999}
+@media print{body{padding:0.25in;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<h1>Bella's Bake Shop</h1>
+<h2>End of Day Order Sheet — <strong>${dayName}</strong></h2>
+<div class="fields">
+  <div class="field"><label>Date:</label><span>${today}</span></div>
+  <div class="field"><label>Prepared by:</label><span>${by}</span></div>
+  <div class="field"><label>Time:</label><span style="min-width:70px"></span></div>
+</div>
+<div class="legend">${totalItems} item${totalItems !== 1 ? 's' : ''} flagged — Kitchen = below par · FOH = Order Now / Order Soon · Write order quantity or notes in the last column</div>
+
+<div class="sec-hdr">🍞 Kitchen — Below Par</div>
+<table>
+  <thead><tr><th>Item</th><th>Have</th><th>Par</th><th>Order / Notes</th></tr></thead>
+  <tbody>${kitchenBody}</tbody>
+</table>
+
+<div class="sec-hdr">🥪 FOH — Items to Order</div>
+<table>
+  <thead><tr><th>Item</th><th>Status</th><th>Have</th><th>Par</th><th>Order / Notes</th></tr></thead>
+  <tbody>${fohBody}</tbody>
+</table>
+
+<div class="sig">
+  <div><label>Action taken / ordered by</label><div class="sig-line"></div></div>
+  <div><label>Owner reviewed</label><div class="sig-line"></div></div>
+</div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); }
+}
+
 function ingRenderGrid(defs, status) {
   const el = document.getElementById('ing-grid');
   if (!el) return;
+  const role    = authCurrentRole();
+  const isOwner = role === 'Owner' || role === 'Head Baker';
 
-  const cats = [], groups = {};
+  const cats = [], groups = {}, defMap = {};
   defs.forEach(d => {
+    defMap[d.name] = d;
     if (!groups[d.cat]) { groups[d.cat] = []; cats.push(d.cat); }
     groups[d.cat].push(d.name);
   });
@@ -15645,16 +15878,20 @@ function ingRenderGrid(defs, status) {
                  letter-spacing:0.8px;color:var(--muted);margin:16px 0 6px;padding-bottom:6px;
                  border-bottom:1px solid var(--border)">${cat}</div>`;
     html += items.map(name => {
-      const entry  = status[name] || { status:'green', updatedBy:null, updatedAt:null, receivedDate:null };
+      const def    = defMap[name] || { par:0 };
+      const entry  = status[name] || { status:'green', updatedBy:null, updatedAt:null, receivedDate:null, qty:null };
       const s      = entry.status || 'green';
       const safe   = name.replace(/'/g,"\\'");
       const fresh  = ingFreshnessLabel(entry.receivedDate);
+      const qty    = (entry.qty !== null && entry.qty !== undefined) ? entry.qty : '';
+      const par    = def.par || 0;
+
       const updLine = entry.updatedBy
-        ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">
-             Updated by ${entry.updatedBy} · ${new Date(entry.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>`
+        ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">
+             ${entry.updatedBy} · ${new Date(entry.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>`
         : '';
       const freshLine = fresh
-        ? `<div style="font-size:12px;color:${fresh.color};margin-top:2px">${fresh.text}</div>`
+        ? `<div style="font-size:11px;color:${fresh.color};margin-top:2px">${fresh.text}</div>`
         : '';
       const freshBtnLabel = entry.receivedDate ? 'Update received' : 'Mark received';
       const freshBtn = `<button
@@ -15663,19 +15900,54 @@ function ingRenderGrid(defs, status) {
         ontouchstart="event.stopPropagation();ingReceivedTouchStart(event,'${safe}')"
         ontouchend="event.stopPropagation();ingReceivedTouchEnd(event)"
         ontouchmove="ingReceivedTouchEnd(event)"
-        style="margin-top:10px;background:none;border:1.5px solid var(--border);border-radius:6px;
-               color:var(--muted);font-size:13px;padding:8px 14px;cursor:pointer;line-height:1.4;
-               touch-action:manipulation;-webkit-user-select:none;user-select:none;min-height:40px"
-        >📅 ${freshBtnLabel}</button>`;
-      return `<div onclick="ingToggle('${safe}')"
-        style="background:${ING_BG[s]};border:2px solid ${ING_BORDER[s]};border-radius:6px;
-               padding:18px 16px;cursor:pointer;user-select:none;-webkit-user-select:none;
-               display:flex;flex-direction:column;touch-action:manipulation;min-height:110px"
-        onmousedown="this.style.opacity=0.7" onmouseup="this.style.opacity=1" ontouchend="this.style.opacity=1">
-        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px">${name}</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px;color:${ING_COLOR[s]}">●</span>
-          <span style="font-size:15px;font-weight:700;color:${ING_COLOR[s]}">${ING_LABEL[s]}</span>
+        style="margin-top:8px;background:none;border:1.5px solid var(--border);border-radius:6px;
+               color:var(--muted);font-size:12px;padding:6px 12px;cursor:pointer;
+               touch-action:manipulation;-webkit-user-select:none;user-select:none">
+        📅 ${freshBtnLabel}</button>`;
+
+      // Par column: editable for owner, read-only for others
+      const parCol = isOwner
+        ? `<div style="text-align:center">
+             <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px">Par</div>
+             <input type="number" min="0" inputmode="numeric" value="${par||''}" placeholder="—"
+               onclick="event.stopPropagation()"
+               onchange="event.stopPropagation();ingSetPar('${safe}',this.value)"
+               style="width:64px;font-size:18px;font-weight:600;text-align:center;padding:8px 4px;
+                      border-radius:6px;border:1.5px dashed var(--border);background:var(--surface);color:var(--muted);
+                      touch-action:manipulation">
+           </div>`
+        : (par > 0
+           ? `<div style="text-align:center;color:var(--muted)">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Par</div>
+                <div style="font-size:20px;font-weight:700">${par}</div>
+              </div>`
+           : '');
+
+      return `<div style="background:${ING_BG[s]};border:2px solid ${ING_BORDER[s]};border-radius:6px;
+               padding:16px;display:flex;flex-direction:column;gap:6px">
+        <!-- Name + status badge -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:16px;font-weight:700;color:var(--text)">${name}</div>
+          <div onclick="ingToggle('${safe}')" title="Tap to cycle status"
+               style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 10px;
+                      border-radius:20px;border:1.5px solid ${ING_BORDER[s]};
+                      touch-action:manipulation;-webkit-user-select:none;user-select:none">
+            <span style="font-size:13px;color:${ING_COLOR[s]}">●</span>
+            <span style="font-size:11px;font-weight:700;color:${ING_COLOR[s]}">${ING_LABEL[s]}</span>
+          </div>
+        </div>
+        <!-- Quantity + par -->
+        <div style="display:flex;align-items:flex-end;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px">On Hand</div>
+            <input type="number" min="0" inputmode="numeric" value="${qty}" placeholder="—"
+              onclick="event.stopPropagation()"
+              onchange="ingSetQty('${safe}',this.value)"
+              style="width:100%;max-width:110px;font-size:28px;font-weight:800;text-align:center;
+                     padding:10px 6px;border-radius:6px;border:2px solid var(--border);
+                     background:var(--surface);color:var(--text);touch-action:manipulation">
+          </div>
+          ${parCol}
         </div>
         ${updLine}${freshLine}${freshBtn}
       </div>`;
@@ -15698,6 +15970,36 @@ function ingToggle(name) {
   ingRenderGrid(ingGetDefs(), status);
   const ind = document.getElementById('ing-autosave-ind');
   if (ind) { ind.style.opacity = '1'; setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
+}
+
+function ingSetQty(name, val) {
+  const status  = ingGetStatus();
+  const defs    = ingGetDefs();
+  const def     = defs.find(d => d.name === name) || { par:0 };
+  const entry   = status[name] || { status:'green', updatedBy:null, updatedAt:null, receivedDate:null, qty:null };
+  const session = authGetSession();
+  entry.qty = (val === '' || val === null || val === undefined) ? null : parseFloat(val);
+  if (def.par > 0 && entry.qty !== null) {
+    const ratio  = entry.qty / def.par;
+    entry.status = ratio >= 1 ? 'green' : ratio >= 0.5 ? 'yellow' : 'red';
+  }
+  entry.updatedBy = session ? session.name : 'Unknown';
+  entry.updatedAt = new Date().toISOString();
+  status[name] = entry;
+  ingSaveStatus(status);
+  ingRenderGrid(defs, ingGetStatus());
+  dsRefresh('ingredients');
+  const ind = document.getElementById('ing-autosave-ind');
+  if (ind) { ind.style.opacity = '1'; setTimeout(() => { ind.style.opacity = '0'; }, 2000); }
+}
+
+function ingSetPar(name, val) {
+  const defs = ingGetDefs();
+  const def  = defs.find(d => d.name === name);
+  if (!def) return;
+  def.par = parseInt(val) || 0;
+  ingSaveDefs(defs);
+  ingRenderGrid(defs, ingGetStatus());
 }
 
 let _ingLongPressTimer = null;
@@ -16370,11 +16672,12 @@ function wpConfirmPush() {
     const [h, m]     = timeVal.split(':').map(Number);
     const [yr,mo,dy] = dateStr.split('-').map(Number);
     const batchCount = Math.max(1, parseInt((item.qty||'').match(/\d+/)?.[0] || '1'));
+    const baseNum    = batches.filter(x => x.recipeId === recipe.id).length + 1;
 
     for (let b = 0; b < batchCount; b++) {
       const startTime = new Date(yr, mo-1, dy, h, m + b*30, 0, 0);
       const colorIdx  = (batches.length + b) % DT_BATCH_COLORS.length;
-      const num       = batches.filter(x => x.recipeId === recipe.id).length + b + 1;
+      const num       = baseNum + b;
       const stepTimes = [];
       let t = startTime.getTime();
       recipe.steps.forEach(s => { stepTimes.push(new Date(t).toISOString()); t += s.duration * 60000; });
@@ -16804,28 +17107,91 @@ function fbSetSyncStatus(status) {
   if (indicator) indicator.title = 'Cloud sync: ' + s.text + (_fbLastSync ? ' (last sync ' + new Date(_fbLastSync).toLocaleTimeString() + ')' : '');
 }
 
+let _fbPendingCount = 0;
+function _fbPendingDelta(delta) {
+  _fbPendingCount = Math.max(0, _fbPendingCount + delta);
+  const btn = document.getElementById('fb-save-btn');
+  if (btn) btn.style.display = _fbPendingCount > 0 ? '' : 'none';
+}
+
 localStorage.setItem = function(key, value) {
   _ls.set(key, value);
   if (_fbDb && FB_SYNC_KEYS.has(key) && !_fbIgnoreKeys.has(key)) {
+    const ts = new Date().toISOString();
+    _ls.set('bk_ts_' + key, ts);           // track when local write happened
+    if (!_fbWriteTimers[key]) _fbPendingDelta(1);  // count new pending write
     clearTimeout(_fbWriteTimers[key]);
     fbSetSyncStatus('syncing');
     _fbWriteTimers[key] = setTimeout(() => {
-      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: new Date().toISOString() })
-        .then(() => { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); })
+      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: _ls.get('bk_ts_' + key) || ts })
+        .then(() => {
+          _fbLastSync = new Date().toISOString();
+          delete _fbWriteTimers[key];
+          _fbPendingDelta(-1);
+          if (_fbPendingCount <= 0) fbSetSyncStatus('online');
+        })
         .catch(e => { console.warn('FB write error:', key, e); fbSetSyncStatus('error'); });
     }, 400);
   }
 };
+
+function fbFlushNow() {
+  const keys = Object.keys(_fbWriteTimers);
+  if (!keys.length) { toastBy('Already saved to cloud.'); return; }
+  fbSetSyncStatus('syncing');
+  let pending = keys.length;
+  keys.forEach(key => {
+    clearTimeout(_fbWriteTimers[key]);
+    delete _fbWriteTimers[key];
+    _fbPendingDelta(-1);
+    const value = _ls.get(key);
+    const ts    = _ls.get('bk_ts_' + key) || new Date().toISOString();
+    if (value !== null && _fbDb) {
+      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: ts })
+        .then(() => { _fbLastSync = new Date().toISOString(); if (--pending <= 0) fbSetSyncStatus('online'); })
+        .catch(e => { console.warn('FB flush error:', key, e); fbSetSyncStatus('error'); });
+    } else { --pending; }
+  });
+}
+
+window.addEventListener('beforeunload', () => {
+  // Best-effort: fire any pending writes before the page unloads
+  Object.keys(_fbWriteTimers).forEach(key => {
+    clearTimeout(_fbWriteTimers[key]);
+    delete _fbWriteTimers[key];
+    const value = _ls.get(key);
+    const ts    = _ls.get('bk_ts_' + key) || new Date().toISOString();
+    if (value !== null && _fbDb) {
+      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: ts });
+    }
+  });
+});
 
 function fbSetupListeners(db) {
   FB_SYNC_KEYS.forEach(key => {
     if (!FB_KEY_PAGE[key]) return; // skip config-only keys for listeners
     db.collection('bakery_data').doc(key).onSnapshot(snap => {
       if (!snap.exists) return;
-      const val = snap.data().value;
+      const val  = snap.data().value;
+      const fbAt = snap.data().updatedAt;
       if (val === undefined || _ls.get(key) === val) return;
+
+      // Never overwrite local data that is newer than what Firebase has
+      const localAt = _ls.get('bk_ts_' + key);
+      if (localAt && fbAt && localAt > fbAt) {
+        // Local is ahead of Firebase — push it back rather than overwriting
+        if (!_fbIgnoreKeys.has(key)) {
+          _fbDb.collection('bakery_data').doc(key)
+            .set({ value: _ls.get(key), updatedAt: localAt })
+            .then(() => { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); })
+            .catch(e => console.warn('FB re-push error:', key, e));
+        }
+        return;
+      }
+
       _fbIgnoreKeys.add(key);
       _ls.set(key, val);
+      if (fbAt) _ls.set('bk_ts_' + key, fbAt);
       setTimeout(() => _fbIgnoreKeys.delete(key), 500);
       FB_KEY_PAGE[key]?.();
     });
@@ -16873,6 +17239,26 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.7.4': [
+    '🚀 Deploy checklist updated — now references GitHub Pages instead of Netlify',
+  ],
+  '1.7.3': [
+    '☁ Fixed data-loss bug: back button no longer loses Bake Board (or any) edits',
+    '🕐 Timestamp-based sync: local changes are never overwritten by older Firebase data',
+    '💾 "☁ Save Now" amber button appears whenever there are unsynced changes — click to flush immediately',
+    '🔄 Sync indicator is now clickable (same as Save Now) as a quick alternative',
+    '⚡ beforeunload handler fires pending writes when leaving the page',
+  ],
+  '1.7.2': [
+    '📄 FOH Ingredients now tracks quantity on hand — big number input on each ingredient card',
+    '📊 Par levels per ingredient — owners set par; status auto-derives from qty vs par when set',
+    '🖨 FOH Print Sheet — clean clipboard count sheet with item, par, blank count box, and notes column',
+    '📋 EOD Order Sheet — combined Kitchen (below par) + FOH (flagged items) shopping list, printable',
+  ],
+  '1.7.1': [
+    '🐛 Fixed batch numbering bug — pushed batches now number correctly (1, 2, 3… not 1, 3, 5…)',
+    '🗑 Added "Clear All" button to Dough Timer — removes all batches with one tap + confirmation',
+  ],
   '1.7.0': [
     '🗓 Push to Dough Timer now uses the currently viewed day — no more auto-"tomorrow" logic',
     '📅 Day selector in push modal lets you switch days before scheduling',
