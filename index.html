@@ -1939,6 +1939,42 @@
 </div>
 
 <!-- Bake Board — Push to Dough Timer modal -->
+<!-- ======== BAKE BOARD — COPY ITEM MODAL ======== -->
+<div id="wp-copy-modal"
+  style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,0.65);
+    align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:8px;width:100%;max-width:480px;
+              box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden">
+    <!-- Header -->
+    <div style="background:#111;color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:15px;font-weight:800;letter-spacing:0.5px">⧉ Copy Item to Days</div>
+      <button onclick="document.getElementById('wp-copy-modal').style.display='none'"
+        style="background:none;border:none;color:rgba(255,255,255,0.6);font-size:22px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <!-- Day picker -->
+    <div style="padding:22px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+                  color:#999;margin-bottom:12px">Select days to copy to</div>
+      <div id="wp-copy-day-btns" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:20px"></div>
+      <div style="font-size:11px;color:#aaa;text-align:center;margin-bottom:16px">
+        Items already on a day won't be duplicated
+      </div>
+      <div style="display:flex;gap:10px">
+        <button id="wp-copy-confirm-btn" onclick="wpConfirmCopy()"
+          style="flex:1;padding:14px;background:#111;color:#fff;border:none;border-radius:6px;
+                 font-size:14px;font-weight:800;cursor:pointer;touch-action:manipulation">
+          📋 Copy
+        </button>
+        <button onclick="document.getElementById('wp-copy-modal').style.display='none'"
+          style="padding:14px 20px;background:#fff;color:#555;border:2px solid #ddd;border-radius:6px;
+                 font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="wp-push-modal"
   style="display:none;position:fixed;inset:0;z-index:99994;background:rgba(0,0,0,0.65);
     align-items:center;justify-content:center;padding:20px">
@@ -2742,7 +2778,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.7.5';
+const APP_VERSION      = '1.7.6';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -16316,6 +16352,8 @@ const WP_DAY_SHORT = { mon:'MON', tue:'TUE', wed:'WED', thu:'THU', fri:'FRI', sa
 const WP_BAKER_COLORS = ['#1a2a6a','#1a5a2a','#7a2a00','#4a1a7a','#005a4a','#6a0020','#555500','#003a5a'];
 
 let _wpWeekMonday    = null;
+let _wpCopyItemId    = null;
+let _wpCopyFromDay   = null;
 let _wpEditDay       = null;
 let _wpEditItemId    = null;
 let _wpEditCategory  = null;
@@ -16454,8 +16492,13 @@ function renderWeekPlan() {
             ${item.qty  ? `<div style="font-size:12px;color:#777;margin-top:2px">${item.qty}</div>`  : ''}
             ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
           </div>
-          <div style="font-size:13px;color:#ccc;flex-shrink:0;align-self:center;
-            padding:0 2px;letter-spacing:-1px">⠿</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
+            <button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+              title="Copy to other days"
+              style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
+                     padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>
+            <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -16986,6 +17029,106 @@ function _wpGestDragCleanup() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// — Copy item to other days —
+function wpOpenCopyModal(fromDay, itemId) {
+  _wpCopyFromDay = fromDay;
+  _wpCopyItemId  = itemId;
+
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const monday    = new Date(_wpWeekMonday);
+  const dowMap    = { mon:0, tue:1, wed:2, thu:3, fri:4, sat:5, sun:6 };
+
+  // Default selection: next day (wraps within the week)
+  const fromIdx   = dowMap[fromDay];
+  const nextDay   = WP_DAYS[(fromIdx + 1) % 7];
+
+  const el = document.getElementById('wp-copy-modal');
+  if (!el) return;
+
+  // Render day toggle buttons
+  const btnHtml = WP_DAYS.map(d => {
+    const date    = new Date(monday);
+    date.setDate(date.getDate() + dowMap[d]);
+    const dateNum = date.getDate();
+    const isFrom  = d === fromDay;
+    const checked = d === nextDay;
+    return `<button id="wp-copy-day-${d}" onclick="wpToggleCopyDay('${d}')"
+      data-selected="${checked && !isFrom ? 'true' : 'false'}"
+      ${isFrom ? 'disabled' : ''}
+      style="padding:10px 6px;border-radius:6px;min-width:62px;font-size:12px;font-weight:700;
+             border:2px solid ${isFrom ? '#ddd' : (checked ? '#1a4a8a' : '#ccc')};
+             background:${isFrom ? '#f5f5f5' : (checked ? '#1a4a8a' : '#fff')};
+             color:${isFrom ? '#bbb' : (checked ? '#fff' : '#555')};
+             cursor:${isFrom ? 'default' : 'pointer'};touch-action:manipulation">
+      <div style="font-size:9px;font-weight:900;letter-spacing:1px;opacity:0.75">${WP_DAY_SHORT[d]}</div>
+      <div style="font-size:18px;font-weight:900;line-height:1.2">${dateNum}</div>
+      ${isFrom ? '<div style="font-size:8px;opacity:0.5">source</div>' : ''}
+    </button>`;
+  }).join('');
+
+  document.getElementById('wp-copy-day-btns').innerHTML = btnHtml;
+  wpUpdateCopyBtn();
+  el.style.display = 'flex';
+}
+
+function wpToggleCopyDay(day) {
+  const btn = document.getElementById('wp-copy-day-' + day);
+  if (!btn || btn.disabled) return;
+  const sel = btn.getAttribute('data-selected') === 'true';
+  btn.setAttribute('data-selected', sel ? 'false' : 'true');
+  btn.style.background   = !sel ? '#1a4a8a' : '#fff';
+  btn.style.borderColor  = !sel ? '#1a4a8a' : '#ccc';
+  btn.style.color        = !sel ? '#fff'    : '#555';
+  wpUpdateCopyBtn();
+}
+
+function wpUpdateCopyBtn() {
+  const selected = WP_DAYS.filter(d => {
+    const b = document.getElementById('wp-copy-day-' + d);
+    return b && b.getAttribute('data-selected') === 'true';
+  });
+  const btn = document.getElementById('wp-copy-confirm-btn');
+  if (btn) {
+    btn.textContent = selected.length
+      ? `📋 Copy to ${selected.length} day${selected.length > 1 ? 's' : ''}`
+      : 'Select at least one day';
+    btn.disabled = selected.length === 0;
+    btn.style.opacity = selected.length ? '1' : '0.5';
+  }
+}
+
+function wpConfirmCopy() {
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const fromItems = weekData[_wpCopyFromDay]?.items || [];
+  const srcItem   = fromItems.find(it => it.id === _wpCopyItemId);
+  if (!srcItem) { document.getElementById('wp-copy-modal').style.display = 'none'; return; }
+
+  const selected = WP_DAYS.filter(d => {
+    const b = document.getElementById('wp-copy-day-' + d);
+    return b && b.getAttribute('data-selected') === 'true';
+  });
+
+  selected.forEach(day => {
+    if (!weekData[day]) weekData[day] = { items:[], bakers:[] };
+    if (!weekData[day].items) weekData[day].items = [];
+    // Don't duplicate if identical item name already exists on that day
+    const alreadyThere = weekData[day].items.some(it => it.name === srcItem.name);
+    if (!alreadyThere) {
+      weekData[day].items.push({
+        ...srcItem,
+        id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      });
+    }
+  });
+
+  wpSaveWeek(mondayStr, weekData);
+  document.getElementById('wp-copy-modal').style.display = 'none';
+  renderWeekPlan();
+  wpInitGestures();
+  toastBy(`Copied to ${selected.length} day${selected.length > 1 ? 's' : ''}`);
+}
+
 // — Baker picker —
 function wpOpenBakerPicker(day) {
   _wpBakerDay = day;
@@ -17239,6 +17382,11 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.7.6': [
+    '⧉ Bake Board: copy any item to one or more days with a single tap',
+    '📅 Day-picker shows the full week — tap to select multiple days, then confirm',
+    '🚫 Won\'t duplicate if the same item name is already on a target day',
+  ],
   '1.7.5': [
     '🐛 FOH Ingredients: tap anywhere on a card to cycle status again (was broken — only badge worked)',
     '✏️ Quantity/par inputs block tap-to-cycle so typing a number doesn\'t accidentally change status',
