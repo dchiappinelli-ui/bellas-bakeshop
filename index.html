@@ -754,6 +754,10 @@
     55%      { transform: rotate(-12deg) scale(1.1); }
     75%      { transform: rotate(10deg)  scale(1.05); }
   }
+  @keyframes sbAlertSlide {
+    from { transform: translateY(-100%); opacity:0; }
+    to   { transform: translateY(0);     opacity:1; }
+  }
 
   @media print {
     .nav, header .subtitle, .btn, .no-print { display: none !important; }
@@ -904,11 +908,6 @@
   <button class="nav-btn active" data-min-role="Owner" onclick="showPage('staff')">Staff</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('ordering')">🛒 Ordering</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
-  <!-- Bakery Staff active tabs -->
-  <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
-  <button class="nav-btn" data-min-role="Baker" onclick="showPage('weekplan')">🗓 Bake Board</button>
-  <button class="nav-btn" data-min-role="Baker" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <!-- Owner only until finalized -->
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('standing')">📋 Standing Tasks</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('weekly')">📅 Weekly Schedule</button>
@@ -921,12 +920,16 @@
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
-  <button class="nav-btn" data-foh="true" onclick="showPage('staffboard')">💬 Staff Message Board</button>
-  <button class="nav-btn" data-foh-only="true" onclick="showPage('eod')">📊 End of Day</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('orders')">📋 Orders</button>
-  <button class="nav-btn" data-foh="true" onclick="showPage('opening')">FOH Checklists</button>
-  <button class="nav-btn" data-foh="true" onclick="showPage('ingredients')">🧂 Ingredients</button>
-  <button class="nav-btn" data-foh="true" onclick="showPage('stationguide')">📋 Station Guide</button>
+  <!-- All staff tabs -->
+  <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
+  <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
+  <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
+  <button class="nav-btn" onclick="showPage('staffboard')">💬 Staff Board</button>
+  <button class="nav-btn" onclick="showPage('eod')">📊 End of Day</button>
+  <button class="nav-btn" onclick="showPage('opening')">📋 Checklists</button>
+  <button class="nav-btn" onclick="showPage('ingredients')">🧂 Ingredients</button>
+  <button class="nav-btn" onclick="showPage('stationguide')">📋 Station Guide</button>
 </div>
 
 <div id="staff-mode-banner" style="display:none;background:var(--accent);color:#1a1209;padding:10px 20px;text-align:center;font-weight:700;font-size:13px;align-items:center;justify-content:center;gap:14px">
@@ -936,8 +939,8 @@
 
 <!-- ======== STAFF PAGE ======== -->
 <div class="page active" id="page-staff">
-  <h2>Staff & Capabilities</h2>
-  <p class="subtitle">Task-level capability matrix — check off what each person can do, and it drives the scheduler. Update as they learn.</p>
+  <h2>Staff</h2>
+  <p class="subtitle">Manage your team, stations, and scheduling positions</p>
 
   <!-- Owner-only: session settings -->
   <div id="session-settings-card" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:20px">
@@ -958,36 +961,51 @@
     </div>
   </div>
 
-  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
-    <button class="btn btn-primary btn-sm" onclick="addStaffMember()">+ Add Staff Member</button>
-    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sq-staff-csv').click()">📥 Import from Square CSV</button>
-    <input type="file" id="sq-staff-csv" accept=".csv" style="display:none" onchange="squareStaffImport(this)">
-    <span style="font-size:11px;color:var(--muted)">Capabilities are drawn from your Recipe Library stage skills — add recipes to expand the matrix</span>
-    <button class="btn btn-ghost btn-sm" onclick="printCapabilityMatrix()" style="margin-left:auto">🖨 Print Capability Matrix</button>
+  <!-- Tab bar -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0">
+    <button id="staff-tab-btn-team"     onclick="staffShowTab('team')"
+      style="padding:10px 18px;background:none;border:none;border-bottom:3px solid var(--accent);margin-bottom:-2px;font-size:14px;font-weight:700;color:var(--accent);cursor:pointer">👥 Team</button>
+    <button id="staff-tab-btn-training" onclick="staffShowTab('training')"
+      style="padding:10px 18px;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer">📋 Training Matrix</button>
   </div>
 
-  <!-- Capability Matrix Table -->
-  <div class="card" style="overflow-x:auto;margin-bottom:24px">
-    <div class="card-title" style="margin-bottom:14px">Task Capability Matrix</div>
-    <div id="capability-matrix">
-      <div class="empty-state">Add recipes with stages to populate the matrix</div>
+  <!-- Team tab -->
+  <div id="staff-tab-team">
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="addStaffMember()">+ Add Staff Member</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sq-staff-csv').click()">📥 Import from Square CSV</button>
+      <input type="file" id="sq-staff-csv" accept=".csv" style="display:none" onchange="squareStaffImport(this)">
     </div>
-  </div>
 
-  <!-- Role Slots -->
-  <div class="card" style="margin-bottom:24px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div>
-        <div class="card-title" style="margin-bottom:2px">Scheduling Positions</div>
-        <div style="font-size:11px;color:var(--muted)">Build your schedule around positions, not people. Assign an employee to each position each day.</div>
+    <!-- Staff Cards -->
+    <div id="staff-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px"></div>
+
+    <!-- Role Slots -->
+    <div class="card" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">Scheduling Positions</div>
+          <div style="font-size:11px;color:var(--muted)">Build your schedule around positions, not people. Assign an employee to each position each day.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addRoleSlot()">+ Add Position</button>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="addRoleSlot()">+ Add Position</button>
+      <div id="role-slots-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
     </div>
-    <div id="role-slots-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
   </div>
 
-  <!-- Staff Cards -->
-  <div id="staff-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"></div>
+  <!-- Training Matrix tab (hidden by default) -->
+  <div id="staff-tab-training" style="display:none">
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">Capabilities are drawn from Recipe Library stage skills — add recipes to expand the matrix</span>
+      <button class="btn btn-ghost btn-sm" onclick="printCapabilityMatrix()" style="margin-left:auto">🖨 Print</button>
+    </div>
+    <div class="card" style="overflow-x:auto;margin-bottom:24px">
+      <div class="card-title" style="margin-bottom:14px">Task Capability Matrix</div>
+      <div id="capability-matrix">
+        <div class="empty-state">Add recipes with stages to populate the matrix</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ======== RECIPE LIBRARY ======== -->
@@ -2039,6 +2057,20 @@
     </div>
   </div>
 
+  <!-- Alert sender — Head Baker / Owner only; shown via renderStaffBoard() -->
+  <div id="sb-alert-sender" style="display:none;background:#fff3cd;border:2px solid #e6a817;border-radius:4px;padding:16px 20px;margin-bottom:20px">
+    <div style="font-size:13px;font-weight:700;color:#7a5600;margin-bottom:10px">🚨 Send Urgent Alert — instantly pops up on all open devices</div>
+    <textarea id="sb-alert-text" placeholder="Short urgent message…"
+      style="width:100%;min-height:56px;resize:vertical;font-size:16px;padding:10px;border:1px solid #e6a817;border-radius:4px;background:#fff;color:#333;font-family:'Inter',sans-serif;margin-bottom:10px"></textarea>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;color:#7a5600">To:</span>
+      <button id="sb-alert-target-all"     onclick="sbSetAlertTarget('all')"     style="padding:8px 14px;border:2px solid #7a5600;background:#7a5600;color:#fff;font-size:13px;font-weight:700;cursor:pointer;border-radius:4px">Everyone</button>
+      <button id="sb-alert-target-kitchen" onclick="sbSetAlertTarget('kitchen')" style="padding:8px 14px;border:2px solid #7a5600;background:transparent;color:#7a5600;font-size:13px;font-weight:600;cursor:pointer;border-radius:4px">🍳 Kitchen</button>
+      <button id="sb-alert-target-foh"     onclick="sbSetAlertTarget('foh')"     style="padding:8px 14px;border:2px solid #7a5600;background:transparent;color:#7a5600;font-size:13px;font-weight:600;cursor:pointer;border-radius:4px">☕ FOH</button>
+      <button onclick="sbSendAlert()" style="margin-left:auto;padding:10px 24px;background:#dc3545;color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer">🚨 Send Alert</button>
+    </div>
+  </div>
+
   <!-- Feed -->
   <div id="sb-feed"></div>
 </div>
@@ -2778,7 +2810,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.7.6';
+const APP_VERSION      = '1.8.1';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2974,19 +3006,52 @@ function setStaffRole(staffId, role) {
   renderStaffPage();
 }
 
+const STAFF_STATIONS = ['Kitchen', 'FOH · Barista', 'Sandwich', 'Sales', 'Manager'];
+
+let _staffActiveTab = 'team';
+function staffShowTab(tab) {
+  _staffActiveTab = tab;
+  ['team','training'].forEach(t => {
+    const panel = document.getElementById('staff-tab-' + t);
+    const btn   = document.getElementById('staff-tab-btn-' + t);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+    if (btn) {
+      btn.style.color       = t === tab ? 'var(--accent)' : 'var(--muted)';
+      btn.style.fontWeight  = t === tab ? '700' : '600';
+      btn.style.borderBottom = t === tab ? '3px solid var(--accent)' : '3px solid transparent';
+    }
+  });
+}
+
 function addStaffMember() {
   const name = prompt('Staff member name:');
   if (!name) return;
-  const title = prompt('Title / role:') || 'Bakery Staff';
   const colors = ['#e8a045','#c47b9f','#7bc4c0','#c4b77b'];
   const color = colors[staff.length % colors.length];
   const newMember = {
     id: 's' + Date.now(),
-    name, title, color,
+    name, color,
     initials: name.charAt(0).toUpperCase(),
+    station: 'Kitchen',
     role: 'Bakery Assistant', taskOverrides: {}
   };
   staff.push(newMember);
+  saveStaff();
+  renderStaffPage();
+}
+
+function setStaffStation(staffId, val) {
+  const m = staff.find(s => s.id === staffId);
+  if (!m) return;
+  m.station = val;
+  saveStaff();
+  renderStaffPage();
+}
+
+function setStaffOwner(staffId, isOwner) {
+  const m = staff.find(s => s.id === staffId);
+  if (!m) return;
+  m.role = isOwner ? 'Owner' : 'Bakery Assistant';
   saveStaff();
   renderStaffPage();
 }
@@ -3008,6 +3073,7 @@ function setHourlyRate(staffId, val) {
 function renderStaffPage() {
   if (!authCanAccess('Owner')) return;
   idleInitSettingsCard();
+  staffShowTab(_staffActiveTab);
   const tasks = getAllTasks();
 
   // ---- Role Slots ----
@@ -3124,40 +3190,33 @@ function renderStaffPage() {
     const pct = tasks2.length > 0 ? Math.round(canCount / tasks2.length * 100) : 0;
     const overrideCount = Object.keys(m.taskOverrides).length;
 
+    const station = m.station || 'Kitchen';
     return `<div class="staff-card" style="position:relative" data-staff-id="${m.id}">
       <button onclick="removeStaff('${m.id}')" style="position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px" title="Remove">✕</button>
       <div class="staff-avatar" style="background:${m.color}22;color:${m.color};border:2px solid ${m.color};width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin:0 auto 12px">${m.initials}</div>
       <div class="staff-name">${m.name}</div>
-      <div class="staff-title">${m.title}</div>
+      <div class="staff-title" style="margin-bottom:10px">${station}</div>
 
-      <div style="margin:12px 0 8px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
-          <span>Task coverage</span>
-          <span style="color:${m.color}">${canCount} / ${tasks2.length} tasks (${pct}%)</span>
-        </div>
-        <div style="height:5px;background:var(--border);border-radius:3px">
-          <div style="height:100%;width:${pct}%;background:${m.color};border-radius:3px;transition:width 0.3s"></div>
-        </div>
-      </div>
-
-      <div class="section-label" style="margin-bottom:8px">Role</div>
-      <select onchange="setStaffRole('${m.id}',this.value)"
-        style="width:100%;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 8px;font-size:13px">
-        ${ROLE_HIERARCHY.slice().reverse().map(role =>
-          `<option value="${role}" ${m.role===role?'selected':''}>${role}</option>`
-        ).join('')}
+      <div class="section-label" style="margin-bottom:6px">Station</div>
+      <select onchange="setStaffStation('${m.id}',this.value)"
+        style="width:100%;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 8px;font-size:13px">
+        ${STAFF_STATIONS.map(s => `<option value="${s}" ${station===s?'selected':''}>${s}</option>`).join('')}
       </select>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-        ${m.role === 'Head Baker' ? 'Can perform all tasks' :
-          m.role === 'Baker' ? 'Can perform Baker & below tasks' :
-          m.role === 'Bakery Assistant' ? 'Can perform Assistant & Anyone tasks' :
-          'Can perform Anyone tasks only'}
-      </div>
 
-      ${overrideCount > 0 ? `<div style="margin-top:10px;font-size:11px;color:var(--warn)">⚡ ${overrideCount} task-level override${overrideCount>1?'s':''} active</div>` : ''}
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;padding:10px 12px;
+        background:${m.role==='Owner'?'rgba(232,160,69,0.12)':'var(--surface2)'};border:1px solid ${m.role==='Owner'?'var(--accent)':'var(--border)'};border-radius:4px">
+        <input type="checkbox" ${m.role==='Owner'?'checked':''} onchange="setStaffOwner('${m.id}',this.checked)"
+          style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${m.role==='Owner'?'var(--accent)':'var(--text)'}">⭐ Owner Access</div>
+          <div style="font-size:11px;color:var(--muted)">Full app access including Staff page</div>
+        </div>
+      </label>
+
+      ${overrideCount > 0 ? `<div style="font-size:11px;color:var(--warn)">⚡ ${overrideCount} override${overrideCount>1?'s':''} in Training Matrix</div>` : ''}
 
       ${(()=>{ const pins=authGetPins(); const hasPin=!!pins[m.id];
-        return authCanAccess('Head Baker')
+        return authCanAccess('Owner')
           ? `<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
                <span style="font-size:11px;color:var(--muted);flex:1">🔑 PIN: ${hasPin ? '••••' : '<em>not set</em>'}</span>
@@ -12050,7 +12109,9 @@ function authCurrentUser() { return authGetSession(); }
 function authCurrentRole() { const s = authGetSession(); return s ? s.role : 'Anyone'; }
 
 function authCanAccess(minRole) {
-  return authRoleIndex(authCurrentRole()) >= authRoleIndex(minRole);
+  const role = authCurrentRole();
+  if (minRole === 'Owner') return role === 'Owner';
+  return role !== 'Anyone';  // any logged-in staff can do everything else
 }
 
 // Show/hide the auth chip in the header
@@ -12069,7 +12130,8 @@ function authUpdateChip() {
     document.getElementById('auth-chip-avatar').textContent = member ? member.initials : '?';
     document.getElementById('auth-chip-avatar').style.background = member ? member.color : '#888';
     document.getElementById('auth-chip-name').textContent = session.name;
-    document.getElementById('auth-chip-role').textContent = session.role;
+    const chipStation = member ? (member.station || (member.role === 'Owner' ? 'Owner' : 'Staff')) : 'Staff';
+    document.getElementById('auth-chip-role').textContent = chipStation;
   } else {
     if (gate) gate.style.display = 'flex';
     chip.style.display = 'none';
@@ -12079,33 +12141,18 @@ function authUpdateChip() {
   authApplyNav();
 }
 
-// Declarative nav filter — permissions live on the buttons, not in code:
-//   data-min-role="Owner"  → Owner only
-//   data-foh="true"        → FOH (Barista) + Bakery Staff + Owner
-//   data-foh-only="true"   → FOH (Barista) + Owner only; Bakery Staff cannot see
-//   data-min-role="Baker"  → Baker, Head Baker, Owner only
-//   (no attrs)             → Bakery Staff + Owner; NOT FOH
+// Nav filter: data-min-role="Owner" → Owner only; no attribute → any logged-in staff
 function authApplyNav() {
   const role    = authCurrentRole();
   const isOwner = role === 'Owner';
-  const isFOH   = role === 'Barista';
-  const isBOH   = !isOwner && !isFOH && authCanAccess('Bakery Assistant');
+  const isStaff = role !== 'Anyone';
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    const minRole   = btn.getAttribute('data-min-role');
-    const fohAccess = btn.getAttribute('data-foh') === 'true';
-    const fohOnly   = btn.getAttribute('data-foh-only') === 'true';
-
+    const minRole = btn.getAttribute('data-min-role');
     if (minRole === 'Owner') {
       btn.style.display = isOwner ? '' : 'none';
-    } else if (isOwner) {
-      btn.style.display = '';
-    } else if (isBOH) {
-      btn.style.display = (!fohOnly && (!minRole || authCanAccess(minRole))) ? '' : 'none';
-    } else if (isFOH) {
-      btn.style.display = (fohAccess || fohOnly) ? '' : 'none';
     } else {
-      btn.style.display = 'none';
+      btn.style.display = isStaff ? '' : 'none';
     }
   });
 }
@@ -12128,32 +12175,22 @@ function authHideModal() {
   document.getElementById('auth-modal').style.display = 'none';
 }
 
-let _authLoginTab = 'foh';
-
-const AUTH_LOGIN_TABS = [
-  { id:'foh',   label:'☕ Front of House', roles:['Barista'] },
-  { id:'baker', label:'🍞 Bakers',         roles:['Bakery Assistant','Baker','Head Baker'] },
-  { id:'mgmt',  label:'⭐ Management',      roles:['Owner'] },
-];
-
 function authBuildPickList() {
   const pins = authGetPins();
   const list = document.getElementById('auth-staff-list');
 
-  const tabBar = `<div style="display:flex;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0">
-    ${AUTH_LOGIN_TABS.map(t => `
-      <button id="ltab-${t.id}" onclick="authLoginSwitchTab('${t.id}')"
-        style="flex:1;padding:8px 4px;border:none;border-bottom:3px solid ${_authLoginTab===t.id?'var(--accent)':'transparent'};
-               background:none;color:${_authLoginTab===t.id?'var(--accent)':'var(--muted)'};
-               font-size:11px;font-weight:${_authLoginTab===t.id?'700':'500'};cursor:pointer;
-               white-space:nowrap;margin-bottom:-2px;transition:all 0.15s">${t.label}</button>`).join('')}
-  </div>`;
+  // Sort: non-Owners first, Owners at bottom; within each group alphabetically
+  const sorted = [...staff].sort((a, b) => {
+    const aOwner = a.role === 'Owner' ? 1 : 0;
+    const bOwner = b.role === 'Owner' ? 1 : 0;
+    if (aOwner !== bOwner) return aOwner - bOwner;
+    return a.name.localeCompare(b.name);
+  });
 
-  const currentTabDef = AUTH_LOGIN_TABS.find(t => t.id === _authLoginTab);
-  const filtered = staff.filter(m => currentTabDef && currentTabDef.roles.includes(m.role));
-
-  const memberCards = filtered.map(m => {
-    const hasPin = !!pins[m.id];
+  const memberCards = sorted.map(m => {
+    const hasPin   = !!pins[m.id];
+    const isOwner  = m.role === 'Owner';
+    const station  = m.station || (isOwner ? 'Owner' : 'Staff');
     return `<button onclick="authPickStaff('${m.id}')"
       style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);
              border-radius:4px;padding:12px 14px;cursor:pointer;text-align:left;transition:border-color 0.15s;width:100%"
@@ -12161,23 +12198,18 @@ function authBuildPickList() {
       <div style="width:36px;height:36px;border-radius:50%;background:${m.color};display:flex;align-items:center;
            justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${m.initials}</div>
       <div style="flex:1;text-align:left">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${m.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${m.title || m.role}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${m.name}${isOwner ? ' <span style="font-size:11px">⭐</span>' : ''}</div>
+        <div style="font-size:11px;color:var(--muted)">${station}</div>
       </div>
-      ${hasPin ? '' : '<div style="font-size:10px;color:#e57373">No PIN set</div>'}
+      ${hasPin ? '' : '<div style="font-size:10px;color:#e57373">No PIN</div>'}
     </button>`;
   }).join('');
 
-  const empty = filtered.length === 0
-    ? `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0">No staff in this group</div>`
+  const empty = sorted.length === 0
+    ? `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0">No staff added yet</div>`
     : '';
 
-  list.innerHTML = tabBar + `<div style="display:flex;flex-direction:column;gap:8px">${memberCards}${empty}</div>`;
-}
-
-function authLoginSwitchTab(tabId) {
-  _authLoginTab = tabId;
-  authBuildPickList();
+  list.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">${memberCards}${empty}</div>`;
 }
 
 function authPickStaff(staffId) {
@@ -13349,21 +13381,74 @@ function dtStartBatch() {
   const num      = batches.filter(b => b.recipeId === recipe.id && b.status === 'active').length + 1;
   const colorIdx = active.length % DT_BATCH_COLORS.length;
   const now      = new Date().toISOString();
+  const firstStep = recipe.steps[0];
+  const firstStartedAt = (firstStep && firstStep.manualStart) ? null : now;
   batches.push({
     id: 'batch_' + Date.now(),
     recipeId: recipe.id,
     recipeName: recipe.name,
+    batchNum: num,
     label: recipe.name + ' Batch ' + num,
     colorIdx,
     startedAt: now,
+    pausedAt: null,
+    pausedDuration: 0,
     currentStepIdx: 0,
-    stepLog: [{ stepIdx:0, startedAt:now, completedAt:null }],
+    stepLog: [{ stepIdx:0, startedAt:firstStartedAt, completedAt:null }],
     status: 'active',
   });
   dtSaveBatches(batches);
   toastBy('Batch started');
   dtStartTick();
   renderDoughTimer();
+}
+
+function dtPauseBatch(batchId) {
+  const batches = dtGetBatches();
+  const batch = batches.find(b => b.id === batchId);
+  if (!batch || batch.pausedAt) return;
+  batch.pausedAt = new Date().toISOString();
+  dtSaveBatches(batches);
+  renderDoughTimer();
+}
+
+function dtResumeBatch(batchId) {
+  const batches = dtGetBatches();
+  const batch = batches.find(b => b.id === batchId);
+  if (!batch || !batch.pausedAt) return;
+  batch.pausedDuration = (batch.pausedDuration || 0) + (Date.now() - new Date(batch.pausedAt));
+  batch.pausedAt = null;
+  dtSaveBatches(batches);
+  renderDoughTimer();
+}
+
+function dtSkipStep(batchId) {
+  dtCompleteStep(batchId);
+}
+
+function dtStartStepTimer(batchId) {
+  try { dtAudio(); } catch(e) {}
+  const batches = dtGetBatches();
+  const batch = batches.find(b => b.id === batchId);
+  if (!batch) return;
+  const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
+  if (!log || log.startedAt) return;
+  log.startedAt = new Date().toISOString();
+  dtSaveBatches(batches);
+  renderDoughTimer();
+}
+
+function dtBatchDisplayLabel(batch, recipe) {
+  if (!recipe) return batch.label || batch.recipeName || 'Batch';
+  const num = batch.batchNum || (batch.label?.match(/\d+$/)?.[0] ?? '');
+  return recipe.name + (num ? ' Batch ' + num : '');
+}
+
+function dtEffectiveElapsed(log, batch, nowMs) {
+  if (!log || !log.startedAt) return -1; // timer not started
+  const raw = nowMs - new Date(log.startedAt).getTime();
+  const pausedMs = (batch.pausedDuration || 0) + (batch.pausedAt ? (nowMs - new Date(batch.pausedAt).getTime()) : 0);
+  return Math.max(0, raw - pausedMs);
 }
 
 function dtCompleteStep(batchId) {
@@ -13377,15 +13462,21 @@ function dtCompleteStep(batchId) {
   delete _dtOverdueAlerted[batchId + '_' + batch.currentStepIdx];
   const now = new Date().toISOString();
   const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
-  if (log) log.completedAt = now;
+  if (log) { if (!log.startedAt) log.startedAt = now; log.completedAt = now; }
+  // Reset pause state for the next step
+  batch.pausedAt = null;
+  batch.pausedDuration = 0;
   const next = batch.currentStepIdx + 1;
   if (next >= recipe.steps.length) {
     batch.status = 'complete';
     batch.completedAt = now;
     dtPlayChime();
   } else {
+    const nextStep = recipe.steps[next];
+    // wait steps (passive countdowns) auto-start; active steps require baker to tap ▶ Start Timer
+    const nextStart = (nextStep && nextStep.type === 'wait') ? now : null;
     batch.currentStepIdx = next;
-    batch.stepLog.push({ stepIdx:next, startedAt:now, completedAt:null });
+    batch.stepLog.push({ stepIdx:next, startedAt:nextStart, completedAt:null });
   }
   dtSaveBatches(batches);
   renderDoughTimer();
@@ -13447,18 +13538,26 @@ function dtStartTick() {
     // Check for wait steps that should auto-advance
     batches.forEach(batch => {
       if (batch.status !== 'active') return;
+      if (batch.pausedAt) return; // don't advance while paused
       const recipe = recipes.find(r => r.id === batch.recipeId);
       if (!recipe) return;
       const step = recipe.steps[batch.currentStepIdx];
       if (!step || step.type !== 'wait') return;
       const log = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
-      if (!log || log.completedAt) return;
-      if ((now - new Date(log.startedAt)) / 60000 >= step.duration) {
+      if (!log || !log.startedAt || log.completedAt) return;
+      const elapsedMs = dtEffectiveElapsed(log, batch, now);
+      if (elapsedMs / 60000 >= step.duration) {
         const ts = new Date().toISOString();
         log.completedAt = ts;
+        batch.pausedDuration = 0; batch.pausedAt = null;
         const next = batch.currentStepIdx + 1;
         if (next >= recipe.steps.length) { batch.status = 'complete'; batch.completedAt = ts; }
-        else { batch.currentStepIdx = next; batch.stepLog.push({ stepIdx: next, startedAt: ts, completedAt: null }); }
+        else {
+          const nextStep = recipe.steps[next];
+          const nextStart = (nextStep && nextStep.manualStart) ? null : ts;
+          batch.currentStepIdx = next;
+          batch.stepLog.push({ stepIdx: next, startedAt: nextStart, completedAt: null });
+        }
         changed = true;
       }
     });
@@ -13520,20 +13619,23 @@ function dtStartTick() {
     });
 
     // Persistent alarm popup — BOH only; Barista (FOH) devices never trigger this
-    if (authCurrentRole() === 'Barista' || !authCanAccess('Bakery Assistant')) return;
+    if (!authCanAccess('Bakery Assistant')) return;
     batches.filter(b => b.status === 'active').forEach(b => {
       if (_dtAlarmKey) return; // one alarm at a time — wait for baker action
+      if (b.pausedAt) return; // no alarm while paused
       const recipe = recipes.find(r => r.id === b.recipeId);
       if (!recipe) return;
       const step = recipe.steps[b.currentStepIdx];
       if (!step || step.type !== 'active') return;
       const log = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
-      if (!log) return;
-      const elapsed = (now - new Date(log.startedAt)) / 1000;
-      if (elapsed < step.duration * 60) return;
+      if (!log || !log.startedAt) return; // no alarm if timer not started yet
+      const elapsedMs = dtEffectiveElapsed(log, b, now);
+      const elapsedSecs = elapsedMs / 1000;
+      if (elapsedSecs < step.duration * 60) return;
       const key = b.id + '_' + b.currentStepIdx;
       if (_dtAlarmSnoozed[key] && now < _dtAlarmSnoozed[key]) return;
-      dtShowAlarm(b.id, key, b.label || b.recipeName, step.name, elapsed - step.duration * 60);
+      const displayLabel = dtBatchDisplayLabel(b, recipe);
+      dtShowAlarm(b.id, key, displayLabel, step.name, elapsedSecs - step.duration * 60);
     });
 
     // Every second: update clock displays in-place (no full re-render needed)
@@ -13545,56 +13647,49 @@ function dtStartTick() {
       const log     = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
       const stepEl  = document.getElementById('dt-step-clock-' + b.id);
       const totalEl = document.getElementById('dt-total-elapsed-' + b.id);
-      const elapsed = log ? (now - new Date(log.startedAt)) / 1000 : 0;
       const scheme  = DT_BATCH_COLORS[(b.colorIdx ?? 0) % DT_BATCH_COLORS.length];
+      const isPaused  = !!b.pausedAt;
+      const notStarted = log && !log.startedAt;
+      const elapsedMs = dtEffectiveElapsed(log, b, now);
+      const elapsed   = elapsedMs / 1000;
       if (stepEl && log) {
-        const left = step.duration * 60 - elapsed;
-        const over = left < 0;
-        if (step.type === 'wait') {
-          stepEl.textContent = dtFmtMMSS(Math.max(0, left));
-          stepEl.style.color = left < 60 ? '#b87000' : scheme.done;
-        } else {
-          stepEl.textContent = over ? '+' + dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
-          stepEl.style.color = over ? '#cc3300' : left < 5*60 ? '#b87000' : '#111';
+        if (notStarted) { stepEl.textContent = '—'; stepEl.style.color = '#aaa'; }
+        else if (isPaused) { stepEl.textContent = '⏸'; stepEl.style.color = '#b87000'; }
+        else {
+          const left = step.duration * 60 - elapsed;
+          const over = left < 0;
+          if (step.type === 'wait') {
+            stepEl.textContent = dtFmtMMSS(Math.max(0, left));
+            stepEl.style.color = left < 60 ? '#b87000' : scheme.done;
+          } else {
+            stepEl.textContent = over ? '+' + dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+            stepEl.style.color = over ? '#cc3300' : left < 5*60 ? '#b87000' : '#111';
+          }
         }
       }
       if (totalEl) { totalEl.textContent = dtFmtHHMM((now - new Date(b.startedAt)) / 1000); totalEl.style.color = '#111'; }
       // Update tab clock (left rail)
       const tabClockEl = document.getElementById('dt-tab-clock-' + b.id);
       if (tabClockEl && log && step) {
-        const tLeft = step.duration * 60 - elapsed;
-        const tOver = tLeft < 0;
-        const isWait = step.type === 'wait';
-        tabClockEl.textContent = tOver ? '+'+dtFmtMMSS(-tLeft) : dtFmtMMSS(Math.max(0, tLeft));
-        tabClockEl.style.color = tOver ? '#cc3300' : tLeft < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
+        if (isPaused) { tabClockEl.textContent = '⏸'; tabClockEl.style.color = '#b87000'; }
+        else if (notStarted) { tabClockEl.textContent = '—'; tabClockEl.style.color = '#aaa'; }
+        else {
+          const tLeft = step.duration * 60 - elapsed;
+          const tOver = tLeft < 0;
+          const isWait = step.type === 'wait';
+          tabClockEl.textContent = tOver ? '+'+dtFmtMMSS(-tLeft) : dtFmtMMSS(Math.max(0, tLeft));
+          tabClockEl.style.color = tOver ? '#cc3300' : tLeft < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
+        }
       }
       // Also update the action alert clock if it's visible
       const actionEl = document.getElementById('dt-action-clock-' + b.id);
       if (actionEl && log) {
-        const aLeft = step.duration * 60 - elapsed;
-        const aOver = aLeft < 0;
-        actionEl.textContent = aOver ? '+' + dtFmtMMSS(-aLeft) : dtFmtMMSS(Math.max(0, aLeft));
-        actionEl.style.color = aOver ? '#cc3300' : aLeft < 5*60 ? '#b87000' : '#111';
-      }
-      // Update live Est. Finish and late badge
-      const adjEl   = document.getElementById('dt-finish-adj-'   + b.id);
-      const badgeEl = document.getElementById('dt-finish-badge-' + b.id);
-      if (adjEl || badgeEl) {
-        const totalDurMs     = recipe.steps.reduce((s, st) => s + st.duration * 60000, 0);
-        const originalFinish = new Date(new Date(b.startedAt).getTime() + totalDurMs);
-        const adjustedFinish = dtProjectedFinish(b, recipe);
-        const lateMs   = adjustedFinish ? Math.max(0, adjustedFinish.getTime() - originalFinish.getTime()) : 0;
-        const lateMins = Math.round(lateMs / 60000);
-        const isLate   = lateMins > 0;
-        if (adjEl) {
-          adjEl.textContent  = adjustedFinish ? dtFmtTime(adjustedFinish.toISOString()) : '—';
-          adjEl.style.color  = isLate ? '#cc3300' : '#111';
-        }
-        if (badgeEl) {
-          badgeEl.textContent = isLate
-            ? `⚠ ${lateMins} min behind · was ${dtFmtTime(originalFinish.toISOString())}`
-            : `✓ On schedule · ${dtFmtTime(originalFinish.toISOString())}`;
-          badgeEl.style.color = isLate ? '#cc3300' : '#2a7a48';
+        if (isPaused || notStarted) { actionEl.textContent = isPaused ? '⏸ PAUSED' : '— Not started'; actionEl.style.color = '#b87000'; }
+        else {
+          const aLeft = step.duration * 60 - elapsed;
+          const aOver = aLeft < 0;
+          actionEl.textContent = aOver ? '+' + dtFmtMMSS(-aLeft) : dtFmtMMSS(Math.max(0, aLeft));
+          actionEl.style.color = aOver ? '#cc3300' : aLeft < 5*60 ? '#b87000' : '#111';
         }
       }
     });
@@ -13765,15 +13860,18 @@ function renderDoughBatchTabs() {
     const isSched = b.status === 'scheduled';
     let dotColor, tabBorderColor, stepLabel, clockHtml;
     if (isActv) {
-      const step    = recipe.steps[b.currentStepIdx];
-      const log     = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
-      const elapsed = log ? (now - new Date(log.startedAt)) / 1000 : 0;
-      const left    = step.duration * 60 - elapsed;
-      const over    = left < 0;
-      const isWait  = step.type === 'wait';
-      const clkClr  = over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
-      const clkTxt  = over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
-      dotColor       = scheme.border; // batch color — makes each tab visually distinct
+      const step      = recipe.steps[b.currentStepIdx];
+      const log       = b.stepLog.find(l => l.stepIdx === b.currentStepIdx);
+      const isPaused  = !!b.pausedAt;
+      const notStarted = log && !log.startedAt;
+      const elapsedMs = dtEffectiveElapsed(log, b, now);
+      const elapsed   = elapsedMs / 1000;
+      const left      = step.duration * 60 - elapsed;
+      const over      = left < 0;
+      const isWait    = step.type === 'wait';
+      const clkClr  = isPaused ? '#b87000' : notStarted ? '#aaa' : over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : scheme.done;
+      const clkTxt  = isPaused ? '⏸' : notStarted ? '—' : over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+      dotColor       = scheme.border;
       tabBorderColor = scheme.border;
       stepLabel = step.name;
       clockHtml = `<div id="dt-tab-clock-${b.id}" style="font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;color:${clkClr};margin-top:5px;line-height:1">${clkTxt}</div>`;
@@ -13798,7 +13896,7 @@ function renderDoughBatchTabs() {
       <div style="display:flex;align-items:flex-start;gap:9px">
         <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:3px;display:inline-block"></span>
         <div style="min-width:0;flex:1">
-          <div style="font-size:13px;font-weight:900;color:${isSel?tabBorderColor:'#333'};line-height:1.2;word-break:break-word">${b.label}</div>
+          <div style="font-size:13px;font-weight:900;color:${isSel?tabBorderColor:'#333'};line-height:1.2;word-break:break-word">${dtBatchDisplayLabel(b, recipe)}</div>
           <div style="font-size:11px;color:#888;margin-top:2px;font-weight:600">${stepLabel}</div>
           ${clockHtml}
         </div>
@@ -13821,28 +13919,30 @@ function renderDoughBatchDetail() {
   const recipe  = recipes.find(r => r.id === batch.recipeId);
   if (!recipe)  { detailEl.innerHTML = ''; return; }
   const now      = Date.now();
-  const isActive = batch.status === 'active';
-  const isDone   = batch.status === 'complete';
-  const isSched  = batch.status === 'scheduled';
-  const scheme   = DT_BATCH_COLORS[(batch.colorIdx ?? 0) % DT_BATCH_COLORS.length];
+  const isActive  = batch.status === 'active';
+  const isDone    = batch.status === 'complete';
+  const isSched   = batch.status === 'scheduled';
+  const isPaused  = isActive && !!batch.pausedAt;
+  const scheme    = DT_BATCH_COLORS[(batch.colorIdx ?? 0) % DT_BATCH_COLORS.length];
   // Step timeline
   const stepsHtml = recipe.steps.map((step, idx) => {
     const isDoneStep = idx < batch.currentStepIdx || batch.status === 'complete';
     const isCur  = idx === batch.currentStepIdx && isActive;
     const log    = batch.stepLog.find(l => l.stepIdx === idx);
+    const notStarted = isCur && log && !log.startedAt;
     let iconBg, iconClr, icon, nameClr, timeStr;
     if (isDoneStep) {
       iconBg=''; iconClr='#fff'; icon='✓'; iconBg=scheme.done; nameClr='#999';
       timeStr = log?.completedAt ? `${dtFmtTime(log.startedAt)} → ${dtFmtTime(log.completedAt)}` : '';
     } else if (isCur) {
-      iconBg = step.type==='active' ? '#cc3300' : '#1a4a8a'; iconClr='#fff';
-      icon   = step.type==='active' ? '▶' : '⏱'; nameClr='#111';
-      timeStr = log?.startedAt ? `Started ${dtFmtTime(log.startedAt)}` : '';
+      iconBg = notStarted ? '#e8e8e8' : step.type==='active' ? '#cc3300' : '#1a4a8a'; iconClr = notStarted ? '#aaa' : '#fff';
+      icon   = notStarted ? '▷' : step.type==='active' ? '▶' : '⏱'; nameClr='#111';
+      timeStr = (!notStarted && log?.startedAt) ? `Started ${dtFmtTime(log.startedAt)}` : notStarted ? 'Tap ▶ to begin' : '';
     } else {
       iconBg='#f0f0f0'; iconClr='#bbb'; icon=String(idx+1); nameClr='#aaa';
       timeStr = batch.stepTimes?.[idx] ? `~${dtFmtTime(batch.stepTimes[idx])}` : `${step.duration}m`;
     }
-    const rowBg = isCur ? (step.type==='active' ? 'rgba(204,51,0,0.05)' : 'rgba(26,74,138,0.05)') : 'transparent';
+    const rowBg = isCur ? (notStarted ? 'rgba(0,0,0,0.02)' : step.type==='active' ? 'rgba(204,51,0,0.05)' : 'rgba(26,74,138,0.05)') : 'transparent';
     return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${rowBg};border-radius:4px;margin-bottom:3px">
       <div style="width:30px;height:30px;border-radius:50%;background:${iconBg};color:${iconClr};
         display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0">${icon}</div>
@@ -13851,7 +13951,11 @@ function renderDoughBatchDetail() {
         <div style="font-size:11px;color:#bbb;margin-top:1px">${step.type} · ${step.duration} min</div>
       </div>
       <div style="font-size:12px;color:#aaa;text-align:right;flex-shrink:0;min-width:80px">${timeStr}</div>
-      ${isCur && step.type==='active' ? `<button onclick="dtCompleteStep('${batch.id}')"
+      ${notStarted ? `<button onclick="dtStartStepTimer('${batch.id}')"
+        style="padding:10px 18px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;
+               font-size:15px;font-weight:900;cursor:pointer;touch-action:manipulation;
+               flex-shrink:0;min-height:44px;white-space:nowrap">▶ Start Timer</button>` : ''}
+      ${isCur && !notStarted && step.type==='active' ? `<button onclick="dtCompleteStep('${batch.id}')"
         style="padding:10px 20px;background:#111;color:#fff;border:none;border-radius:4px;
                font-size:15px;font-weight:900;cursor:pointer;touch-action:manipulation;
                flex-shrink:0;min-height:44px;white-space:nowrap">✓ Done</button>` : ''}
@@ -13862,12 +13966,15 @@ function renderDoughBatchDetail() {
   if (isActive) {
     const step    = recipe.steps[batch.currentStepIdx];
     const log     = batch.stepLog.find(l => l.stepIdx === batch.currentStepIdx);
-    const elapsed = log ? (now - new Date(log.startedAt)) / 1000 : 0;
+    const notStarted = log && !log.startedAt;
+    const elapsedMs  = dtEffectiveElapsed(log, batch, now);
+    const elapsed    = elapsedMs / 1000;
     const left    = step.duration * 60 - elapsed;
     const over    = left < 0;
     const isWait  = step.type === 'wait';
-    const stepClr = over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : '#111';
-    const stepTxt = over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+    const stepClr = isPaused ? '#b87000' : notStarted ? '#aaa' : over ? '#cc3300' : left < (isWait ? 60 : 5*60) ? '#b87000' : '#111';
+    const stepTxt = isPaused ? '⏸ PAUSED' : notStarted ? '— Waiting' : over ? '+'+dtFmtMMSS(-left) : dtFmtMMSS(Math.max(0, left));
+    const stepLbl = isPaused ? 'PAUSED' : notStarted ? 'WAITING' : over ? '⚠ OVERDUE' : isWait ? 'Wait Left' : 'Step Left';
     const totalTxt      = dtFmtHHMM((now - new Date(batch.startedAt)) / 1000);
     const adjustedFinish = dtProjectedFinish(batch, recipe);
     const totalDurMs    = recipe.steps.reduce((s, st) => s + st.duration * 60000, 0);
@@ -13877,8 +13984,8 @@ function renderDoughBatchDetail() {
     const isLate        = lateMins > 0;
     metricsHtml = `<div style="display:flex;gap:0;border:2px solid ${scheme.border};border-radius:4px;overflow:hidden;margin-bottom:12px">
       <div style="flex:1;padding:12px 14px;border-right:1px solid #eee">
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">${over?'⚠ OVERDUE':isWait?'Wait Left':'Step Left'}</div>
-        <div id="dt-step-clock-${batch.id}" style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;color:${stepClr};line-height:1">${stepTxt}</div>
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px">${stepLbl}</div>
+        <div id="dt-step-clock-${batch.id}" style="font-size:${isPaused?'20':'26'}px;font-weight:900;font-variant-numeric:tabular-nums;color:${stepClr};line-height:1">${stepTxt}</div>
         <div style="font-size:10px;color:#aaa;margin-top:2px">${step.name}</div>
       </div>
       <div style="flex:1;padding:12px 14px;border-right:1px solid #eee">
@@ -13922,16 +14029,24 @@ function renderDoughBatchDetail() {
     </div>`;
   }
   // Header
-  const accentClr = isActive ? scheme.border : isDone ? '#4a9c6e' : '#bbb';
+  const accentClr = isPaused ? '#b87000' : isActive ? scheme.border : isDone ? '#4a9c6e' : '#bbb';
   const stepNum   = isActive ? `Step ${batch.currentStepIdx+1} of ${recipe.steps.length}` : isDone ? '✓ Complete' : 'Scheduled';
-  const curStepName = isActive ? recipe.steps[batch.currentStepIdx]?.name : '';
+  const curStep   = isActive ? recipe.steps[batch.currentStepIdx] : null;
+  const curStepName = curStep?.name || '';
+  const displayLabel = dtBatchDisplayLabel(batch, recipe);
+  const pauseBtn = isPaused
+    ? `<button onclick="dtResumeBatch('${batch.id}')" style="padding:10px 18px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:900;cursor:pointer;touch-action:manipulation;min-height:44px;white-space:nowrap">▶ Resume</button>`
+    : `<button onclick="dtPauseBatch('${batch.id}')" style="padding:10px 18px;background:#fff;border:2px solid #b87000;color:#b87000;border-radius:4px;font-size:14px;font-weight:900;cursor:pointer;touch-action:manipulation;min-height:44px;white-space:nowrap">⏸ Pause</button>`;
+  const skipBtn = `<button onclick="dtSkipStep('${batch.id}')" style="padding:10px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;color:#888;font-size:12px;cursor:pointer;touch-action:manipulation;min-height:44px;white-space:nowrap">Skip ›</button>`;
   detailEl.innerHTML = `<div style="background:#fff;border:5px solid ${accentClr};border-radius:0 10px 10px 10px;margin-bottom:16px;overflow:hidden">
-    <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="padding:14px 18px;border-bottom:2px solid #eee;background:#fafafa;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
-        <div style="font-size:20px;font-weight:900;color:#111">${batch.label}</div>
+        <div style="font-size:20px;font-weight:900;color:#111">${displayLabel}</div>
         <div style="font-size:12px;color:#888;margin-top:3px">${recipe.name} · ${stepNum}${curStepName?' — '+curStepName:''}</div>
       </div>
-      ${isActive ? `<button onclick="dtAbandonBatch('${batch.id}')" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;color:#999;font-size:12px;cursor:pointer;flex-shrink:0">Abandon</button>` : ''}
+      ${isActive ? pauseBtn : ''}
+      ${isActive && batch.currentStepIdx < recipe.steps.length - 1 ? skipBtn : ''}
+      ${isActive ? `<button onclick="dtAbandonBatch('${batch.id}')" style="padding:10px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;color:#999;font-size:12px;cursor:pointer;touch-action:manipulation;min-height:44px">Abandon</button>` : ''}
     </div>
     <div style="padding:12px 8px">${metricsHtml}${stepsHtml}</div>
   </div>`;
@@ -13995,6 +14110,11 @@ function dtRenderEditor() {
           <option value="active" ${step.type==='active'?'selected':''}>▶ Active</option>
           <option value="wait"   ${step.type==='wait'?'selected':''}>⏱ Wait</option>
         </select>
+        <label title="Baker must tap Start Timer to begin counting" style="display:flex;align-items:center;gap:5px;font-size:12px;color:#777;flex-shrink:0;cursor:pointer;user-select:none">
+          <input type="checkbox" ${step.manualStart?'checked':''} onchange="_dtEditingRecipe.steps[${idx}].manualStart=this.checked"
+            style="width:16px;height:16px;cursor:pointer">
+          Manual start
+        </label>
         <div style="display:flex;gap:4px;flex-shrink:0">
           ${idx>0 ? `<button onclick="dtEditorMove(${idx},-1)" style="padding:8px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↑</button>` : '<span style="width:36px"></span>'}
           ${idx<r.steps.length-1 ? `<button onclick="dtEditorMove(${idx},1)" style="padding:8px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;cursor:pointer">↓</button>` : '<span style="width:36px"></span>'}
@@ -14006,7 +14126,7 @@ function dtRenderEditor() {
 }
 function dtEditorAdd() {
   if (!_dtEditingRecipe) return;
-  _dtEditingRecipe.steps.push({id:'step_'+Date.now(),name:'New Step',duration:5,type:'active'});
+  _dtEditingRecipe.steps.push({id:'step_'+Date.now(),name:'New Step',duration:5,type:'active',manualStart:false});
   dtRenderEditor();
 }
 function dtEditorDel(idx) {
@@ -14905,11 +15025,108 @@ function sbPin(id) {
   renderStaffBoard();
 }
 
+// ---- Alert system ----
+const SB_ALERT_KEY = 'bk_alert';
+let _sbAlertTarget = 'all';
+let _sbLastAlertId = null;
+
+function sbSetAlertTarget(t) {
+  _sbAlertTarget = t;
+  ['all','kitchen','foh'].forEach(x => {
+    const btn = document.getElementById('sb-alert-target-' + x);
+    if (!btn) return;
+    const active = x === t;
+    btn.style.background = active ? '#7a5600' : 'transparent';
+    btn.style.color      = active ? '#fff'    : '#7a5600';
+    btn.style.fontWeight = active ? '700'     : '600';
+  });
+}
+
+function sbSendAlert() {
+  const text = (document.getElementById('sb-alert-text')?.value || '').trim();
+  if (!text) { toastBy('Write the alert message first.'); return; }
+  const session = authGetSession();
+  const al = {
+    id:     'al_' + Date.now(),
+    text,
+    target: _sbAlertTarget,
+    by:     session ? session.name : 'Staff',
+    at:     new Date().toISOString(),
+  };
+  _sbLastAlertId = al.id;
+  localStorage.setItem(SB_ALERT_KEY, JSON.stringify(al));
+  const el = document.getElementById('sb-alert-text');
+  if (el) el.value = '';
+  sbSetAlertTarget('all');
+  toastBy('Alert sent!');
+}
+
+function sbHandleIncomingAlert() {
+  try {
+    const raw = localStorage.getItem(SB_ALERT_KEY);
+    if (!raw) return;
+    const al = JSON.parse(raw);
+    if (!al || !al.id) return;
+    if (al.id === _sbLastAlertId) return;
+    const age = Date.now() - new Date(al.at).getTime();
+    if (age > 10 * 60 * 1000) { _sbLastAlertId = al.id; return; }
+    const session = authGetSession();
+    const role    = session ? session.role : 'Anyone';
+    const isFoh   = role === 'Barista';
+    const isKitch = ['Bakery Assistant','Baker','Head Baker'].includes(role);
+    if (al.target === 'kitchen' && isFoh)   { _sbLastAlertId = al.id; return; }
+    if (al.target === 'foh'     && isKitch) { _sbLastAlertId = al.id; return; }
+    _sbLastAlertId = al.id;
+    sbShowAlertBanner(al);
+  } catch(e) {}
+}
+
+function sbShowAlertBanner(al) {
+  if (Notification.permission === 'granted') {
+    try { new Notification('🚨 Bella\'s Bakeshop Alert', { body: al.text }); } catch(e) {}
+  }
+  if (navigator.vibrate) navigator.vibrate([200,100,200,100,200]);
+  let banner = document.getElementById('sb-alert-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'sb-alert-banner';
+    document.body.appendChild(banner);
+  }
+  const targetLabel = al.target === 'all' ? 'Everyone' : al.target === 'kitchen' ? '🍳 Kitchen' : '☕ FOH';
+  banner.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc3545;color:#fff;
+    padding:18px 20px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:flex;align-items:flex-start;gap:14px;
+    animation:sbAlertSlide 0.3s ease">
+    <div style="font-size:30px;line-height:1.1">🚨</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:700;opacity:0.85;margin-bottom:4px">ALERT from ${al.by} → ${targetLabel}</div>
+      <div style="font-size:18px;font-weight:700;line-height:1.4;word-break:break-word">${al.text}</div>
+    </div>
+    <button onclick="document.getElementById('sb-alert-banner').innerHTML=''"
+      style="background:rgba(255,255,255,0.25);border:none;color:#fff;font-size:20px;font-weight:700;
+        cursor:pointer;border-radius:4px;padding:4px 10px;flex-shrink:0;line-height:1">✕</button>
+  </div>`;
+  setTimeout(() => { const b = document.getElementById('sb-alert-banner'); if (b) b.innerHTML = ''; }, 15000);
+}
+
+function sbRequestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
 function renderStaffBoard() {
   const el = document.getElementById('sb-feed');
   if (!el) return;
   const session = authGetSession();
-  const canManage = authCanAccess('Head Baker');
+  const canManage = authCanAccess('Owner');
+
+  // Show alert sender for Head Baker and Owner only
+  const alertSender = document.getElementById('sb-alert-sender');
+  if (alertSender) alertSender.style.display = canManage ? '' : 'none';
+
+  // Request notification permission on first visit to staff board
+  sbRequestNotifPermission();
+
   const posts = sbGetPosts();
   if (!posts.length) {
     el.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--muted);font-size:16px">No messages yet — be the first to post.</div>';
@@ -15483,7 +15700,7 @@ function openReset() {
   renderOpeningPage();
 }
 
-function openCanManage() { return authCanAccess('Head Baker'); }
+function openCanManage() { return authCanAccess('Owner'); }
 
 function openAddRow() {
   if (!openCanManage()) { alert('Sign in as Head Baker or Owner to manage tasks.'); return; }
@@ -17185,7 +17402,7 @@ const FB_SYNC_KEYS = new Set([
   'bk_eod_log', 'bk_eod_locations',
   'bk_staff', 'bk_recipes', 'bk_standing_tasks', 'bk_role_slots',
   'bk_side_tasks', 'bk_side_task_log',
-  'bk_staff_board',
+  'bk_staff_board', 'bk_alert',
   'bk_dough_recipes', 'bk_dough_batches',
   'bk_sandwich_recipes',
   'bk_week_plan',
@@ -17206,6 +17423,7 @@ const FB_KEY_PAGE = {
   'bk_side_tasks':        () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
   'bk_side_task_log':     () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
   'bk_staff_board':       () => { if (activePage() === 'staffboard') try { renderStaffBoard(); } catch(e){} },
+  'bk_alert':             () => { try { sbHandleIncomingAlert(); } catch(e){} },
   'bk_dough_recipes':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
   'bk_dough_batches':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
   'bk_sg_recipes':        () => { if (activePage() === 'stationguide') try { renderStationGuide(); } catch(e){} },
@@ -17382,6 +17600,33 @@ function authBoot() {
 }
 
 const VERSION_NOTES = {
+  '1.8.1': [
+    '▶ Active steps now always wait for baker to tap "Start Timer" before the clock begins — no more auto-starting after completing a step',
+    '⏱ Wait steps (rests, proofs) still auto-start and auto-advance as before',
+  ],
+  '1.8.0': [
+    '⏸ Dough Timer: Pause and Resume any active batch — clock freezes, alarms halt, auto-advance waits',
+    '⏭ Skip Step: jump to the next step instantly from the batch detail header',
+    '▶ Manual Start: mark recipe steps as "Manual Start" so the timer only counts after you tap Start Timer',
+    '🏷 Batch name fix: batch display names now reflect the current recipe name, not the cached label at creation time',
+  ],
+  '1.7.9': [
+    '🔑 Two-tier access: Owner (full app) and Staff (all employee pages) — role hierarchy removed',
+    '👤 Login screen: one flat list, no FOH/Baker/Management tabs — sorted staff then owner (⭐)',
+    '⭐ Owner access is a simple checkbox on each staff card — no more role dropdown',
+    '📋 All staff now see the same pages: Dough Timer, Bake Board, Freezer, Checklists, Ingredients, Station Guide, Staff Board, End of Day',
+    '💬 Pin / Alert on Staff Board now Owner-only (previously Head Baker)',
+  ],
+  '1.7.8': [
+    '👥 Staff page simplified — Team tab shows cards & positions; Training Matrix moved to its own tab',
+    '🏷 Station field added to each staff card: Kitchen, FOH · Barista, Sandwich, Sales, Manager',
+    '📋 Training Matrix stays fully usable but no longer dominates the day-to-day staff view',
+  ],
+  '1.7.7': [
+    '🚨 Staff Board: Send Alert button (Head Baker / Owner) — pops up instantly on all open devices',
+    '🎯 Target alerts to Everyone, 🍳 Kitchen, or ☕ FOH separately',
+    '📳 Vibrates on mobile, fires browser notification if permission granted, auto-dismisses in 15 s',
+  ],
   '1.7.6': [
     '⧉ Bake Board: copy any item to one or more days with a single tap',
     '📅 Day-picker shows the full week — tap to select multiple days, then confirm',
