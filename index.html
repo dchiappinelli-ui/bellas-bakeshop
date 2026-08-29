@@ -922,6 +922,7 @@
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('orders')">📋 Orders</button>
   <!-- All staff tabs -->
+  <button class="nav-btn" onclick="showPage('dayview')">📋 Day View</button>
   <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
   <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
   <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
@@ -2038,6 +2039,11 @@
   </div>
 </div>
 
+<!-- ======== DAY VIEW PAGE ======== -->
+<div class="page staff-page" id="page-dayview" style="padding:0;overflow:hidden">
+  <div id="dv-root" style="height:100%;display:flex;flex-direction:column;overflow:hidden"></div>
+</div>
+
 <!-- ======== STAFF BOARD PAGE ======== -->
 <div class="page staff-page" id="page-staffboard">
   <h2>💬 Staff Message Board</h2>
@@ -2810,7 +2816,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.8.1';
+const APP_VERSION      = '1.9.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3548,6 +3554,7 @@ function showPage(page) {
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
   if (page === 'stationguide') renderStationGuide();
+  if (page === 'dayview') renderDayView();
   renderStatusBanners(page);
 }
 
@@ -17406,6 +17413,7 @@ const FB_SYNC_KEYS = new Set([
   'bk_dough_recipes', 'bk_dough_batches',
   'bk_sandwich_recipes',
   'bk_week_plan',
+  'bk_shift_templates',
 ]);
 
 // Which page to re-render when a key changes remotely
@@ -17428,6 +17436,7 @@ const FB_KEY_PAGE = {
   'bk_dough_batches':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
   'bk_sg_recipes':        () => { if (activePage() === 'stationguide') try { renderStationGuide(); } catch(e){} },
   'bk_week_plan':         () => { if (activePage() === 'weekplan')   try { renderWeekPlan(); wpInitGestures(); } catch(e){} },
+  'bk_shift_templates':   () => { if (activePage() === 'dayview')   try { renderDayView(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_staff':             () => { if (activePage() === 'staff')       try { renderStaffPage();        } catch(e){} },
@@ -17599,7 +17608,526 @@ function authBoot() {
   }
 }
 
+// ============ DAY VIEW — SHIFT SCHEDULE ============
+const DV_KEY         = 'bk_shift_templates';
+const DV_DAYS        = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DV_DAY_SHORT   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DV_START_MIN   = 5 * 60;   // 5:00 AM
+const DV_END_MIN     = 18 * 60;  // 6:00 PM
+const DV_SLOT        = 30;       // minutes per row
+const DV_SLOT_H      = 44;       // px per slot row
+const DV_SLOTS       = (DV_END_MIN - DV_START_MIN) / DV_SLOT; // 26 slots
+const DV_COL_W       = 160;      // px per column
+const DV_TIME_W      = 64;       // px for time label column
+const DV_COLORS      = [
+  { bg:'#e8f0fe', border:'#4a7cc7', text:'#1a3a6b' }, // blue
+  { bg:'#fce8e6', border:'#c7422a', text:'#6b1a10' }, // red
+  { bg:'#e6f4ea', border:'#2e7d52', text:'#0f3d22' }, // green
+  { bg:'#fef7e0', border:'#c79a1a', text:'#5a3e00' }, // yellow
+  { bg:'#f3e8fd', border:'#8a3ac7', text:'#3d1060' }, // purple
+  { bg:'#fde8f4', border:'#c73a8a', text:'#600038' }, // pink
+  { bg:'#e8fdf4', border:'#1ac79a', text:'#005a3d' }, // teal
+  { bg:'#f0f0f0', border:'#888',    text:'#333'    }, // grey
+];
+
+let _dvDay = new Date().getDay();
+let _dvEditBlock = null;
+
+// Friday example seed — derived from the printed shift schedule
+const DV_FRIDAY_SEED = {
+  columns: [
+    { id:'seed_c1', label:'Baker 1' },
+    { id:'seed_c2', label:'Baker 2' },
+    { id:'seed_c3', label:'Barista 1' },
+    { id:'seed_c4', label:'Barista 2' },
+  ],
+  blocks: [
+    // Baker 1 — slots: 5:30=1, 8:00=6, 9:30=9, 10:00=10, 12:00=14, 12:30=15, 1:00=16, 2:00=18
+    { id:'seed_b1',  colId:'seed_c1', label:'Morning Routine',                  startSlot:1,  endSlot:5,  colorIdx:7 },
+    { id:'seed_b2',  colId:'seed_c1', label:'Morning Routine · Restock to Par', startSlot:5,  endSlot:6,  colorIdx:7 },
+    { id:'seed_b3',  colId:'seed_c1', label:'Croissant Laminate 1-3',           startSlot:6,  endSlot:9,  colorIdx:1 },
+    { id:'seed_b4',  colId:'seed_c1', label:'Clean & Reset Kitchen',            startSlot:9,  endSlot:10, colorIdx:4 },
+    { id:'seed_b5',  colId:'seed_c1', label:'Rollout Croissant',                startSlot:10, endSlot:14, colorIdx:1 },
+    { id:'seed_b6',  colId:'seed_c1', label:'Clockout Break',                   startSlot:14, endSlot:15, colorIdx:7 },
+    { id:'seed_b7',  colId:'seed_c1', label:'Relieve Barista Break',            startSlot:15, endSlot:16, colorIdx:7 },
+    { id:'seed_b8',  colId:'seed_c1', label:'Setup Next Day / Restock',         startSlot:16, endSlot:18, colorIdx:3 },
+    // Baker 2 — starts 10:30 AM = slot 11
+    { id:'seed_b9',  colId:'seed_c2', label:'Sourdough Process 1-3',            startSlot:11, endSlot:18, colorIdx:0 },
+    { id:'seed_b10', colId:'seed_c2', label:'Final Dough Shaping',              startSlot:18, endSlot:19, colorIdx:0 },
+    { id:'seed_b11', colId:'seed_c2', label:'Mix Croissant Dough If Needed',    startSlot:19, endSlot:20, colorIdx:1 },
+    { id:'seed_b12', colId:'seed_c2', label:'Levain',                           startSlot:20, endSlot:21, colorIdx:3 },
+    { id:'seed_b13', colId:'seed_c2', label:'Clean / Prep',                     startSlot:21, endSlot:22, colorIdx:4 },
+    // Barista 1 — starts 7:30 AM = slot 5
+    { id:'seed_b14', colId:'seed_c3', label:'Prep / Open',                      startSlot:5,  endSlot:6,  colorIdx:6 },
+    { id:'seed_b15', colId:'seed_c3', label:'On Station',                       startSlot:6,  endSlot:15, colorIdx:2 },
+    { id:'seed_b16', colId:'seed_c3', label:'Clockout Break',                   startSlot:15, endSlot:16, colorIdx:7 },
+    { id:'seed_b17', colId:'seed_c3', label:'On Station',                       startSlot:16, endSlot:20, colorIdx:2 },
+    // Barista 2 — starts 9:30 AM = slot 9
+    { id:'seed_b18', colId:'seed_c4', label:'On Station',                       startSlot:9,  endSlot:19, colorIdx:2 },
+    { id:'seed_b19', colId:'seed_c4', label:'Clockout Break',                   startSlot:19, endSlot:20, colorIdx:7 },
+    { id:'seed_b20', colId:'seed_c4', label:'On Station',                       startSlot:20, endSlot:24, colorIdx:2 },
+  ]
+};
+
+function dvLoadExample() {
+  const data = dvGet();
+  if (data[_dvDay]?.columns?.length) {
+    if (!confirm(`This will replace the existing ${DV_DAYS[_dvDay]} template with the example. Continue?`)) return;
+  }
+  // Deep-copy seed and re-ID to avoid any future collision
+  const seed = JSON.parse(JSON.stringify(DV_FRIDAY_SEED));
+  const ts = Date.now();
+  const idMap = {};
+  seed.columns.forEach((c,i) => { const nid='col_ex_'+ts+'_'+i; idMap[c.id]=nid; c.id=nid; });
+  seed.blocks.forEach((b,i)  => { b.id='blk_ex_'+ts+'_'+i; if(idMap[b.colId]) b.colId=idMap[b.colId]; });
+  data[_dvDay] = seed;
+  dvSave(data);
+  renderDayView();
+}
+
+function dvGet() {
+  try { return JSON.parse(localStorage.getItem(DV_KEY) || '{}'); } catch(e) { return {}; }
+}
+function dvSave(data) { localStorage.setItem(DV_KEY, JSON.stringify(data)); }
+
+function dvGetDay(data, day) {
+  if (!data[day]) data[day] = { columns: [], blocks: [] };
+  if (!data[day].columns) data[day].columns = [];
+  if (!data[day].blocks)  data[day].blocks  = [];
+  return data[day];
+}
+
+function dvSlotToMin(slot) { return DV_START_MIN + slot * DV_SLOT; }
+function dvMinToSlot(min)  { return Math.round((min - DV_START_MIN) / DV_SLOT); }
+function dvFmtSlot(slot) {
+  const m = dvSlotToMin(slot);
+  const h = Math.floor(m / 60), mm = m % 60;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const hh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${hh}:${mm.toString().padStart(2,'0')} ${ampm}`;
+}
+
+function renderDayView() {
+  const root = document.getElementById('dv-root');
+  if (!root) return;
+  const isOwner = authCanAccess('Owner');
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+
+  // Build grid
+  const cols = day.columns;
+
+  // Day selector header
+  const daySel = DV_DAY_SHORT.map((d,i) => {
+    const sel = i === _dvDay;
+    return `<button onclick="dvSetDay(${i})" style="padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:${sel?'900':'600'};background:${sel?'#111':'transparent'};color:${sel?'#fff':'#666'};transition:all 0.1s;touch-action:manipulation">${d}</button>`;
+  }).join('');
+
+  const headerHtml = `
+  <div style="padding:12px 16px 8px;border-bottom:2px solid #eee;background:#fff;flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="font-size:18px;font-weight:900;color:#111">${DV_DAYS[_dvDay]}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${cols.length ? `<button onclick="dvPrint()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">🖨 Print</button>` : ''}
+        ${isOwner ? `<button onclick="dvPromptCopy()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">Copy to →</button>
+        <button onclick="dvAddColumn()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation">+ Add Column</button>` : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">${daySel}</div>
+  </div>`;
+
+  if (!cols.length) {
+    // Auto-seed Friday on first open
+    if (_dvDay === 5 && !localStorage.getItem('bk_dv_fri_seeded')) {
+      localStorage.setItem('bk_dv_fri_seeded', '1');
+      dvLoadExample();
+      return;
+    }
+    root.innerHTML = headerHtml + `<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#bbb;padding:40px;text-align:center">
+      <div style="font-size:48px">📋</div>
+      <div style="font-size:16px;font-weight:700;color:#555">No template for ${DV_DAYS[_dvDay]} yet</div>
+      ${isOwner ? `
+        <button onclick="dvLoadExample()" style="padding:12px 24px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation">
+          Load Friday Example
+        </button>
+        <div style="font-size:12px;color:#bbb">or tap <strong style="color:#555">+ Add Column</strong> to build from scratch</div>
+      ` : '<div style="font-size:13px">No schedule has been set up for this day</div>'}
+    </div>`;
+    return;
+  }
+
+  // Time labels + columns grid
+  const totalW = DV_TIME_W + cols.length * DV_COL_W + (isOwner ? 50 : 0);
+
+  // Time label rows
+  const timeRows = Array.from({length: DV_SLOTS}, (_,i) => {
+    const isHour = (dvSlotToMin(i) % 60 === 0);
+    return `<div style="height:${DV_SLOT_H}px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;padding-top:4px;font-size:${isHour?'11':'10'}px;font-weight:${isHour?'700':'400'};color:${isHour?'#555':'#bbb'};flex-shrink:0;box-sizing:border-box;border-top:1px solid ${isHour?'#ddd':'#f0f0f0'}">${isHour?dvFmtSlot(i):''}</div>`;
+  }).join('');
+
+  // Per-column block rendering
+  const colGrids = cols.map(col => {
+    const blocks = day.blocks.filter(b => b.colId === col.id).sort((a,z) => a.startSlot - z.startSlot);
+    // Build slot occupancy map
+    const occupied = new Set();
+    blocks.forEach(b => { for(let s=b.startSlot;s<b.endSlot;s++) occupied.add(s); });
+
+    // Render blocks as absolutely positioned divs
+    const blockDivs = blocks.map(b => {
+      const top    = b.startSlot * DV_SLOT_H;
+      const height = (b.endSlot - b.startSlot) * DV_SLOT_H;
+      const clr    = DV_COLORS[b.colorIdx ?? 0];
+      const tooSmall = height < 36;
+      return `<div onclick="${isOwner?`dvOpenEdit('${b.id}',event)`:''}" style="position:absolute;left:2px;right:2px;top:${top}px;height:${height-2}px;
+        background:${clr.bg};border-left:4px solid ${clr.border};border-radius:0 4px 4px 0;
+        overflow:hidden;box-sizing:border-box;padding:${tooSmall?'2px 6px':'6px 8px'};
+        cursor:${isOwner?'pointer':'default'};user-select:none">
+        <div style="font-size:${tooSmall?'10':'12'}px;font-weight:800;color:${clr.text};line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:${tooSmall?'nowrap':'normal'}">${b.label}</div>
+      </div>`;
+    }).join('');
+
+    // Click targets for empty slots (owner only)
+    const emptyClicks = isOwner ? Array.from({length: DV_SLOTS}, (_,i) => {
+      if (occupied.has(i)) return '';
+      return `<div onclick="dvOpenNew('${col.id}',${i},event)" style="position:absolute;left:0;right:0;top:${i*DV_SLOT_H}px;height:${DV_SLOT_H}px;cursor:pointer;z-index:0" title="Add task at ${dvFmtSlot(i)}"></div>`;
+    }).join('') : '';
+
+    const totalH = DV_SLOTS * DV_SLOT_H;
+    return `<div style="width:${DV_COL_W}px;flex-shrink:0;border-left:1px solid #e8e8e8;position:relative;height:${totalH}px">
+      ${emptyClicks}${blockDivs}
+    </div>`;
+  }).join('');
+
+  // Column headers
+  const colHeaders = cols.map(col => `
+    <div style="width:${DV_COL_W}px;flex-shrink:0;padding:10px 8px;border-left:1px solid #e8e8e8;display:flex;align-items:center;justify-content:space-between;gap:4px">
+      <div style="font-size:13px;font-weight:900;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${col.label}</div>
+      ${isOwner ? `<button onclick="dvRenameColumn('${col.id}')" title="Rename" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;color:#aaa;flex-shrink:0">✏️</button>
+      <button onclick="dvRemoveColumn('${col.id}')" title="Remove column" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;color:#ddd;flex-shrink:0">✕</button>` : ''}
+    </div>`).join('');
+
+  const totalH = DV_SLOTS * DV_SLOT_H;
+
+  root.innerHTML = headerHtml + `
+  <div style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch">
+    <div style="min-width:${totalW}px">
+      <!-- Column header row -->
+      <div style="display:flex;position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #eee">
+        <div style="width:${DV_TIME_W}px;flex-shrink:0;padding:10px 8px;font-size:11px;font-weight:700;color:#bbb;text-align:right">TIME</div>
+        ${colHeaders}
+      </div>
+      <!-- Grid body -->
+      <div style="display:flex">
+        <div style="width:${DV_TIME_W}px;flex-shrink:0">${timeRows}</div>
+        <div style="display:flex;position:relative">${colGrids}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function dvSetDay(day) {
+  _dvDay = day;
+  renderDayView();
+}
+
+function dvAddColumn() {
+  const name = prompt('Column name (e.g. "Baker 1", "Barista 2"):');
+  if (!name || !name.trim()) return;
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+  day.columns.push({ id: 'col_' + Date.now(), label: name.trim() });
+  dvSave(data);
+  renderDayView();
+}
+
+function dvRenameColumn(colId) {
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+  const col  = day.columns.find(c => c.id === colId);
+  if (!col) return;
+  const name = prompt('New name for this column:', col.label);
+  if (!name || !name.trim()) return;
+  col.label = name.trim();
+  dvSave(data);
+  renderDayView();
+}
+
+function dvRemoveColumn(colId) {
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+  const col  = day.columns.find(c => c.id === colId);
+  if (!col) return;
+  const blockCount = day.blocks.filter(b => b.colId === colId).length;
+  if (!confirm(`Remove "${col.label}"${blockCount ? ` and its ${blockCount} task block${blockCount>1?'s':''}` : ''}?`)) return;
+  day.columns = day.columns.filter(c => c.id !== colId);
+  day.blocks  = day.blocks.filter(b => b.colId !== colId);
+  dvSave(data);
+  renderDayView();
+}
+
+function dvOpenNew(colId, startSlot, e) {
+  if (e) e.stopPropagation();
+  _dvEditBlock = { colId, startSlot, blockId: null };
+  dvShowModal(null, colId, startSlot);
+}
+
+function dvOpenEdit(blockId, e) {
+  if (e) e.stopPropagation();
+  const data  = dvGet();
+  const day   = dvGetDay(data, _dvDay);
+  const block = day.blocks.find(b => b.id === blockId);
+  if (!block) return;
+  _dvEditBlock = { colId: block.colId, startSlot: block.startSlot, blockId };
+  dvShowModal(block, block.colId, block.startSlot);
+}
+
+function dvShowModal(block, colId, startSlot) {
+  const isEdit   = !!block;
+  const label    = block?.label || '';
+  const endSlot  = block?.endSlot ?? Math.min(startSlot + 2, DV_SLOTS);
+  const colorIdx = block?.colorIdx ?? 0;
+
+  const slotOpts = (sel, label) => Array.from({length: DV_SLOTS+1}, (_,i) => {
+    if (i > DV_SLOTS) return '';
+    return `<option value="${i}" ${i===sel?'selected':''}>${dvFmtSlot(i === DV_SLOTS ? DV_SLOTS-1 : i)}</option>`;
+  }).join('');
+
+  const colorSwatches = DV_COLORS.map((c,i) => `<button onclick="dvSetColor(${i})" id="dv-swatch-${i}"
+    style="width:28px;height:28px;border-radius:4px;border:3px solid ${i===colorIdx?c.border:'transparent'};background:${c.bg};cursor:pointer;flex-shrink:0"></button>`).join('');
+
+  let modal = document.getElementById('dv-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dv-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick = e => { if (e.target === modal) dvHideModal(); };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:8px;padding:24px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+    <div style="font-size:17px;font-weight:900;color:#111;margin-bottom:18px">${isEdit ? 'Edit Task Block' : 'Add Task Block'}</div>
+    <label style="display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#777;margin-bottom:6px">Task Name</label>
+    <input id="dv-lbl" type="text" value="${label}" placeholder="e.g. Croissant Laminate"
+      style="width:100%;font-size:16px;padding:12px;border:2px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:14px">
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <div style="flex:1">
+        <label style="display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#777;margin-bottom:6px">Start</label>
+        <select id="dv-start" style="width:100%;font-size:15px;padding:10px;border:2px solid #ddd;border-radius:4px">${slotOpts(startSlot)}</select>
+      </div>
+      <div style="flex:1">
+        <label style="display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#777;margin-bottom:6px">End</label>
+        <select id="dv-end" style="width:100%;font-size:15px;padding:10px;border:2px solid #ddd;border-radius:4px">${slotOpts(endSlot)}</select>
+      </div>
+    </div>
+    <label style="display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#777;margin-bottom:8px">Color</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px" id="dv-swatches">${colorSwatches}</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="dvSaveBlock()" style="flex:1;padding:14px;background:#111;color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:900;cursor:pointer">Save</button>
+      ${isEdit ? `<button onclick="dvDeleteBlock('${block.id}')" style="padding:14px 16px;background:#fff;border:2px solid #fcc;border-radius:4px;color:#c00;font-size:14px;cursor:pointer">Delete</button>` : ''}
+      <button onclick="dvHideModal()" style="padding:14px 16px;background:#fff;border:2px solid #ddd;border-radius:4px;color:#888;font-size:14px;cursor:pointer">Cancel</button>
+    </div>
+  </div>`;
+  modal.style.display = 'flex';
+  document.getElementById('dv-lbl').focus();
+}
+
+function dvSetColor(idx) {
+  if (!_dvEditBlock) return;
+  _dvEditBlock.colorIdx = idx;
+  document.querySelectorAll('[id^="dv-swatch-"]').forEach((el,i) => {
+    el.style.borderColor = i === idx ? DV_COLORS[i].border : 'transparent';
+  });
+}
+
+function dvSaveBlock() {
+  const label    = (document.getElementById('dv-lbl')?.value || '').trim();
+  const startSel = parseInt(document.getElementById('dv-start')?.value || '0');
+  const endSel   = parseInt(document.getElementById('dv-end')?.value || '1');
+  if (!label) { document.getElementById('dv-lbl').focus(); return; }
+  if (endSel <= startSel) { alert('End time must be after start time.'); return; }
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+  const colorIdx = _dvEditBlock?.colorIdx ?? 0;
+  if (_dvEditBlock?.blockId) {
+    const b = day.blocks.find(b => b.id === _dvEditBlock.blockId);
+    if (b) { b.label = label; b.startSlot = startSel; b.endSlot = endSel; b.colorIdx = colorIdx; }
+  } else {
+    day.blocks.push({ id: 'blk_'+Date.now(), colId: _dvEditBlock.colId, label, startSlot: startSel, endSlot: endSel, colorIdx });
+  }
+  dvSave(data);
+  dvHideModal();
+  renderDayView();
+}
+
+function dvDeleteBlock(blockId) {
+  if (!confirm('Delete this task block?')) return;
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+  day.blocks = day.blocks.filter(b => b.id !== blockId);
+  dvSave(data);
+  dvHideModal();
+  renderDayView();
+}
+
+function dvHideModal() {
+  const m = document.getElementById('dv-modal');
+  if (m) m.style.display = 'none';
+  _dvEditBlock = null;
+}
+
+// — Copy day template to another day —
+function dvCopyDay(fromDay, toDay) {
+  const data = dvGet();
+  const src  = dvGetDay(data, fromDay);
+  data[toDay] = JSON.parse(JSON.stringify(src));
+  const idMap = {};
+  data[toDay].columns.forEach(c => { const nid='col_'+Date.now()+'_'+Math.random().toString(36).slice(2); idMap[c.id]=nid; c.id=nid; });
+  data[toDay].blocks.forEach(b  => { b.id='blk_'+Date.now()+'_'+Math.random().toString(36).slice(2); if(idMap[b.colId])b.colId=idMap[b.colId]; });
+  dvSave(data);
+  renderDayView();
+}
+
+function dvPrint() {
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+  const cols = day.columns;
+  if (!cols.length) { toastBy('Nothing to print — add columns first.'); return; }
+
+  // Build slot→block map per column for rowspan calculation
+  const colMaps = cols.map(col => {
+    const map = new Array(DV_SLOTS).fill(null);
+    day.blocks.filter(b => b.colId === col.id).forEach(b => {
+      for (let s = b.startSlot; s < Math.min(b.endSlot, DV_SLOTS); s++) map[s] = b;
+    });
+    return map;
+  });
+
+  const rows = Array.from({length: DV_SLOTS}, (_, slot) => {
+    const isHour = dvSlotToMin(slot) % 60 === 0;
+    const timeLabel = dvFmtSlot(slot);
+    let cells = '';
+    cols.forEach((col, ci) => {
+      const block = colMaps[ci][slot];
+      if (!block) {
+        cells += `<td class="empty"></td>`;
+      } else if (block.startSlot === slot) {
+        const span = block.endSlot - block.startSlot;
+        const clr  = DV_COLORS[block.colorIdx ?? 0];
+        cells += `<td rowspan="${span}" class="block" style="background:${clr.bg};border-left:5px solid ${clr.border};color:${clr.text}">${block.label}</td>`;
+      }
+      // else: continuation row — rowspan handles it, output nothing
+    });
+    return `<tr class="${isHour ? 'hour' : ''}">
+      <td class="time">${isHour ? timeLabel : '<span class="half">· ' + timeLabel + '</span>'}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  const colHeaders = cols.map(c => `<th>${c.label}</th>`).join('');
+  const printDate  = new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  const html = `<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<title>Bella's Bakeshop — ${DV_DAYS[_dvDay]} Shift Schedule</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; margin: 0; padding: 12px 16px; }
+  h1 { font-size: 20px; margin: 0 0 2px; font-weight: 900; }
+  .sub { font-size: 11px; color: #777; margin: 0 0 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; table-layout: fixed; }
+  col.time-col { width: 70px; }
+  th { background: #111; color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 800; border: 1px solid #333; }
+  th.time-hdr { width: 70px; background: #333; }
+  td { border: 1px solid #e0e0e0; vertical-align: top; padding: 0; }
+  td.time { width: 70px; font-size: 10px; color: #777; text-align: right; padding: 3px 6px 0; white-space: nowrap; border-right: 2px solid #ccc; }
+  td.time .half { color: #bbb; font-size: 9px; }
+  tr.hour td { border-top: 1px solid #bbb; }
+  tr.hour td.time { font-size: 11px; font-weight: 700; color: #333; }
+  td.empty { height: 22px; background: #fafafa; }
+  td.block { padding: 5px 8px; font-size: 11px; font-weight: 700; vertical-align: middle; line-height: 1.3; }
+  @media print {
+    body { padding: 6px 10px; }
+    @page { margin: 1cm; size: landscape; }
+    button { display: none !important; }
+  }
+</style>
+</head><body>
+<h1>Bella's Bakeshop &mdash; ${DV_DAYS[_dvDay]} Shift Schedule</h1>
+<div class="sub">Printed ${printDate}</div>
+<table>
+  <colgroup><col class="time-col">${cols.map(() => '<col>').join('')}</colgroup>
+  <thead><tr><th class="time-hdr">Time</th>${colHeaders}</tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { toastBy('Pop-up blocked — allow pop-ups to print.'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.addEventListener('load', () => { win.focus(); win.print(); });
+}
+
+function dvPromptCopy() {
+  const data = dvGet();
+  const src  = dvGetDay(data, _dvDay);
+  if (!src.columns.length) { toastBy('Nothing to copy — this day has no columns yet.'); return; }
+  const otherDays = DV_DAYS.map((name, i) => ({ name, i })).filter(d => d.i !== _dvDay);
+  let modal = document.getElementById('dv-copy-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dv-copy-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick = e => { if (e.target === modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  const dayBtns = otherDays.map(d => {
+    const hasData = dvGet()[d.i]?.columns?.length > 0;
+    return `<button onclick="dvConfirmCopy(${d.i})"
+      style="width:100%;padding:14px 18px;background:#fff;border:2px solid #ddd;border-radius:4px;
+             font-size:15px;font-weight:700;color:#111;cursor:pointer;text-align:left;
+             display:flex;align-items:center;justify-content:space-between;touch-action:manipulation">
+      <span>${d.name}</span>
+      ${hasData ? '<span style="font-size:11px;color:#b87000;font-weight:600">⚠ will overwrite</span>' : '<span style="font-size:11px;color:#aaa">empty</span>'}
+    </button>`;
+  }).join('');
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:8px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+    <div style="font-size:17px;font-weight:900;color:#111;margin-bottom:4px">Copy ${DV_DAYS[_dvDay]} template to…</div>
+    <div style="font-size:12px;color:#aaa;margin-bottom:16px">Columns and task blocks will be duplicated</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${dayBtns}</div>
+    <button onclick="document.getElementById('dv-copy-modal').style.display='none'"
+      style="width:100%;margin-top:14px;padding:12px;background:#f5f5f5;border:none;border-radius:4px;font-size:14px;color:#888;cursor:pointer">Cancel</button>
+  </div>`;
+  modal.style.display = 'flex';
+}
+
+function dvConfirmCopy(toDay) {
+  document.getElementById('dv-copy-modal').style.display = 'none';
+  dvCopyDay(_dvDay, toDay);
+  _dvDay = toDay;
+  renderDayView();
+  toastBy(`Copied to ${DV_DAYS[toDay]}`);
+}
+
+// ============ END DAY VIEW ============
+
 const VERSION_NOTES = {
+  '1.9.3': [
+    '🖨 Day View: Print button generates a clean landscape shift sheet — color-coded task blocks with proper row spanning, ready to post in the kitchen',
+  ],
+  '1.9.2': [
+    '📋 Day View: Friday auto-loads with your printed shift schedule as an example (Baker 1, Baker 2, Barista 1, Barista 2 with all task blocks)',
+    '📋 Day View: "Load Friday Example" button appears on any empty day so you can use it as a starting point',
+  ],
+  '1.9.1': [
+    '📋 Day View: Copy to → button duplicates the current day\'s full template (columns + task blocks) to any other day of the week — warns before overwriting an existing template',
+  ],
+  '1.9.0': [
+    '📋 Day View: new shift schedule tab — build a daily template per day of the week with role columns (Baker 1, Barista 2, etc.) and color-coded task blocks',
+    '✏️ Owner can add/rename/remove columns and tap any slot to add, edit, or delete task blocks',
+    '🔄 Templates sync across devices via Firebase',
+  ],
   '1.8.1': [
     '▶ Active steps now always wait for baker to tap "Start Timer" before the clock begins — no more auto-starting after completing a step',
     '⏱ Wait steps (rests, proofs) still auto-start and auto-advance as before',
