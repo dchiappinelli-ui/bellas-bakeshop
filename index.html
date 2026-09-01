@@ -2816,7 +2816,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.9.7';
+const APP_VERSION      = '1.9.8';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3013,6 +3013,26 @@ function setStaffRole(staffId, role) {
 }
 
 const STAFF_STATIONS = ['Kitchen', 'FOH · Barista', 'Sandwich', 'Sales', 'Manager'];
+
+const STAFF_PAGES = [
+  { id: 'dayview',    label: '📋 Day View' },
+  { id: 'doughtimer', label: '⏱ Dough Timer' },
+  { id: 'weekplan',   label: '🗓 Bake Board' },
+  { id: 'freezer',    label: '❄️ Freezer Stock' },
+  { id: 'staffboard', label: '💬 Staff Board' },
+  { id: 'eod',        label: '📊 End of Day' },
+];
+
+function setStaffPageAccess(staffId, pageId, allowed) {
+  const m = staff.find(s => s.id === staffId);
+  if (!m) return;
+  if (!m.pageAccess) m.pageAccess = {};
+  m.pageAccess[pageId] = allowed;
+  saveStaff();
+  // If the currently logged-in user is this staff member, refresh nav immediately
+  const session = authGetSession();
+  if (session?.staffId === staffId) authApplyNav();
+}
 
 let _staffActiveTab = 'team';
 function staffShowTab(tab) {
@@ -3236,7 +3256,21 @@ function renderStaffPage() {
               <div style="font-size:13px;font-weight:700;color:${isOwner?'var(--accent)':'var(--text)'}">⭐ Owner Access</div>
               <div style="font-size:11px;color:var(--muted)">${isOwner ? 'Full app + Staff page + settings' : 'Staff view: Dough Timer, Bake Board, Day View, Board'}</div>
             </div>
-          </label>`;
+          </label>
+          ${!isOwner ? `<div style="margin-top:12px">
+            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">Page Access</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              ${STAFF_PAGES.map(p => {
+                const allowed = !(m.pageAccess && m.pageAccess[p.id] === false);
+                return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 8px;border-radius:4px;background:${allowed?'transparent':'rgba(204,51,0,0.05)'}">
+                  <input type="checkbox" ${allowed?'checked':''} onchange="setStaffPageAccess('${m.id}','${p.id}',this.checked)"
+                    style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+                  <span style="font-size:12px;color:${allowed?'var(--text)':'var(--muted)'}">${p.label}</span>
+                  ${!allowed?'<span style="font-size:10px;color:#c33;margin-left:auto">hidden</span>':''}
+                </label>`;
+              }).join('')}
+            </div>
+          </div>` : ''}`;
       })()}
     </div>`;
   }).join('');
@@ -12153,17 +12187,31 @@ function authUpdateChip() {
 }
 
 // Nav filter: data-min-role="Owner" → Owner only; no attribute → any logged-in staff
+// Per-staff pageAccess restrictions also apply for non-owners.
 function authApplyNav() {
   const role    = authCurrentRole();
   const isOwner = role === 'Owner';
   const isStaff = role !== 'Anyone';
+
+  // Resolve current staff member's page restrictions (owners are never restricted)
+  let pageAccess = null;
+  if (isStaff && !isOwner) {
+    const session = authGetSession();
+    const member  = session ? staff.find(s => s.id === session.staffId) : null;
+    pageAccess = member?.pageAccess || null;
+  }
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const minRole = btn.getAttribute('data-min-role');
     if (minRole === 'Owner') {
       btn.style.display = isOwner ? '' : 'none';
     } else {
-      btn.style.display = isStaff ? '' : 'none';
+      if (!isStaff) { btn.style.display = 'none'; return; }
+      if (pageAccess) {
+        const m = (btn.getAttribute('onclick') || '').match(/showPage\('(\w+)'\)/);
+        if (m && pageAccess[m[1]] === false) { btn.style.display = 'none'; return; }
+      }
+      btn.style.display = '';
     }
   });
 }
@@ -18120,6 +18168,9 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '1.9.8': [
+    '🔒 Per-person page access: Owner can uncheck any tab on a staff card to hide it from that person when they log in — Day View, Dough Timer, Bake Board, Freezer, Staff Board, End of Day each independently controllable',
+  ],
   '1.9.7': [
     '🔄 Staff list and PINs now sync across all devices via Firebase — add a staff member on your phone and it appears on every device instantly',
   ],
