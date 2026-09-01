@@ -2816,7 +2816,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.9.5';
+const APP_VERSION      = '1.9.6';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3194,6 +3194,7 @@ function renderStaffPage() {
   cardsEl.innerHTML = staff.map(m => {
     const canCount = tasks2.filter(t => canDo(m, t)).length;
     const pct = tasks2.length > 0 ? Math.round(canCount / tasks2.length * 100) : 0;
+    if (!m.taskOverrides) m.taskOverrides = {};
     const overrideCount = Object.keys(m.taskOverrides).length;
 
     const station = m.station || 'Kitchen';
