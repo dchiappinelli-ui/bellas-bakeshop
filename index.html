@@ -2816,7 +2816,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.9.8';
+const APP_VERSION      = '1.9.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17687,6 +17687,7 @@ const DV_COLORS      = [
 
 let _dvDay = new Date().getDay();
 let _dvEditBlock = null;
+let _dvResizing = null; // { colId, startX, startWidth }
 
 // Friday example seed — derived from the printed shift schedule
 const DV_FRIDAY_SEED = {
@@ -17847,25 +17848,35 @@ function renderDayView() {
       return `<div onclick="dvOpenNew('${col.id}',${i},event)" style="position:absolute;left:0;right:0;top:${i*DV_SLOT_H}px;height:${DV_SLOT_H}px;cursor:pointer;z-index:0" title="Add task at ${dvFmtSlot(i)}"></div>`;
     }).join('') : '';
 
+    const colW = col.width || DV_COL_W;
     const totalH = DV_SLOTS * DV_SLOT_H;
-    return `<div style="width:${DV_COL_W}px;flex-shrink:0;border-left:1px solid #e8e8e8;position:relative;height:${totalH}px">
+    return `<div data-dv-col="${col.id}" style="width:${colW}px;min-width:${colW}px;flex-shrink:0;border-left:1px solid #e8e8e8;position:relative;height:${totalH}px">
       ${emptyClicks}${blockDivs}
     </div>`;
   }).join('');
 
   // Column headers
-  const colHeaders = cols.map(col => `
-    <div style="width:${DV_COL_W}px;flex-shrink:0;padding:10px 8px;border-left:1px solid #e8e8e8;display:flex;align-items:center;justify-content:space-between;gap:4px">
+  const colHeaders = cols.map(col => {
+    const colW = col.width || DV_COL_W;
+    return `<div data-dv-col="${col.id}" style="width:${colW}px;min-width:${colW}px;flex-shrink:0;padding:10px 8px 10px 10px;border-left:1px solid #e8e8e8;display:flex;align-items:center;gap:4px;position:relative;box-sizing:border-box">
       <div style="font-size:13px;font-weight:900;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${col.label}</div>
-      ${isOwner ? `<button onclick="dvRenameColumn('${col.id}')" title="Rename" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;color:#aaa;flex-shrink:0">✏️</button>
-      <button onclick="dvRemoveColumn('${col.id}')" title="Remove column" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;color:#ddd;flex-shrink:0">✕</button>` : ''}
-    </div>`).join('');
+      ${isOwner ? `<button onclick="dvRenameColumn('${col.id}')" title="Rename" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px;color:#ccc;flex-shrink:0">✏️</button>
+      <button onclick="dvRemoveColumn('${col.id}')" title="Remove column" style="border:none;background:none;cursor:pointer;font-size:13px;padding:2px;color:#ddd;flex-shrink:0">✕</button>` : ''}
+      <div onmousedown="dvStartResize('${col.id}',event)" ontouchstart="dvStartResize('${col.id}',event)"
+        title="Drag to resize column"
+        style="position:absolute;right:0;top:0;bottom:0;width:10px;cursor:col-resize;z-index:5;
+               display:flex;align-items:center;justify-content:center">
+        <div style="width:3px;height:50%;background:#ddd;border-radius:2px"></div>
+      </div>
+    </div>`;
+  }).join('');
 
+  const totalW2 = DV_TIME_W + cols.reduce((s, c) => s + (c.width || DV_COL_W), 0);
   const totalH = DV_SLOTS * DV_SLOT_H;
 
   root.innerHTML = headerHtml + `
   <div style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch">
-    <div style="min-width:${totalW}px">
+    <div style="min-width:${totalW2}px">
       <!-- Column header row -->
       <div style="display:flex;position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #eee">
         <div style="width:${DV_TIME_W}px;flex-shrink:0;padding:10px 8px;font-size:11px;font-weight:700;color:#bbb;text-align:right">TIME</div>
@@ -18123,6 +18134,48 @@ function dvPrint() {
   win.addEventListener('load', () => { win.focus(); win.print(); });
 }
 
+function dvStartResize(colId, e) {
+  e.preventDefault(); e.stopPropagation();
+  const startX = e.touches ? e.touches[0].clientX : e.clientX;
+  const data = dvGet();
+  const col  = dvGetDay(data, _dvDay).columns.find(c => c.id === colId);
+  if (!col) return;
+  _dvResizing = { colId, startX, startWidth: col.width || DV_COL_W };
+  document.addEventListener('mousemove',  dvDoResize);
+  document.addEventListener('touchmove',  dvDoResize, { passive: false });
+  document.addEventListener('mouseup',    dvStopResize);
+  document.addEventListener('touchend',   dvStopResize);
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+}
+
+function dvDoResize(e) {
+  if (!_dvResizing) return;
+  e.preventDefault();
+  const x  = e.touches ? e.touches[0].clientX : e.clientX;
+  const w  = Math.max(100, Math.min(400, _dvResizing.startWidth + (x - _dvResizing.startX)));
+  document.querySelectorAll(`[data-dv-col="${_dvResizing.colId}"]`).forEach(el => {
+    el.style.width = w + 'px';
+    el.style.minWidth = w + 'px';
+  });
+}
+
+function dvStopResize(e) {
+  if (!_dvResizing) return;
+  const x = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+  const w = Math.max(100, Math.min(400, _dvResizing.startWidth + (x - _dvResizing.startX)));
+  const data = dvGet();
+  const col  = dvGetDay(data, _dvDay).columns.find(c => c.id === _dvResizing.colId);
+  if (col) { col.width = Math.round(w); dvSave(data); }
+  _dvResizing = null;
+  document.removeEventListener('mousemove',  dvDoResize);
+  document.removeEventListener('touchmove',  dvDoResize);
+  document.removeEventListener('mouseup',    dvStopResize);
+  document.removeEventListener('touchend',   dvStopResize);
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+}
+
 function dvPromptCopy() {
   const data = dvGet();
   const src  = dvGetDay(data, _dvDay);
@@ -18168,6 +18221,9 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '1.9.9': [
+    '↔ Day View: drag the right edge of any column header to resize it wider or narrower — width is saved per column in the day template',
+  ],
   '1.9.8': [
     '🔒 Per-person page access: Owner can uncheck any tab on a staff card to hide it from that person when they log in — Day View, Dough Timer, Bake Board, Freezer, Staff Board, End of Day each independently controllable',
   ],
