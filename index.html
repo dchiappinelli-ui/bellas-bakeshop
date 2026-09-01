@@ -2816,7 +2816,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.9.6';
+const APP_VERSION      = '1.9.7';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17418,6 +17418,7 @@ const FB_SYNC_KEYS = new Set([
   'bk_sandwich_recipes',
   'bk_week_plan',
   'bk_shift_templates',
+  'bk_staff', 'bk_staff_pins',
 ]);
 
 // Which page to re-render when a key changes remotely
@@ -17441,6 +17442,8 @@ const FB_KEY_PAGE = {
   'bk_sg_recipes':        () => { if (activePage() === 'stationguide') try { renderStationGuide(); } catch(e){} },
   'bk_week_plan':         () => { if (activePage() === 'weekplan')   try { renderWeekPlan(); wpInitGestures(); } catch(e){} },
   'bk_shift_templates':   () => { if (activePage() === 'dayview')   try { renderDayView(); } catch(e){} },
+  'bk_staff':             () => { if (activePage() === 'staff')     try { renderStaffPage(); } catch(e){} },
+  'bk_staff_pins':        () => { if (activePage() === 'staff')     try { renderStaffPage(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_staff':             () => { if (activePage() === 'staff')       try { renderStaffPage();        } catch(e){} },
@@ -18117,6 +18120,9 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '1.9.7': [
+    '🔄 Staff list and PINs now sync across all devices via Firebase — add a staff member on your phone and it appears on every device instantly',
+  ],
   '1.9.5': [
     '👤 Staff page: App Login section on each card now shows clear Active / No PIN status, PIN management, and access level description — no more guessing what the checkbox does',
   ],
