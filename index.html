@@ -2816,7 +2816,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '1.9.9';
+const APP_VERSION      = '2.0.0';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17541,22 +17541,24 @@ function _fbPendingDelta(delta) {
 
 localStorage.setItem = function(key, value) {
   _ls.set(key, value);
-  if (_fbDb && FB_SYNC_KEYS.has(key) && !_fbIgnoreKeys.has(key)) {
+  if (FB_SYNC_KEYS.has(key) && !_fbIgnoreKeys.has(key)) {
     const ts = new Date().toISOString();
-    _ls.set('bk_ts_' + key, ts);           // track when local write happened
-    if (!_fbWriteTimers[key]) _fbPendingDelta(1);  // count new pending write
-    clearTimeout(_fbWriteTimers[key]);
-    fbSetSyncStatus('syncing');
-    _fbWriteTimers[key] = setTimeout(() => {
-      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: _ls.get('bk_ts_' + key) || ts })
-        .then(() => {
-          _fbLastSync = new Date().toISOString();
-          delete _fbWriteTimers[key];
-          _fbPendingDelta(-1);
-          if (_fbPendingCount <= 0) fbSetSyncStatus('online');
-        })
-        .catch(e => { console.warn('FB write error:', key, e); fbSetSyncStatus('error'); });
-    }, 400);
+    _ls.set('bk_ts_' + key, ts);           // always stamp — protects local data even before Firebase connects
+    if (_fbDb) {
+      if (!_fbWriteTimers[key]) _fbPendingDelta(1);  // count new pending write
+      clearTimeout(_fbWriteTimers[key]);
+      fbSetSyncStatus('syncing');
+      _fbWriteTimers[key] = setTimeout(() => {
+        _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: _ls.get('bk_ts_' + key) || ts })
+          .then(() => {
+            _fbLastSync = new Date().toISOString();
+            delete _fbWriteTimers[key];
+            _fbPendingDelta(-1);
+            if (_fbPendingCount <= 0) fbSetSyncStatus('online');
+          })
+          .catch(e => { console.warn('FB write error:', key, e); fbSetSyncStatus('error'); });
+      }, 400);
+    }
   }
 };
 
@@ -17603,8 +17605,8 @@ function fbSetupListeners(db) {
 
       // Never overwrite local data that is newer than what Firebase has
       const localAt = _ls.get('bk_ts_' + key);
-      if (localAt && fbAt && localAt > fbAt) {
-        // Local is ahead of Firebase — push it back rather than overwriting
+      if (localAt && (!fbAt || localAt > fbAt)) {
+        // Local is newer (or Firebase has no timestamp) — push local back rather than overwriting
         if (!_fbIgnoreKeys.has(key)) {
           _fbDb.collection('bakery_data').doc(key)
             .set({ value: _ls.get(key), updatedAt: localAt })
@@ -17746,6 +17748,21 @@ function dvGet() {
 }
 function dvSave(data) { localStorage.setItem(DV_KEY, JSON.stringify(data)); }
 
+function dvForceSave() {
+  // Re-write with a fresh timestamp so local always wins the Firebase conflict check,
+  // then immediately flush to cloud rather than waiting for the debounce
+  const val = _ls.get(DV_KEY) || '{}';
+  _ls.set('bk_ts_' + DV_KEY, new Date().toISOString());
+  if (_fbDb) {
+    const ts = _ls.get('bk_ts_' + DV_KEY);
+    _fbDb.collection('bakery_data').doc(DV_KEY).set({ value: val, updatedAt: ts })
+      .then(() => { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); toastBy('Day View saved to cloud ✓'); })
+      .catch(e => { console.warn('dvForceSave error:', e); toastBy('Save failed — check connection'); });
+  } else {
+    toastBy('Saved locally (cloud not connected yet)');
+  }
+}
+
 function dvGetDay(data, day) {
   if (!data[day]) data[day] = { columns: [], blocks: [] };
   if (!data[day].columns) data[day].columns = [];
@@ -17785,6 +17802,7 @@ function renderDayView() {
       <div style="font-size:18px;font-weight:900;color:#111">${DV_DAYS[_dvDay]}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${cols.length ? `<button onclick="dvPrint()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">🖨 Print</button>` : ''}
+        <button onclick="dvForceSave()" id="dv-save-btn" style="padding:8px 14px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation" title="Force-save this day's schedule to cloud now">☁ Save</button>
         ${isOwner ? `<button onclick="dvPromptCopy()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">Copy to →</button>
         <button onclick="dvAddColumn()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation">+ Add Column</button>` : ''}
       </div>
@@ -17793,12 +17811,6 @@ function renderDayView() {
   </div>`;
 
   if (!cols.length) {
-    // Auto-seed Friday on first open
-    if (_dvDay === 5 && !localStorage.getItem('bk_dv_fri_seeded')) {
-      localStorage.setItem('bk_dv_fri_seeded', '1');
-      dvLoadExample();
-      return;
-    }
     root.innerHTML = headerHtml + `<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#bbb;padding:40px;text-align:center">
       <div style="font-size:48px">📋</div>
       <div style="font-size:16px;font-weight:700;color:#555">No template for ${DV_DAYS[_dvDay]} yet</div>
@@ -18221,6 +18233,11 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '2.0.0': [
+    '🛡 Data protection: local changes now always win over cloud during conflicts — prevents version updates from reverting your Day View edits',
+    '☁ Day View: new "Save" button force-pushes the current day\'s schedule to the cloud immediately with confirmation toast',
+    '🚫 Removed auto-seed: Friday no longer gets reset to the example template on any new device or browser',
+  ],
   '1.9.9': [
     '↔ Day View: drag the right edge of any column header to resize it wider or narrower — width is saved per column in the day template',
   ],
