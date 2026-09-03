@@ -940,8 +940,15 @@
 
 <!-- ======== STAFF PAGE ======== -->
 <div class="page active" id="page-staff">
-  <h2>Staff</h2>
-  <p class="subtitle">Manage your team, stations, and scheduling positions</p>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+    <div>
+      <h2 style="margin:0">Staff</h2>
+      <p class="subtitle" style="margin:4px 0 0">Manage your team, stations, and scheduling positions</p>
+    </div>
+    <button onclick="forceSaveKeys(['bk_staff','bk_staff_pins'])"
+      style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;
+             padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Save to cloud now">☁ Save</button>
+  </div>
 
   <!-- Owner-only: session settings -->
   <div id="session-settings-card" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:20px">
@@ -1729,6 +1736,10 @@
         style="padding:18px 20px;background:#fff;color:#c0392b;border:3px solid #c0392b;border-radius:4px;
                font-size:15px;font-weight:800;cursor:pointer;touch-action:manipulation;
                min-height:64px;white-space:nowrap;flex-shrink:0">🗑 Clear All</button>
+      <button onclick="forceSaveKeys(['bk_dough_batches','bk_dough_recipes'])"
+        style="padding:18px 20px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;
+               font-size:15px;font-weight:800;cursor:pointer;touch-action:manipulation;
+               min-height:64px;white-space:nowrap;flex-shrink:0" title="Save to cloud now">☁ Save</button>
     </div>
     <!-- Alerts: full-width, shown only when baker action needed -->
     <div id="dt-alerts" style="margin-bottom:12px"></div>
@@ -1890,6 +1901,10 @@
         style="padding:10px 18px;border:2px solid #1a4a8a;border-radius:4px;background:#1a4a8a;
           color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
           white-space:nowrap">📤 Push to Dough Timer</button>
+      <button onclick="forceSaveKeys(['bk_week_plan'])"
+        style="padding:10px 18px;border:none;border-radius:4px;background:#2a7d4f;
+          color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
+          white-space:nowrap" title="Save to cloud now">☁ Save</button>
     </div>
   </div>
   <div id="wp-board"
@@ -2046,8 +2061,15 @@
 
 <!-- ======== STAFF BOARD PAGE ======== -->
 <div class="page staff-page" id="page-staffboard">
-  <h2>💬 Staff Message Board</h2>
-  <p class="subtitle">Messages, shift notes, and morning tasks — visible to everyone</p>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+    <div>
+      <h2 style="margin:0">💬 Staff Message Board</h2>
+      <p class="subtitle" style="margin:4px 0 0">Messages, shift notes, and morning tasks — visible to everyone</p>
+    </div>
+    <button onclick="forceSaveKeys(['bk_staff_board'])"
+      style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;
+             padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Save to cloud now">☁ Save</button>
+  </div>
 
   <!-- Compose box -->
   <div style="background:var(--surface);border:2px solid var(--border);border-radius:4px;padding:20px;margin-bottom:28px">
@@ -2097,6 +2119,7 @@
         <button class="btn btn-ghost" onclick="eodShowTab('items')"     id="eod-tab-items"   style="">📋 Settings</button>
         <button class="btn btn-ghost" onclick="eodShowTab('square')"    id="eod-tab-square"  style="">🟦 Square</button>
         <button class="btn btn-ghost" onclick="eodPrintReport()" style="border-color:var(--accent);color:var(--accent);font-weight:700">📄 Full Report</button>
+        <button class="btn" onclick="forceSaveKeys(['bk_eod_log','bk_eod_locations'])" style="background:#2a7d4f;color:#fff;border:none;font-weight:700" title="Save to cloud now">☁ Save</button>
       </div>
     </div>
 
@@ -2205,7 +2228,9 @@
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button onclick="openAddRow()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">+ Add Task</button>
       <button onclick="openReset()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
+      <button onclick="openPrintChecklist()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">🖨 Print</button>
       <button onclick="openGenerateReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">📄 Report</button>
+      <button onclick="forceSaveKeys(['bk_cl_state_opening','bk_cl_state_closing','bk_cl_state_baker','bk_cl_defs_opening','bk_cl_defs_closing','bk_cl_defs_baker','bk_cl_log_opening','bk_cl_log_closing','bk_cl_log_baker'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
       <button id="open-finalize-btn" onclick="openFinalize()" style="background:#4a9c6e;color:#fff;border:none;border-radius:4px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">✓ Complete</button>
     </div>
   </div>
@@ -2240,7 +2265,7 @@
     <div id="open-progress-bar" style="height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width 0.3s"></div>
   </div>
 
-  <div id="open-checklist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:0 28px;align-items:start"></div>
+  <div id="open-checklist" style="display:flex;flex-direction:column;gap:0"></div>
   <div id="open-last-complete" style="text-align:center;font-size:11px;color:var(--muted);margin-top:24px"></div>
 
   <!-- Side Tasks panel (shown when side tab active) -->
@@ -2342,6 +2367,9 @@
         style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;
                padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer">📷 Scan Sheet</button>
       <input id="freezer-scan-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="freezerScanFileChosen(event)">
+      <button onclick="forceSaveKeys(['bk_freezer','bk_freezer_defs','bk_freezer_last_submit','bk_freezer_last_scan'])"
+        style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;
+               padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
     </div>
   </div>
 
@@ -2403,6 +2431,9 @@
       <button id="sg-add-btn" onclick="sgOpenEditor(null)"
         style="display:none;background:var(--accent);color:#fff;border:none;border-radius:4px;
                padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+      <button onclick="forceSaveKeys(['bk_sg_recipes'])"
+        style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;
+               padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
     </div>
   </div>
   <!-- Category tabs -->
@@ -2816,7 +2847,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.0.0';
+const APP_VERSION      = '2.0.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -15678,6 +15709,199 @@ function openGenerateReport() {
   w.document.close();
 }
 
+function openPrintChecklist() {
+  const tab      = _openActiveTab;
+  const defs     = openGetDefs(tab);
+  const tabLabel = { opening:'Opening', closing:'Closing', baker:'Baker Morning' }[tab] || tab;
+  const tabEmoji = { opening:'☀️', closing:'🌙', baker:'🥐' }[tab] || '📋';
+
+  const cats = [], groups = {};
+  defs.forEach(t => {
+    if (!groups[t.cat]) { groups[t.cat] = []; cats.push(t.cat); }
+    groups[t.cat].push(t);
+  });
+
+  const taskRows = cats.map(cat => {
+    const tasks = groups[cat];
+    return `
+      <div class="cat-header">${cat}</div>
+      ${tasks.map(t => `
+        <div class="task-row">
+          <div class="checkbox"></div>
+          <div class="task-name">${t.name}</div>
+          <div class="task-meta">_____ / _____<br><span class="meta-label">initials&nbsp;&nbsp;&nbsp;&nbsp;time</span></div>
+        </div>
+      `).join('')}`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${tabLabel} Checklist — Bella's Bakeshop</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: #111;
+      background: #fff;
+      padding: 0.5in 0.55in 0.5in;
+      font-size: 13px;
+    }
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 3px solid #111;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .shop-name {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 4px;
+    }
+    .checklist-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #111;
+      line-height: 1;
+    }
+    .header-right {
+      text-align: right;
+      font-size: 12px;
+      color: #555;
+      line-height: 2;
+    }
+    .header-right .fill-line {
+      display: inline-block;
+      width: 140px;
+      border-bottom: 1.5px solid #999;
+      margin-left: 6px;
+      vertical-align: bottom;
+    }
+    .cat-header {
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #fff;
+      background: #333;
+      padding: 5px 10px;
+      margin-top: 14px;
+      margin-bottom: 2px;
+      border-radius: 2px;
+    }
+    .task-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 6px 6px 4px;
+      border-bottom: 1px solid #e8e8e8;
+      min-height: 38px;
+    }
+    .task-row:last-child { border-bottom: none; }
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #333;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .task-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+    .task-meta {
+      font-size: 11px;
+      color: #888;
+      text-align: right;
+      white-space: nowrap;
+      flex-shrink: 0;
+      width: 105px;
+      line-height: 1.5;
+    }
+    .meta-label {
+      font-size: 8.5px;
+      letter-spacing: 0.2px;
+      color: #bbb;
+    }
+    .footer {
+      margin-top: 18px;
+      border-top: 1px solid #ddd;
+      padding-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #aaa;
+    }
+    .notes-box {
+      margin-top: 14px;
+      border: 1.5px solid #ccc;
+      border-radius: 4px;
+      padding: 8px 10px;
+      min-height: 56px;
+    }
+    .notes-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+    .print-btn {
+      display: block;
+      margin: 20px auto 0;
+      padding: 10px 32px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    @media print {
+      body { padding: 0.4in 0.45in; }
+      .print-btn { display: none; }
+      @page { margin: 0; size: letter portrait; }
+    }
+  </style>
+  </head><body>
+
+  <div class="page-header">
+    <div>
+      <div class="shop-name">Bella's Bakeshop</div>
+      <div class="checklist-title">${tabEmoji} ${tabLabel} Checklist</div>
+    </div>
+    <div class="header-right">
+      Date <span class="fill-line"></span><br>
+      Name <span class="fill-line"></span>
+    </div>
+  </div>
+
+  ${taskRows}
+
+  <div class="notes-box">
+    <div class="notes-label">Notes</div>
+  </div>
+
+  <div class="footer">
+    <span>Bella's Bakeshop · ${tabLabel} Checklist · ${defs.length} tasks</span>
+    <span>Finalized by _________________________ at _______</span>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 function sideGenerateReport() {
   const tasks = sideGetTasks();
   const log   = sideGetLog();
@@ -17562,6 +17786,26 @@ localStorage.setItem = function(key, value) {
   }
 };
 
+function forceSaveKeys(keys) {
+  const ts = new Date().toISOString();
+  keys.forEach(key => { if (_ls.get(key) !== null) _ls.set('bk_ts_' + key, ts); });
+  if (!_fbDb) { toastBy('Saved locally (cloud not connected yet)'); return; }
+  let pending = 0;
+  keys.forEach(key => {
+    const val = _ls.get(key);
+    if (val === null) return;
+    pending++;
+    _fbDb.collection('bakery_data').doc(key).set({ value: val, updatedAt: ts })
+      .then(() => { if (--pending <= 0) { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); toastBy('Saved to cloud ✓'); } })
+      .catch(e => { console.warn('forceSaveKeys error:', key, e); toastBy('Save failed — check connection'); });
+  });
+  if (!pending) toastBy('Nothing to save');
+}
+
+function pageSaveBtn(keys) {
+  return `<button onclick="forceSaveKeys(${JSON.stringify(keys).replace(/"/g,"'")})" style="padding:8px 14px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation" title="Save to cloud now">☁ Save</button>`;
+}
+
 function fbFlushNow() {
   const keys = Object.keys(_fbWriteTimers);
   if (!keys.length) { toastBy('Already saved to cloud.'); return; }
@@ -17748,20 +17992,7 @@ function dvGet() {
 }
 function dvSave(data) { localStorage.setItem(DV_KEY, JSON.stringify(data)); }
 
-function dvForceSave() {
-  // Re-write with a fresh timestamp so local always wins the Firebase conflict check,
-  // then immediately flush to cloud rather than waiting for the debounce
-  const val = _ls.get(DV_KEY) || '{}';
-  _ls.set('bk_ts_' + DV_KEY, new Date().toISOString());
-  if (_fbDb) {
-    const ts = _ls.get('bk_ts_' + DV_KEY);
-    _fbDb.collection('bakery_data').doc(DV_KEY).set({ value: val, updatedAt: ts })
-      .then(() => { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); toastBy('Day View saved to cloud ✓'); })
-      .catch(e => { console.warn('dvForceSave error:', e); toastBy('Save failed — check connection'); });
-  } else {
-    toastBy('Saved locally (cloud not connected yet)');
-  }
-}
+function dvForceSave() { forceSaveKeys([DV_KEY]); }
 
 function dvGetDay(data, day) {
   if (!data[day]) data[day] = { columns: [], blocks: [] };
@@ -18080,7 +18311,18 @@ function dvPrint() {
     return map;
   });
 
-  const rows = Array.from({length: DV_SLOTS}, (_, slot) => {
+  // Auto-trim: find first/last slots that have any block content, pad by 2 slots
+  let firstSlot = DV_SLOTS - 1, lastSlot = 0;
+  day.blocks.forEach(b => {
+    if (b.startSlot < firstSlot) firstSlot = b.startSlot;
+    if (b.endSlot   > lastSlot)  lastSlot  = b.endSlot;
+  });
+  if (!day.blocks.length) { firstSlot = 0; lastSlot = DV_SLOTS; }
+  firstSlot = Math.max(0, firstSlot - 2);
+  lastSlot  = Math.min(DV_SLOTS, lastSlot + 1);
+
+  const rows = Array.from({length: lastSlot - firstSlot}, (_, i) => {
+    const slot = firstSlot + i;
     const isHour = dvSlotToMin(slot) % 60 === 0;
     const timeLabel = dvFmtSlot(slot);
     let cells = '';
@@ -18089,11 +18331,10 @@ function dvPrint() {
       if (!block) {
         cells += `<td class="empty"></td>`;
       } else if (block.startSlot === slot) {
-        const span = block.endSlot - block.startSlot;
+        const span = Math.min(block.endSlot, lastSlot) - slot;
         const clr  = DV_COLORS[block.colorIdx ?? 0];
-        cells += `<td rowspan="${span}" class="block" style="background:${clr.bg};border-left:5px solid ${clr.border};color:${clr.text}">${block.label}</td>`;
+        cells += `<td rowspan="${span}" class="block" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${clr.bg};border-left:6px solid ${clr.border};color:${clr.text}">${block.label}</td>`;
       }
-      // else: continuation row — rowspan handles it, output nothing
     });
     return `<tr class="${isHour ? 'hour' : ''}">
       <td class="time">${isHour ? timeLabel : '<span class="half">· ' + timeLabel + '</span>'}</td>
@@ -18103,43 +18344,61 @@ function dvPrint() {
 
   const colHeaders = cols.map(c => `<th>${c.label}</th>`).join('');
   const printDate  = new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const shiftStart = dvFmtSlot(firstSlot);
+  const shiftEnd   = dvFmtSlot(Math.min(lastSlot, DV_SLOTS - 1));
 
   const html = `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
 <title>Bella's Bakeshop — ${DV_DAYS[_dvDay]} Shift Schedule</title>
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; margin: 0; padding: 12px 16px; }
-  h1 { font-size: 20px; margin: 0 0 2px; font-weight: 900; }
-  .sub { font-size: 11px; color: #777; margin: 0 0 10px; }
-  table { border-collapse: collapse; width: 100%; font-size: 12px; table-layout: fixed; }
-  col.time-col { width: 70px; }
-  th { background: #111; color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 800; border: 1px solid #333; }
-  th.time-hdr { width: 70px; background: #333; }
-  td { border: 1px solid #e0e0e0; vertical-align: top; padding: 0; }
-  td.time { width: 70px; font-size: 10px; color: #777; text-align: right; padding: 3px 6px 0; white-space: nowrap; border-right: 2px solid #ccc; }
-  td.time .half { color: #bbb; font-size: 9px; }
-  tr.hour td { border-top: 1px solid #bbb; }
-  tr.hour td.time { font-size: 11px; font-weight: 700; color: #333; }
-  td.empty { height: 22px; background: #fafafa; }
-  td.block { padding: 5px 8px; font-size: 11px; font-weight: 700; vertical-align: middle; line-height: 1.3; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 0.35in 0.45in; color: #111; background: #fff; }
+  .page-header { display:flex; align-items:flex-end; justify-content:space-between; border-bottom:3px solid #111; padding-bottom:10px; margin-bottom:12px; }
+  .shop-name { font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#777; margin-bottom:4px; }
+  .sched-title { font-size:22px; font-weight:900; line-height:1; }
+  .header-right { text-align:right; font-size:11px; color:#555; line-height:2; }
+  table { border-collapse:collapse; width:100%; font-size:12px; table-layout:fixed; }
+  th { background:#111; color:#fff; padding:9px 10px; text-align:left; font-size:12px; font-weight:800; border:1px solid #333; }
+  th.time-hdr { width:66px; background:#444; }
+  td { border:1px solid #ddd; vertical-align:top; padding:0; }
+  td.time { width:66px; font-size:10px; color:#888; text-align:right; padding:3px 7px 0 0; white-space:nowrap; border-right:2px solid #ccc; }
+  td.time .half { color:#ccc; font-size:9px; }
+  tr.hour td { border-top:1.5px solid #aaa; }
+  tr.hour td.time { font-size:11px; font-weight:700; color:#444; }
+  td.empty { height:26px; background:#f9f9f9; }
+  td.block { padding:6px 9px; font-size:12px; font-weight:700; vertical-align:middle; line-height:1.35; word-wrap:break-word; }
+  .footer { margin-top:10px; display:flex; justify-content:space-between; font-size:9.5px; color:#aaa; border-top:1px solid #e8e8e8; padding-top:7px; }
+  .print-btn { display:block; margin:16px auto 0; padding:10px 32px; background:#111; color:#fff; border:none; border-radius:6px; font-size:14px; font-weight:700; cursor:pointer; }
   @media print {
-    body { padding: 6px 10px; }
-    @page { margin: 1cm; size: landscape; }
-    button { display: none !important; }
+    body { padding: 0.3in 0.4in; }
+    @page { margin: 0; size: landscape; }
+    .print-btn { display: none; }
   }
 </style>
 </head><body>
-<h1>Bella's Bakeshop &mdash; ${DV_DAYS[_dvDay]} Shift Schedule</h1>
-<div class="sub">Printed ${printDate}</div>
+<div class="page-header">
+  <div>
+    <div class="shop-name">Bella's Bakeshop</div>
+    <div class="sched-title">📋 ${DV_DAYS[_dvDay]} Shift Schedule</div>
+  </div>
+  <div class="header-right">
+    ${printDate}<br>
+    ${shiftStart} – ${shiftEnd} &nbsp;·&nbsp; ${cols.length} role${cols.length !== 1 ? 's' : ''}
+  </div>
+</div>
 <table>
-  <colgroup><col class="time-col">${cols.map(() => '<col>').join('')}</colgroup>
+  <colgroup><col style="width:66px">${cols.map(() => '<col>').join('')}</colgroup>
   <thead><tr><th class="time-hdr">Time</th>${colHeaders}</tr></thead>
   <tbody>${rows}</tbody>
 </table>
+<div class="footer">
+  <span>Bella's Bakeshop · ${DV_DAYS[_dvDay]} Shift Schedule</span>
+  <span>Printed ${printDate}</span>
+</div>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
 </body></html>`;
 
-  const win = window.open('', '_blank', 'width=900,height=700');
+  const win = window.open('', '_blank', 'width=1000,height=750');
   if (!win) { toastBy('Pop-up blocked — allow pop-ups to print.'); return; }
   win.document.write(html);
   win.document.close();
@@ -18233,6 +18492,18 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '2.0.4': [
+    '📋 Day View: upgraded shift schedule print — auto-trims blank rows above/below your actual shifts, adds Bella\'s Bakeshop header with day + shift hours, preserves block colors, and includes a Print/Save PDF button',
+  ],
+  '2.0.3': [
+    '🖨 Checklists: new "Print" button on Opening, Closing, and Baker tabs — opens a clean clipboard sheet with checkboxes, initials/time columns, a notes box, and a "Finalized by" line at the bottom, ready to photocopy',
+  ],
+  '2.0.2': [
+    '📋 Checklists: Opening, Closing, and Baker tabs now always scroll vertically — no more horizontal scroll on the Closing tab',
+  ],
+  '2.0.1': [
+    '☁ "Save" button added to every page — Bake Board, Dough Timer, Freezer, Checklists, EOD, Staff Board, Station Guide, Staff, and Day View all have a green Save button that force-pushes that page\'s data to cloud immediately with a confirmation',
+  ],
   '2.0.0': [
     '🛡 Data protection: local changes now always win over cloud during conflicts — prevents version updates from reverting your Day View edits',
     '☁ Day View: new "Save" button force-pushes the current day\'s schedule to the cloud immediately with confirmation toast',
