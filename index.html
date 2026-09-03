@@ -2847,7 +2847,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.0.5';
+const APP_VERSION      = '2.0.6';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3253,13 +3253,14 @@ function renderStaffPage() {
 
       ${overrideCount > 0 ? `<div style="font-size:11px;color:var(--warn);margin-bottom:10px">⚡ ${overrideCount} override${overrideCount>1?'s':''} in Training Matrix</div>` : ''}
 
-      ${(()=>{ const pins=authGetPins(); const hasPin=!!pins[m.id]; const isOwner=m.role==='Owner';
+      ${(()=>{ const pins=authGetPins(); const pin=pins[m.id]; const hasPin=!!pin; const isOwner=m.role==='Owner';
         return `<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
           <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">App Login</div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px">
               <span style="width:8px;height:8px;border-radius:50%;background:${hasPin?'#2e7d52':'#b87000'};display:inline-block;flex-shrink:0"></span>
               <span style="font-size:12px;font-weight:700;color:${hasPin?'#2e7d52':'#b87000'}">${hasPin ? 'Active' : 'No PIN — cannot log in'}</span>
+              ${hasPin ? `<span style="font-family:monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 10px">${pin}</span>` : ''}
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="authSetPin('${m.id}');renderStaffPage()"
@@ -18487,6 +18488,9 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '2.0.6': [
+    '🔑 Staff cards now show each person\'s current PIN in the App Login section — visible only to Owners',
+  ],
   '2.0.5': [
     '👥 Staff deletions now stick — deleted staff no longer come back after updates; fixed two root causes: hardcoded default roster removed (was overriding Firebase on new devices), and in-memory staff list now reloads from Firebase so a deletion on one device propagates everywhere',
   ],
