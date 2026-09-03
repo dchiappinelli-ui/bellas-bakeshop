@@ -2847,7 +2847,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.0.4';
+const APP_VERSION      = '2.0.5';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2913,20 +2913,10 @@ let boardChecked = JSON.parse(sessionStorage.getItem('bk_board_checked') || '{}'
 function saveBoardChecked() { sessionStorage.setItem('bk_board_checked', JSON.stringify(boardChecked)); }
 
 // ============ STAFF DATA ============
+// defaultStaff is only used when localStorage is completely empty (first-ever launch
+// on a device before Firebase has synced). Keep it minimal — real staff list lives in Firebase.
 const defaultStaff = [
-  { id:'s0',  name:'David',    title:'Owner',             color:'#c4a44a', initials:'DC', hourlyRate:0,  role:'Owner',            email:'david@bellasbakeshop.com',     taskOverrides:{} },
-  { id:'s1',  name:'Brett',    title:'Head Baker',        color:'#7b9fc4', initials:'BM', hourlyRate:25, role:'Head Baker',        email:'bernellsbaking@gmail.com',     taskOverrides:{} },
-  { id:'s2',  name:'Juan',     title:'Assistant Baker',   color:'#9fc47b', initials:'JA', hourlyRate:17, role:'Bakery Assistant',  email:'jjandrade89@gmail.com',        taskOverrides:{} },
-  { id:'s3',  name:'Luciana',  title:'Assistant Baker',   color:'#c49b7b', initials:'LL', hourlyRate:17, role:'Bakery Assistant',  email:'lucianalopeza154@gmail.com',   taskOverrides:{} },
-  { id:'s4',  name:'Yaneth',   title:'Baker',             color:'#c47bb9', initials:'YS', hourlyRate:17, role:'Baker',             email:'belsyaceituno@icloud.com',     taskOverrides:{} },
-  { id:'s5',  name:'Tatyana',  title:'Co-Owner',          color:'#c4a44a', initials:'TC', hourlyRate:0,  role:'Owner',             email:'tatyana@bellasbakeshop.com',   taskOverrides:{} },
-  { id:'s6',  name:'Isabella P', title:'Barista/Sales',  color:'#e87d7d', initials:'IP', hourlyRate:16, role:'Barista',           email:'paezizzy@gmail.com',           taskOverrides:{} },
-  { id:'s7',  name:'Isabella W', title:'Barista/Sales',  color:'#e8a07d', initials:'IW', hourlyRate:16, role:'Barista',           email:'izzywish1225@gmail.com',       taskOverrides:{} },
-  { id:'s8',  name:'Liberty',  title:'Barista/Sales',     color:'#b07de8', initials:'LY', hourlyRate:17, role:'Barista',           email:'libertylynn@msn.com',          taskOverrides:{} },
-  { id:'s9',  name:'Sophie',   title:'Barista/Sales',     color:'#e87db0', initials:'ST', hourlyRate:16, role:'Barista',           email:'sophietuncoglu@gmail.com',     taskOverrides:{} },
-  { id:'s10', name:'Sienna',   title:'Barista/Sales',     color:'#7db8e8', initials:'SD', hourlyRate:16, role:'Barista',           email:'siennademarinis@icloud.com',   taskOverrides:{} },
-  { id:'s11', name:'Sorrel',   title:'Barista/Sales',     color:'#7de8c4', initials:'SR', hourlyRate:16, role:'Barista',           email:'sorreltrick@gmail.com',        taskOverrides:{} },
-  { id:'s12', name:'Zoe',      title:'Barista/Sales',     color:'#e8d07d', initials:'ZM', hourlyRate:17, role:'Barista',           email:'zoemanarel1@gmail.com',        taskOverrides:{} },
+  { id:'s0', name:'David', title:'Owner', color:'#c4a44a', initials:'DC', hourlyRate:0, role:'Owner', email:'david@bellasbakeshop.com', taskOverrides:{} },
 ];
 
 // Role slots — the stable scheduling positions. Employees are assigned to slots each day.
@@ -2939,9 +2929,9 @@ const defaultRoleSlots = [
 ];
 
 let staff = JSON.parse(localStorage.getItem('bk_staff') || 'null') || defaultStaff;
-// Ensure David (owner) exists in the staff list
+// Ensure David (owner) always exists — add only if missing, don't rewrite the whole list
 if (!staff.find(s => s.id === 's0')) {
-  staff.unshift({ id:'s0', name:'David', title:'Owner', color:'#c4a44a', initials:'D', hourlyRate:0, role:'Owner', taskOverrides:{} });
+  staff.unshift({ id:'s0', name:'David', title:'Owner', color:'#c4a44a', initials:'DC', hourlyRate:0, role:'Owner', email:'david@bellasbakeshop.com', taskOverrides:{} });
   localStorage.setItem('bk_staff', JSON.stringify(staff));
 }
 function saveStaff() { localStorage.setItem('bk_staff', JSON.stringify(staff)); }
@@ -17714,11 +17704,16 @@ const FB_KEY_PAGE = {
   'bk_sg_recipes':        () => { if (activePage() === 'stationguide') try { renderStationGuide(); } catch(e){} },
   'bk_week_plan':         () => { if (activePage() === 'weekplan')   try { renderWeekPlan(); wpInitGestures(); } catch(e){} },
   'bk_shift_templates':   () => { if (activePage() === 'dayview')   try { renderDayView(); } catch(e){} },
-  'bk_staff':             () => { if (activePage() === 'staff')     try { renderStaffPage(); } catch(e){} },
+  'bk_staff': () => {
+    // Reload in-memory staff from the freshly-synced localStorage value so
+    // deletions/additions made on another device take effect immediately and
+    // aren't overwritten the next time saveStaff() is called from this device.
+    try { const fresh = JSON.parse(_ls.get('bk_staff') || 'null'); if (fresh) staff = fresh; } catch(e) {}
+    if (activePage() === 'staff') try { renderStaffPage(); } catch(e) {}
+  },
   'bk_staff_pins':        () => { if (activePage() === 'staff')     try { renderStaffPage(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
-  'bk_staff':             () => { if (activePage() === 'staff')       try { renderStaffPage();        } catch(e){} },
 };
 
 function activePage() {
@@ -18492,6 +18487,9 @@ function dvConfirmCopy(toDay) {
 // ============ END DAY VIEW ============
 
 const VERSION_NOTES = {
+  '2.0.5': [
+    '👥 Staff deletions now stick — deleted staff no longer come back after updates; fixed two root causes: hardcoded default roster removed (was overriding Firebase on new devices), and in-memory staff list now reloads from Firebase so a deletion on one device propagates everywhere',
+  ],
   '2.0.4': [
     '📋 Day View: upgraded shift schedule print — auto-trims blank rows above/below your actual shifts, adds Bella\'s Bakeshop header with day + shift hours, preserves block colors, and includes a Print/Save PDF button',
   ],
