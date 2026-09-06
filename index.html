@@ -926,6 +926,7 @@
   <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
   <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
   <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
+  <button class="nav-btn" onclick="showPage('displaystock')">🖼 Display Stock</button>
   <button class="nav-btn" onclick="showPage('staffboard')">💬 Staff Board</button>
   <button class="nav-btn" onclick="showPage('eod')">📊 End of Day</button>
   <button class="nav-btn" onclick="showPage('opening')">📋 Checklists</button>
@@ -2060,6 +2061,11 @@
 </div>
 
 <!-- ======== STAFF BOARD PAGE ======== -->
+<div class="page staff-page" id="page-displaystock" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
+  <div id="ds-banner-displaystock" style="flex-shrink:0"></div>
+  <div id="dsp-root" style="display:flex;flex-direction:column;flex:1;overflow:hidden"></div>
+</div>
+
 <div class="page staff-page" id="page-staffboard">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
     <div>
@@ -2847,7 +2853,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.0.6';
+const APP_VERSION      = '2.1.0';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3036,12 +3042,13 @@ function setStaffRole(staffId, role) {
 const STAFF_STATIONS = ['Kitchen', 'FOH · Barista', 'Sandwich', 'Sales', 'Manager'];
 
 const STAFF_PAGES = [
-  { id: 'dayview',    label: '📋 Day View' },
-  { id: 'doughtimer', label: '⏱ Dough Timer' },
-  { id: 'weekplan',   label: '🗓 Bake Board' },
-  { id: 'freezer',    label: '❄️ Freezer Stock' },
-  { id: 'staffboard', label: '💬 Staff Board' },
-  { id: 'eod',        label: '📊 End of Day' },
+  { id: 'dayview',      label: '📋 Day View' },
+  { id: 'doughtimer',   label: '⏱ Dough Timer' },
+  { id: 'weekplan',     label: '🗓 Bake Board' },
+  { id: 'freezer',      label: '❄️ Freezer Stock' },
+  { id: 'displaystock', label: '🖼 Display Stock' },
+  { id: 'staffboard',   label: '💬 Staff Board' },
+  { id: 'eod',          label: '📊 End of Day' },
 ];
 
 function setStaffPageAccess(staffId, pageId, allowed) {
@@ -3585,6 +3592,7 @@ function showPageDirect(page) {
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
   if (page === 'stationguide') renderStationGuide();
+  if (page === 'displaystock') renderDisplayStock();
 }
 
 function showPage(page) {
@@ -3615,6 +3623,7 @@ function showPage(page) {
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
   if (page === 'stationguide') renderStationGuide();
   if (page === 'dayview') renderDayView();
+  if (page === 'displaystock') renderDisplayStock();
   renderStatusBanners(page);
 }
 
@@ -17682,6 +17691,7 @@ const FB_SYNC_KEYS = new Set([
   'bk_week_plan',
   'bk_shift_templates',
   'bk_staff', 'bk_staff_pins',
+  'bk_display_defs', 'bk_display_log',
 ]);
 
 // Which page to re-render when a key changes remotely
@@ -17715,6 +17725,8 @@ const FB_KEY_PAGE = {
   'bk_staff_pins':        () => { if (activePage() === 'staff')     try { renderStaffPage(); } catch(e){} },
   'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
   'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
+  'bk_display_defs':      () => { if (activePage() === 'displaystock') try { renderDisplayStock(); } catch(e){} },
+  'bk_display_log':       () => { if (activePage() === 'displaystock') try { renderDisplayStock(); } catch(e){} },
 };
 
 function activePage() {
@@ -17928,6 +17940,7 @@ const DV_COLORS      = [
 ];
 
 let _dvDay = new Date().getDay();
+let _dvSelectedDate = new Date().toISOString().slice(0,10); // YYYY-MM-DD for the specific selected date
 let _dvEditBlock = null;
 let _dvResizing = null; // { colId, startX, startWidth }
 
@@ -18018,29 +18031,48 @@ function renderDayView() {
   const cols = day.columns;
 
   // Day selector header
-  const daySel = DV_DAY_SHORT.map((d,i) => {
-    const sel = i === _dvDay;
-    return `<button onclick="dvSetDay(${i})" style="padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:${sel?'900':'600'};background:${sel?'#111':'transparent'};color:${sel?'#fff':'#666'};transition:all 0.1s;touch-action:manipulation">${d}</button>`;
+  // 14-day scrollable date strip
+  const _dvToday = new Date(); _dvToday.setHours(0,0,0,0);
+  const daySel = Array.from({length:14}, (_,i) => {
+    const d = new Date(_dvToday); d.setDate(_dvToday.getDate() + i);
+    const ds = d.toISOString().slice(0,10);
+    const sel = ds === _dvSelectedDate;
+    const isToday = i === 0;
+    const dayAbbr = DV_DAY_SHORT[d.getDay()];
+    const dateNum = d.getDate();
+    const mon = d.toLocaleDateString('en-US',{month:'short'});
+    return `<button onclick="dvSetDate('${ds}')" style="flex-shrink:0;min-width:52px;padding:6px 8px 8px;border-radius:10px;border:none;cursor:pointer;background:${sel?'#111':'transparent'};color:${sel?'#fff':'#555'};touch-action:manipulation;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative">
+      ${isToday&&!sel?'<span style="position:absolute;top:4px;right:6px;width:5px;height:5px;background:#006aff;border-radius:50%"></span>':''}
+      <span style="font-size:11px;font-weight:${sel?'800':'600'};letter-spacing:.3px">${dayAbbr}</span>
+      <span style="font-size:18px;font-weight:${sel?'900':'700'};line-height:1.1">${dateNum}</span>
+      <span style="font-size:10px;font-weight:400;opacity:${sel?'.8':'.5'}">${mon}</span>
+      ${isToday?`<span style="font-size:9px;font-weight:700;color:${sel?'#aef':'#006aff'};margin-top:1px">TODAY</span>`:''}
+    </button>`;
   }).join('');
+
+  const _dvSelDateObj = new Date(_dvSelectedDate + 'T12:00:00');
+  const _dvSelLabel = _dvSelDateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
 
   const headerHtml = `
   <div style="padding:12px 16px 8px;border-bottom:2px solid #eee;background:#fff;flex-shrink:0">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div style="font-size:18px;font-weight:900;color:#111">${DV_DAYS[_dvDay]}</div>
+      <div style="font-size:17px;font-weight:900;color:#111">${_dvSelLabel}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${cols.length ? `<button onclick="dvPrint()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">🖨 Print</button>` : ''}
         <button onclick="dvForceSave()" id="dv-save-btn" style="padding:8px 14px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation" title="Force-save this day's schedule to cloud now">☁ Save</button>
-        ${isOwner ? `<button onclick="dvPromptCopy()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">Copy to →</button>
+        ${isOwner ? `<button onclick="dvSquareSync()" style="padding:8px 14px;background:#006aff;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation" title="Import shifts from Square">↓ Square</button>
+        <button onclick="dvPromptCopy()" style="padding:8px 14px;background:#fff;border:2px solid #ccc;border-radius:4px;font-size:13px;font-weight:700;color:#555;cursor:pointer;touch-action:manipulation">Copy to →</button>
         <button onclick="dvAddColumn()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation">+ Add Column</button>` : ''}
       </div>
     </div>
-    <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">${daySel}</div>
+    <div style="display:flex;gap:2px;margin-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px">${daySel}</div>
   </div>`;
 
   if (!cols.length) {
     root.innerHTML = headerHtml + `<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#bbb;padding:40px;text-align:center">
       <div style="font-size:48px">📋</div>
       <div style="font-size:16px;font-weight:700;color:#555">No template for ${DV_DAYS[_dvDay]} yet</div>
+      <div style="font-size:12px;color:#bbb">${_dvSelLabel}</div>
       ${isOwner ? `
         <button onclick="dvLoadExample()" style="padding:12px 24px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation">
           Load Friday Example
@@ -18128,10 +18160,27 @@ function renderDayView() {
       </div>
     </div>
   </div>`;
+  // Scroll the selected date pill into view
+  requestAnimationFrame(() => {
+    const strip = root.querySelector('[style*="overflow-x:auto"]');
+    const sel   = strip && strip.querySelector('button[style*="background:#111"]');
+    if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
+  });
 }
 
 function dvSetDay(day) {
   _dvDay = day;
+  // Update selected date to the nearest upcoming occurrence of this weekday
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = (day - today.getDay() + 7) % 7;
+  const d = new Date(today); d.setDate(today.getDate() + diff);
+  _dvSelectedDate = d.toISOString().slice(0,10);
+  renderDayView();
+}
+
+function dvSetDate(dateStr) {
+  _dvSelectedDate = dateStr;
+  _dvDay = new Date(dateStr + 'T12:00:00').getDay();
   renderDayView();
 }
 
@@ -18485,9 +18534,591 @@ function dvConfirmCopy(toDay) {
   toastBy(`Copied to ${DV_DAYS[toDay]}`);
 }
 
+// ── Square Shift Sync ────────────────────────────────────────
+const DV_SQ_MAP_KEY = 'bk_sq_shift_map'; // { squareMemberId: staffId }
+
+function dvSqGetMap() {
+  try { return JSON.parse(_ls.get(DV_SQ_MAP_KEY) || '{}'); } catch(e) { return {}; }
+}
+function dvSqSaveMap(m) { localStorage.setItem(DV_SQ_MAP_KEY, JSON.stringify(m)); }
+
+function dvSqGetDate() {
+  return new Date(_dvSelectedDate + 'T12:00:00');
+}
+
+function dvSqFmtDate(d) {
+  return d.toISOString().slice(0,10);
+}
+
+function dvSqErrHtml(title, detail, extra) {
+  return `<div style="padding:4px 0">
+    <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#c0392b">${title}</div>
+    <div style="font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;max-height:180px;overflow-y:auto;color:var(--text)">${detail}</div>
+    ${extra ? `<div style="font-size:12px;color:var(--text-muted);margin-top:8px">${extra}</div>` : ''}
+    <button onclick="dvSqHideModal()" style="margin-top:14px;padding:7px 18px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer">Close</button>
+  </div>`;
+}
+
+async function dvSqFetch(url, opts) {
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch(e) {}
+  return { ok: res.ok, status: res.status, text, json };
+}
+
+async function dvSquareSync() {
+  const sq = eodGetSquare();
+  if (!sq.token || !sq.locationId) {
+    dvSqShowModal(`
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:32px;margin-bottom:10px">🔑</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Square not configured</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Add your Square Personal Access Token and Location ID in<br><strong>End of Day → Square tab</strong>.</div>
+        <button onclick="dvSqHideModal();showPage('eod');" style="padding:8px 20px;background:#4a6fa5;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Go to End of Day →</button>
+      </div>`);
+    return;
+  }
+
+  const headers = { 'Authorization': 'Bearer ' + sq.token, 'Square-Version': '2024-01-18', 'Content-Type': 'application/json' };
+
+  dvSqShowModal(`<div style="text-align:center;padding:20px 0">
+    <div style="font-size:24px;margin-bottom:8px">⏳</div>
+    <div style="font-size:13px;color:var(--text-muted)">Step 1/3 — Verifying credentials…</div>
+  </div>`);
+
+  // Step 1: verify token works by fetching the location
+  let locResult;
+  try {
+    locResult = await dvSqFetch(`https://connect.squareup.com/v2/locations/${encodeURIComponent(sq.locationId)}`, { headers });
+  } catch(e) {
+    dvSqShowModal(dvSqErrHtml('Network / CORS error on credentials check', e.message,
+      'This usually means the browser blocked the request. Make sure you\'re accessing the app over https:// (not file://) and that pop-up blockers aren\'t interfering.'));
+    return;
+  }
+  if (!locResult.ok) {
+    const hint = locResult.status === 401 ? 'Token is invalid or expired. Re-copy it from Square Developer → Production → Personal Access Token.'
+               : locResult.status === 404 ? 'Location ID not found. Re-copy it from Square Developer → Locations.'
+               : '';
+    dvSqShowModal(dvSqErrHtml(`Credentials failed (HTTP ${locResult.status})`,
+      locResult.text.slice(0, 800), hint));
+    return;
+  }
+
+  dvSqShowModal(`<div style="text-align:center;padding:20px 0">
+    <div style="font-size:24px;margin-bottom:8px">⏳</div>
+    <div style="font-size:13px;color:var(--text-muted)">Step 2/3 — Loading team members…</div>
+  </div>`);
+
+  // Step 2: team members for name lookup
+  let teamMembers = {};
+  try {
+    const tm = await dvSqFetch('https://connect.squareup.com/v2/team-members?limit=200', { headers });
+    if (tm.json && tm.json.team_members) {
+      tm.json.team_members.forEach(m => {
+        teamMembers[m.id] = (m.display_name || ((m.given_name||'') + ' ' + (m.family_name||'')).trim() || m.id);
+      });
+    }
+  } catch(e) { /* names optional, continue */ }
+
+  dvSqShowModal(`<div style="text-align:center;padding:20px 0">
+    <div style="font-size:24px;margin-bottom:8px">⏳</div>
+    <div style="font-size:13px;color:var(--text-muted)">Step 3/3 — Fetching shifts for <strong>${_dvSelLabel}</strong>…</div>
+  </div>`);
+
+  // Step 3: fetch shifts via POST search (more reliable than GET with query params)
+  const date = dvSqGetDate();
+  const dateStr = dvSqFmtDate(date);
+  const tzOff  = -date.getTimezoneOffset();
+  const tzSign = tzOff >= 0 ? '+' : '-';
+  const tzH = String(Math.floor(Math.abs(tzOff)/60)).padStart(2,'0');
+  const tzM = String(Math.abs(tzOff)%60).padStart(2,'0');
+  const tz  = `${tzSign}${tzH}:${tzM}`;
+  const startAt = `${dateStr}T00:00:00${tz}`;
+  const endAt   = `${dateStr}T23:59:59${tz}`;
+
+  let shifts = [];
+  let shiftResult;
+  try {
+    shiftResult = await dvSqFetch('https://connect.squareup.com/v2/labor/shifts/search', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query: { filter: {
+          location_ids: [sq.locationId],
+          start: { start_at: startAt, end_at: endAt }
+        }},
+        limit: 200
+      })
+    });
+  } catch(e) {
+    dvSqShowModal(dvSqErrHtml('Network error fetching shifts', e.message, ''));
+    return;
+  }
+
+  if (!shiftResult.ok) {
+    dvSqShowModal(dvSqErrHtml(`Shifts API error (HTTP ${shiftResult.status})`, shiftResult.text.slice(0,800),
+      'Credentials verified OK — this is a shifts-search error. The full response is shown above.'));
+    return;
+  }
+
+  shifts = (shiftResult.json && shiftResult.json.shifts) || [];
+
+  if (!shifts.length) {
+    dvSqShowModal(`<div style="text-align:center;padding:24px 0">
+      <div style="font-size:32px;margin-bottom:10px">📭</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">No shifts found</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Square returned 0 shifts for <strong>${_dvSelLabel}</strong>.</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Square's Labor API returns actual worked shifts (clock-in/out).<br>Future scheduled shifts won't appear until the shift starts.</div>
+      <button onclick="dvSqHideModal()" style="padding:7px 18px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer">Close</button>
+    </div>`);
+    return;
+  }
+
+  // Build preview rows
+  const sqMap = dvSqGetMap();
+  const staffList = (()=>{ try { return JSON.parse(_ls.get('bk_staff')||'[]'); } catch(e){ return []; } })();
+
+  const rows = shifts.map(sh => {
+    const memberId   = sh.team_member_id || sh.employee_id || '';
+    const memberName = teamMembers[memberId] || memberId || 'Unknown';
+    const startISO   = sh.start_at || '';
+    const endISO     = sh.end_at   || '';
+    const startMin   = startISO ? (new Date(startISO).getHours()*60 + new Date(startISO).getMinutes()) : null;
+    const endMin     = endISO   ? (new Date(endISO).getHours()*60   + new Date(endISO).getMinutes())   : null;
+    const startSlot  = startMin !== null ? Math.max(0, dvMinToSlot(startMin)) : null;
+    const endSlot    = endMin   !== null ? Math.min(DV_SLOTS, dvMinToSlot(endMin)) : null;
+    const timeLabel  = (startSlot !== null && endSlot !== null) ? `${dvFmtSlot(startSlot)} – ${dvFmtSlot(endSlot)}` : '(time unknown)';
+
+    // Auto-match to staff by name (first name match)
+    let autoMatch = sqMap[memberId] || null;
+    if (!autoMatch && memberName) {
+      const firstName = memberName.split(' ')[0].toLowerCase();
+      const found = staffList.find(s => s.name && s.name.split(' ')[0].toLowerCase() === firstName);
+      if (found) autoMatch = found.id;
+    }
+
+    const staffOpts = `<option value="">— No match —</option>` +
+      staffList.map(s => `<option value="${s.id}" ${s.id === autoMatch ? 'selected' : ''}>${s.name}</option>`).join('');
+
+    return { sh, memberId, memberName, startSlot, endSlot, timeLabel, staffOpts };
+  });
+
+  const tableRows = rows.map((r,i) => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;font-size:13px;font-weight:600">${r.memberName}</td>
+      <td style="padding:8px 8px;font-size:12px;color:var(--text-muted)">${r.timeLabel}</td>
+      <td style="padding:8px 8px">
+        <select id="dvsq-map-${i}" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)">
+          ${r.staffOpts}
+        </select>
+      </td>
+    </tr>`).join('');
+
+  dvSqShowModal(`
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">↓ Import Square Shifts</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${DV_DAYS[_dvDay]}, ${dateStr} · ${shifts.length} shift${shifts.length===1?'':'s'} found</div>
+    <div style="overflow-x:auto;margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--surface2);font-size:11px;color:var(--text-muted)">
+          <th style="padding:6px 10px;text-align:left;font-weight:600">Team Member</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600">Time</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600">Match to Staff Card</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">
+      Each shift will create a column named after the team member (or staff card name if matched). Existing columns with the same name won't be duplicated.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="dvSqHideModal()" style="padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="dvSqImport(${JSON.stringify(rows.map(r=>({memberId:r.memberId,memberName:r.memberName,startSlot:r.startSlot,endSlot:r.endSlot}))).replace(/"/g,"'")})"
+        style="padding:8px 16px;background:#1565C0;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Import Shifts →</button>
+    </div>`, true);
+}
+
+function dvSqImport(shiftMeta) {
+  // Save name→staffId mappings
+  const sqMap = dvSqGetMap();
+  const staffList = (()=>{ try { return JSON.parse(_ls.get('bk_staff')||'[]'); } catch(e){ return []; } })();
+  shiftMeta.forEach((s,i) => {
+    const sel = document.getElementById('dvsq-map-' + i);
+    if (sel && sel.value) sqMap[s.memberId] = sel.value;
+  });
+  dvSqSaveMap(sqMap);
+
+  const data = dvGet();
+  const day  = dvGetDay(data, _dvDay);
+
+  let colorCursor = day.columns.length % DV_COLORS.length;
+
+  shiftMeta.forEach((s,i) => {
+    if (s.startSlot === null || s.endSlot === null || s.endSlot <= s.startSlot) return;
+
+    const sel = document.getElementById('dvsq-map-' + i);
+    const mappedStaffId = sel ? sel.value : '';
+    const mappedStaff   = mappedStaffId ? staffList.find(st => st.id === mappedStaffId) : null;
+    const colLabel      = mappedStaff ? mappedStaff.name : s.memberName;
+
+    // Find or create column
+    let col = day.columns.find(c => c.label === colLabel);
+    if (!col) {
+      col = { id: 'col_sq_' + Date.now() + '_' + i, label: colLabel };
+      day.columns.push(col);
+      colorCursor++;
+    }
+
+    // Add shift block (remove any existing sq-imported block for this col on this day)
+    day.blocks = day.blocks.filter(b => !(b.colId === col.id && b.sqImported));
+    day.blocks.push({
+      id: 'blk_sq_' + Date.now() + '_' + i,
+      colId: col.id,
+      label: colLabel,
+      startSlot: s.startSlot,
+      endSlot: s.endSlot,
+      colorIdx: colorCursor % DV_COLORS.length,
+      sqImported: true,
+    });
+  });
+
+  dvSave(data);
+  dvSqHideModal();
+  renderDayView();
+  toastBy(`${shiftMeta.length} Square shift${shiftMeta.length===1?'':'s'} imported ✓`);
+}
+
+function dvSqShowModal(html, wide) {
+  let m = document.getElementById('dv-sq-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'dv-sq-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.innerHTML = `<div id="dv-sq-modal-inner" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:100%;box-sizing:border-box;max-height:90vh;overflow-y:auto"></div>`;
+    document.body.appendChild(m);
+  }
+  m.querySelector('#dv-sq-modal-inner').style.maxWidth = wide ? '560px' : '400px';
+  m.querySelector('#dv-sq-modal-inner').innerHTML = html;
+  m.style.display = 'flex';
+}
+function dvSqHideModal() {
+  const m = document.getElementById('dv-sq-modal');
+  if (m) m.style.display = 'none';
+}
+// ── End Square Shift Sync ─────────────────────────────────────
+
 // ============ END DAY VIEW ============
 
+// ============ DISPLAY STOCK ============
+const DS_DEFS_KEY = 'bk_display_defs';
+const DS_LOG_KEY  = 'bk_display_log';
+
+const DS_DEFAULT_SECTIONS = [
+  { id:'ds-wood-rack', label:'Wood Rack', items:[
+    { id:'wr-1', name:'Petit Brioche', par:6 },
+    { id:'wr-2', name:'Bread Crumbs', par:4 },
+    { id:'wr-3', name:'Cinnamon Raisin Babka', par:3 },
+    { id:'wr-4', name:'Italian Friselle', par:4 },
+  ]},
+  { id:'ds-bread-shelf', label:'Bread Shelf', items:[
+    { id:'bs-1', name:'Baguette', par:8 },
+    { id:'bs-2', name:'Sourdough Classic', par:4 },
+    { id:'bs-3', name:'Sourdough Olive', par:3 },
+    { id:'bs-4', name:'Sourdough Cranberry Walnut', par:3 },
+    { id:'bs-5', name:'Bagel Packs', par:6 },
+  ]},
+  { id:'ds-case-left', label:'Display Case (Left)', items:[
+    { id:'cl-1', name:'Chocolate Cupcakes', par:12 },
+    { id:'cl-2', name:'Vanilla Cupcakes', par:12 },
+    { id:'cl-3', name:'Cake Pop – Funfetti', par:8 },
+    { id:'cl-4', name:'Cake Pop – Chocolate', par:8 },
+    { id:'cl-5', name:'Cake Pop – Lemon', par:8 },
+    { id:'cl-6', name:'Cake Pop – Red Velvet', par:8 },
+    { id:'cl-7', name:'Macaron – Vanilla', par:12 },
+    { id:'cl-8', name:'Macaron – Chocolate', par:12 },
+    { id:'cl-9', name:'Macaron – Blueberry Cheesecake', par:12 },
+    { id:'cl-10', name:'Macaron – Strawberry', par:12 },
+    { id:'cl-11', name:'Macaron – Funfetti', par:12 },
+    { id:'cl-12', name:'Macaron – French Toast', par:12 },
+  ]},
+  { id:'ds-case-right', label:'Display Case (Right)', items:[
+    { id:'cr-1', name:'Chocolate Chip Cookie', par:24 },
+    { id:'cr-2', name:'Chocolate Chip Walnut Cookie', par:24 },
+    { id:'cr-3', name:'Oatmeal Cranberry Walnut Cookie', par:24 },
+    { id:'cr-4', name:'Raspberry White Chocolate Cookie', par:24 },
+  ]},
+  { id:'ds-grab-go', label:'Grab & Go Case', items:[
+    { id:'gg-1', name:'House Pesto', par:4 },
+    { id:'gg-2', name:'Ham & Swiss Grab & Go Sandwich', par:6 },
+    { id:'gg-3', name:'Turkey & Swiss Grab & Go Sandwich', par:6 },
+  ]},
+  { id:'ds-freezer', label:'Display Freezer', items:[
+    { id:'df-1', name:'Frozen Cookie Packs – Chocolate Chip', par:6 },
+    { id:'df-2', name:'Frozen Cookie Packs – Chocolate Chip Walnut', par:6 },
+    { id:'df-3', name:'Frozen Cookie Packs – Oatmeal Cranberry', par:6 },
+    { id:'df-4', name:'Frozen Cookie Packs – Raspberry White Chocolate', par:6 },
+    { id:'df-5', name:'Pretzel Packs', par:8 },
+    { id:'df-6', name:'English Muffin Packs', par:6 },
+    { id:'df-7', name:'Chicken Cutlets', par:4 },
+  ]},
+];
+
+function dsGetDefs() {
+  try { const d = JSON.parse(_ls.get(DS_DEFS_KEY)); if (d && d.sections) return d; } catch(e) {}
+  return { sections: JSON.parse(JSON.stringify(DS_DEFAULT_SECTIONS)) };
+}
+function dsSaveDefs(defs) { localStorage.setItem(DS_DEFS_KEY, JSON.stringify(defs)); }
+
+function dsGetLog() {
+  const today = new Date().toISOString().slice(0,10);
+  try { const l = JSON.parse(_ls.get(DS_LOG_KEY)); if (l && l.date === today) return l; } catch(e) {}
+  return { date: today, counts: {}, submitted: false, submittedAt: null };
+}
+function dsSaveLog(log) { localStorage.setItem(DS_LOG_KEY, JSON.stringify(log)); }
+
+function renderDisplayStock() {
+  const root = document.getElementById('dsp-root');
+  if (!root) return;
+  const defs = dsGetDefs();
+  const log  = dsGetLog();
+  const today = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const allIds = defs.sections.flatMap(s => s.items.map(i => i.id));
+  const filled = allIds.filter(id => log.counts[id] !== undefined && log.counts[id] !== '');
+  const pct = allIds.length ? Math.round(filled.length / allIds.length * 100) : 0;
+
+  const sectionsHTML = defs.sections.map(sec => {
+    const itemRows = sec.items.map(item => {
+      const cnt = log.counts[item.id];
+      const hasCnt = cnt !== undefined && cnt !== '';
+      const num = parseFloat(cnt);
+      let rowBg = '', badge = '';
+      if (hasCnt) {
+        if (num === 0)           { rowBg='#fff3cd'; badge='<span style="font-size:11px;font-weight:700;color:#856404;background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:1px 7px">EMPTY</span>'; }
+        else if (num < item.par) { rowBg='#ffe8e8'; badge='<span style="font-size:11px;font-weight:700;color:#a30000;background:#ffe8e8;border:1px solid #f5c6cb;border-radius:10px;padding:1px 7px">LOW</span>'; }
+        else                     { rowBg='#e8f5e9'; badge='<span style="font-size:11px;font-weight:700;color:#1b5e20;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:1px 7px">OK</span>'; }
+      }
+      return `<tr id="dsr-${item.id}" style="background:${rowBg||'transparent'};transition:background 0.3s">
+        <td style="padding:8px 10px;font-size:14px;border-bottom:1px solid var(--border)">${item.name}</td>
+        <td style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)">
+          <button onclick="dsEditPar('${sec.id}','${item.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-muted);padding:2px 8px;border-radius:4px;border:1px solid var(--border)" title="Click to edit par">${item.par}</button>
+        </td>
+        <td style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)">
+          <input type="number" min="0" value="${hasCnt?cnt:''}" placeholder="—"
+            oninput="dsSetCount('${item.id}',this.value)"
+            style="width:60px;text-align:center;border:1px solid var(--border);border-radius:4px;padding:4px;font-size:14px;background:var(--surface2);color:var(--text)">
+        </td>
+        <td style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)">${badge}</td>
+        <td style="padding:8px 4px;text-align:center;border-bottom:1px solid var(--border)">
+          <button onclick="dsRemoveItem('${sec.id}','${item.id}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:#c0392b;padding:2px 5px" title="Remove">&#x2715;</button>
+        </td>
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="background:var(--surface2);padding:9px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+        <span style="font-size:15px;font-weight:700">${sec.label}</span>
+        <button onclick="dsAddItem('${sec.id}')" style="font-size:12px;padding:4px 10px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;cursor:pointer">+ Item</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--surface2);font-size:12px;color:var(--text-muted)">
+          <th style="padding:5px 10px;text-align:left;font-weight:600">Item</th>
+          <th style="padding:5px 6px;text-align:center;font-weight:600" title="Click par number to edit">Par</th>
+          <th style="padding:5px 6px;text-align:center;font-weight:600">Count</th>
+          <th style="padding:5px 6px;text-align:center;font-weight:600">Status</th>
+          <th style="padding:5px 4px"></th>
+        </tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  const submitBg  = log.submitted ? '#4caf50' : '#1565C0';
+  const submitLbl = log.submitted
+    ? '&#x2705; Submitted' + (log.submittedAt ? ' ' + new Date(log.submittedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '')
+    : 'Submit Check';
+
+  root.innerHTML = `
+    <div style="padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:16px;font-weight:700">&#x1F5BC; Display Stock</div>
+        <div style="font-size:12px;color:var(--text-muted)">${today} &middot; ${filled.length}/${allIds.length} counted (${pct}%)</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${pageSaveBtn([DS_DEFS_KEY, DS_LOG_KEY])}
+        <button onclick="dsPrintChecklist()" style="padding:8px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation">&#x1F5A8; Print</button>
+        <button onclick="dsSubmitCheck()" style="padding:8px 14px;background:${submitBg};color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation">${submitLbl}</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:14px 16px">
+      ${sectionsHTML}
+      <div style="margin-top:6px">
+        <button onclick="dsAddSection()" style="padding:8px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer">+ Add Section</button>
+      </div>
+    </div>`;
+}
+
+function dsSetCount(itemId, val) {
+  const log = dsGetLog();
+  log.counts[itemId] = val;
+  dsSaveLog(log);
+  const defs = dsGetDefs();
+  let item = null;
+  for (const sec of defs.sections) { const f = sec.items.find(i => i.id === itemId); if (f) { item = f; break; } }
+  const row = document.getElementById('dsr-' + itemId);
+  if (!row || !item) return;
+  const num = parseFloat(val);
+  const hasCnt = val !== '' && val !== undefined;
+  let bg = '', badgeHTML = '';
+  if (hasCnt) {
+    if (num === 0)           { bg='#fff3cd'; badgeHTML='<span style="font-size:11px;font-weight:700;color:#856404;background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:1px 7px">EMPTY</span>'; }
+    else if (num < item.par) { bg='#ffe8e8'; badgeHTML='<span style="font-size:11px;font-weight:700;color:#a30000;background:#ffe8e8;border:1px solid #f5c6cb;border-radius:10px;padding:1px 7px">LOW</span>'; }
+    else                     { bg='#e8f5e9'; badgeHTML='<span style="font-size:11px;font-weight:700;color:#1b5e20;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:1px 7px">OK</span>'; }
+  }
+  row.style.background = bg;
+  const cells = row.querySelectorAll('td');
+  if (cells[3]) cells[3].innerHTML = badgeHTML;
+}
+
+function dsEditPar(secId, itemId) {
+  const defs = dsGetDefs();
+  const sec  = defs.sections.find(s => s.id === secId); if (!sec) return;
+  const item = sec.items.find(i => i.id === itemId);    if (!item) return;
+  const val = prompt('Set par level for "' + item.name + '":', item.par);
+  if (val === null) return;
+  const n = parseInt(val, 10);
+  if (isNaN(n) || n < 0) { alert('Please enter a valid number.'); return; }
+  item.par = n;
+  dsSaveDefs(defs);
+  renderDisplayStock();
+}
+
+function dsSubmitCheck() {
+  const log = dsGetLog();
+  if (!log.submitted) {
+    log.submitted = true;
+    log.submittedAt = new Date().toISOString();
+    dsSaveLog(log);
+    toastBy('Display check submitted ✓');
+  } else {
+    if (!confirm('Unmark this check as submitted?')) return;
+    log.submitted = false; log.submittedAt = null;
+    dsSaveLog(log);
+  }
+  renderDisplayStock();
+}
+
+function dsAddItem(secId) {
+  const name = prompt('New item name:');
+  if (!name || !name.trim()) return;
+  const parStr = prompt('Par level for this item:', '6');
+  if (parStr === null) return;
+  const par = parseInt(parStr, 10);
+  if (isNaN(par) || par < 0) { alert('Please enter a valid par number.'); return; }
+  const defs = dsGetDefs();
+  const sec  = defs.sections.find(s => s.id === secId); if (!sec) return;
+  sec.items.push({ id: secId + '-' + Date.now(), name: name.trim(), par });
+  dsSaveDefs(defs);
+  renderDisplayStock();
+}
+
+function dsRemoveItem(secId, itemId) {
+  const defs = dsGetDefs();
+  const sec  = defs.sections.find(s => s.id === secId); if (!sec) return;
+  const item = sec.items.find(i => i.id === itemId);    if (!item) return;
+  if (!confirm('Remove "' + item.name + '" from the checklist?')) return;
+  sec.items = sec.items.filter(i => i.id !== itemId);
+  dsSaveDefs(defs);
+  renderDisplayStock();
+}
+
+function dsAddSection() {
+  const label = prompt('New section name:');
+  if (!label || !label.trim()) return;
+  const defs = dsGetDefs();
+  defs.sections.push({ id: 'ds-sec-' + Date.now(), label: label.trim(), items: [] });
+  dsSaveDefs(defs);
+  renderDisplayStock();
+}
+
+function dsPrintChecklist() {
+  const defs = dsGetDefs();
+  const log  = dsGetLog();
+  const today = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const win = window.open('','_blank');
+  if (!win) { alert('Pop-up blocked. Please allow pop-ups and try again.'); return; }
+
+  const sectionsHTML = defs.sections.map(sec => {
+    const rows = sec.items.map(item => {
+      const cnt    = log.counts[item.id];
+      const hasCnt = cnt !== undefined && cnt !== '';
+      const num    = parseFloat(cnt);
+      let statusLabel = '', statusColor = '';
+      if (hasCnt) {
+        if (num === 0)           { statusLabel='EMPTY'; statusColor='#856404'; }
+        else if (num < item.par) { statusLabel='LOW';   statusColor='#a30000'; }
+        else                     { statusLabel='OK';    statusColor='#1b5e20'; }
+      }
+      return `<tr>
+        <td style="padding:7px 10px;font-size:13px;border-bottom:1px solid #e0e0e0">${item.name}</td>
+        <td style="padding:7px 8px;text-align:center;font-size:13px;border-bottom:1px solid #e0e0e0">${item.par}</td>
+        <td style="padding:7px 8px;text-align:center;font-size:14px;font-weight:700;border-bottom:1px solid #e0e0e0">${hasCnt?cnt:''}</td>
+        <td style="padding:7px 8px;text-align:center;font-size:12px;font-weight:700;color:${statusColor};border-bottom:1px solid #e0e0e0">${statusLabel}</td>
+        <td style="padding:7px 20px;border-bottom:1px solid #e0e0e0"></td>
+      </tr>`;
+    }).join('');
+    return `<div style="margin-bottom:18px;break-inside:avoid">
+      <div style="background:#2c2c2c;color:#fff;padding:8px 12px;font-size:13px;font-weight:700;letter-spacing:.5px">${sec.label.toUpperCase()}</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #ccc">
+        <thead><tr style="background:#f5f5f5;font-size:11px;color:#555">
+          <th style="padding:5px 10px;text-align:left;font-weight:700">Item</th>
+          <th style="padding:5px 8px;text-align:center;font-weight:700">Par</th>
+          <th style="padding:5px 8px;text-align:center;font-weight:700">Count</th>
+          <th style="padding:5px 8px;text-align:center;font-weight:700">Status</th>
+          <th style="padding:5px 8px;text-align:center;font-weight:700">Notes</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  win.document.write(`<!DOCTYPE html><html><head><title>Display Stock — ${today}</title>
+    <style>
+      body { font-family:Arial,sans-serif; margin:0; padding:20px; color:#222; }
+      .print-btn { display:inline-block; margin-bottom:16px; padding:8px 20px; background:#2a7d4f; color:#fff; border:none; border-radius:4px; font-size:14px; font-weight:700; cursor:pointer; }
+      @media print { .print-btn { display:none; } @page { size:portrait; margin:1cm; } }
+    </style></head><body>
+    <button class="print-btn" onclick="window.print()">&#x1F5A8; Print / Save PDF</button>
+    <div style="text-align:center;border-bottom:3px solid #2c2c2c;padding-bottom:12px;margin-bottom:18px">
+      <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:4px">Bella's Bakeshop</div>
+      <div style="font-size:20px;font-weight:900;letter-spacing:1px">DISPLAY STOCK CHECKLIST</div>
+      <div style="font-size:13px;color:#555;margin-top:4px">${today}</div>
+    </div>
+    <div style="display:flex;gap:24px;margin-bottom:14px;font-size:12px;border:1px solid #ccc;padding:8px 12px;border-radius:4px">
+      <span>Staff Name: _________________________</span>
+      <span>Check Time: _________________________</span>
+    </div>
+    ${sectionsHTML}
+    <div style="margin-top:16px;border-top:1px solid #ccc;padding-top:10px;font-size:12px;color:#555">
+      Finalized by: _________________________ &nbsp;&nbsp;&nbsp; Time: _____________
+    </div>
+  </body></html>`);
+  win.document.close();
+  win.onload = () => { try { win.print(); } catch(e){} };
+}
+// ============ END DISPLAY STOCK ============
+
 const VERSION_NOTES = {
+  '2.1.0': [
+    '🔧 Square sync diagnostics — step-by-step progress (credentials → team members → shifts); detailed error display with HTTP status code and full response body; switched to POST /v2/labor/shifts/search; CORS guidance for "Failed to fetch" errors',
+  ],
+  '2.0.9': [
+    '📅 Day View date strip — 14-day scrollable strip; day name + date + month; TODAY badge; header shows full selected date',
+  ],
+  '2.0.8': [
+    '📅 Square Shift Sync — "↓ Square" button in Day View fetches shifts from Square Labor API, maps team members to staff cards, and imports shift blocks automatically',
+  ],
+  '2.0.7': [
+    '🖼 New Display Stock tab — count every display item against its par level; color-coded status (OK / LOW / EMPTY); editable pars in-app; printable checklist; Firebase sync; add/remove items and sections',
+  ],
   '2.0.6': [
     '🔑 Staff cards now show each person\'s current PIN in the App Login section — visible only to Owners',
   ],
