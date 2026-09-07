@@ -2853,7 +2853,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.1';
+const APP_VERSION      = '2.1.2';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17945,6 +17945,7 @@ const DV_COLORS      = [
 
 let _dvDay = new Date().getDay();
 let _dvSelectedDate = new Date().toISOString().slice(0,10); // YYYY-MM-DD for the specific selected date
+let _dvSelLabel = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
 let _dvEditBlock = null;
 let _dvResizing = null; // { colId, startX, startWidth }
 
@@ -18055,7 +18056,7 @@ function renderDayView() {
   }).join('');
 
   const _dvSelDateObj = new Date(_dvSelectedDate + 'T12:00:00');
-  const _dvSelLabel = _dvSelDateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  _dvSelLabel = _dvSelDateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
 
   const headerHtml = `
   <div style="padding:12px 16px 8px;border-bottom:2px solid #eee;background:#fff;flex-shrink:0">
@@ -18574,6 +18575,13 @@ async function dvSqFetch(url, opts) {
 }
 
 async function dvSquareSync() {
+  try { await _dvSquareSyncInner(); } catch(e) {
+    dvSqShowModal(dvSqErrHtml('Unexpected error', e.message || String(e),
+      'This is a bug — please close and try again.'));
+  }
+}
+
+async function _dvSquareSyncInner() {
   const sq = eodGetSquare();
   if (!sq.token || !sq.locationId) {
     dvSqShowModal(`
@@ -19123,8 +19131,11 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.1.2': [
+    '🐛 Fixed tab-freeze bug — clicking ↓ Square could leave an invisible full-screen modal blocking all clicks; _dvSelLabel promoted to global; entire Square sync wrapped in top-level try/catch so errors always show a dismissible message',
+  ],
   '2.1.1': [
-    '🔧 Cloudflare Worker proxy support — Square API calls now route through your own Worker to bypass browser CORS restrictions; add proxy URL in End of Day → Square settings',
+    '🔧 Cloudflare Worker proxy support — Square sync routes through your own Worker; add proxy URL in End of Day → Square settings',
   ],
   '2.1.0': [
     '🔧 Square sync diagnostics — step-by-step progress; detailed error display with HTTP status and full response body',
