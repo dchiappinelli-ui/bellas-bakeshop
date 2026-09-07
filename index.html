@@ -1023,7 +1023,32 @@
   <p class="subtitle">Define recipes with stages, timings, and skill requirements — this powers the scheduler</p>
 
   <div style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="openBulkImportModal()" style="color:var(--accent);border-color:var(--accent)">📋 Bulk Import from Spreadsheet</button>
     <button class="btn btn-ghost btn-sm" onclick="resetRecipesToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Reset All Recipes to Defaults</button>
+  </div>
+
+  <!-- Bulk Import Modal -->
+  <div id="recipe-bulk-import-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--surface);border-radius:10px;width:100%;max-width:720px;max-height:90vh;overflow:auto;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:17px;font-weight:700">Bulk Import Recipes from Spreadsheet</div>
+        <button onclick="closeBulkImportModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6">
+        <strong style="color:var(--text)">How to paste:</strong> Copy rows from your spreadsheet (Excel or Google Sheets). Expected columns in order:<br>
+        <code style="background:var(--surface);padding:2px 6px;border-radius:3px;font-size:11px">Recipe Name &nbsp;|&nbsp; Ingredient &nbsp;|&nbsp; Quantity &nbsp;|&nbsp; Unit &nbsp;|&nbsp; Cost/Unit</code><br>
+        One ingredient per row. Multiple ingredients for the same recipe = same recipe name repeated. A header row is fine — it will be skipped automatically. Cost/Unit is optional.
+      </div>
+      <textarea id="bulk-import-paste" rows="12"
+        style="width:100%;box-sizing:border-box;font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);resize:vertical"
+        placeholder="Paste your spreadsheet rows here…"></textarea>
+      <div id="bulk-import-preview" style="margin-top:12px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-ghost" onclick="closeBulkImportModal()">Cancel</button>
+        <button class="btn btn-ghost" onclick="parseBulkImport()" style="color:var(--accent);border-color:var(--accent)">Preview Import</button>
+        <button class="btn btn-primary" id="bulk-import-confirm-btn" style="display:none" onclick="confirmBulkImport()">✓ Import All</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -1844,6 +1869,22 @@
       <button onclick="dtHideSchedule()" style="padding:14px 24px;border:2px solid #ccc;border-radius:4px;background:#fff;color:#777;font-size:16px;cursor:pointer">Cancel</button>
       <button onclick="dtConfirmSchedule()" style="padding:14px 32px;background:#111;color:#fff;border:none;border-radius:4px;font-size:18px;font-weight:800;cursor:pointer">⏰ Schedule Batch</button>
     </div>
+  </div>
+</div>
+
+<!-- Dough Timer Library Picker Modal -->
+<div id="dt-library-picker-modal" style="display:none;position:fixed;inset:0;z-index:99985;
+  background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--surface);border-radius:8px;width:100%;max-width:560px;max-height:88vh;
+              display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:17px;font-weight:800">📖 Import from Recipe Library</div>
+      <button onclick="dtCloseLibraryPicker()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="padding:14px 24px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.5">
+      Select a recipe to pre-fill the dough timer editor with its stages. You'll review and adjust everything before saving — no existing timers are changed.
+    </div>
+    <div id="dt-library-list" style="overflow-y:auto;flex:1;padding:12px 16px"></div>
   </div>
 </div>
 
@@ -2853,7 +2894,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.2';
+const APP_VERSION      = '2.1.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2905,6 +2946,25 @@ function migrateSkillStrings() {
   });
   if (sfChanged) localStorage.setItem('bk_staff', JSON.stringify(staff));
 }
+
+// ============ BELLA RECIPES STARTUP MIGRATION (v2.1.3) ============
+(function() {
+  if (localStorage.getItem('bk_recipes_imported_v2')) return;
+  const IMPORTED = [{"id":178882194417,"name":"Olive Oil Cake","category":"Pastry","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194400,"name":"Sugar","quantity":"","unit":"G","costPerUnit":0.00194},{"id":178882194401,"name":"Egg","quantity":"","unit":"G","costPerUnit":0.005754},{"id":178882194402,"name":"Lemon Juice","quantity":"","unit":"G","costPerUnit":0.004874},{"id":178882194403,"name":"Vanilla","quantity":"","unit":"G","costPerUnit":0.015856},{"id":178882194404,"name":"Lemon Zest","quantity":"","unit":"G","costPerUnit":0.004874},{"id":178882194405,"name":"Cake Flour","quantity":"","unit":"G","costPerUnit":0.002116},{"id":178882194406,"name":"Olive Oil","quantity":"","unit":"G","costPerUnit":0.008519}]},{"id":178882194439,"name":"Chocolate Chip","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194418,"name":"Cake Flour","quantity":"241","unit":"G","costPerUnit":0.002116},{"id":178882194419,"name":"Farmer's Ground Multipurpose","quantity":"241","unit":"G","costPerUnit":0.00882},{"id":178882194420,"name":"Baking Soda","quantity":"1.25","unit":"TSP","costPerUnit":0.007582},{"id":178882194421,"name":"Baking Powder","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194422,"name":"Salt","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194423,"name":"Butter","quantity":"282.5","unit":"G","costPerUnit":0.006547},{"id":178882194424,"name":"Brown Sugar","quantity":"284","unit":"G","costPerUnit":0.002028},{"id":178882194425,"name":"Sugar","quantity":"227","unit":"G","costPerUnit":0.00194},{"id":178882194426,"name":"Egg","quantity":"2","unit":"EACH","costPerUnit":0.005754},{"id":178882194427,"name":"Vanilla","quantity":"2","unit":"TSP","costPerUnit":0.015856},{"id":178882194428,"name":"Chocolate","quantity":"567","unit":"G","costPerUnit":0.016735}]},{"id":178882194460,"name":"Bacon Cheddar Scone","category":"Pastry","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194440,"name":"Sir Galahad","quantity":"140","unit":"G","costPerUnit":0.000794},{"id":178882194441,"name":"Sp Flour","quantity":"140","unit":"G","costPerUnit":0.000824},{"id":178882194442,"name":"Baking Powder","quantity":"14","unit":"TSP","costPerUnit":0.007582},{"id":178882194443,"name":"Salt","quantity":"5","unit":"TSP","costPerUnit":0.007582},{"id":178882194444,"name":"Sugar","quantity":"10","unit":"G","costPerUnit":0.00194},{"id":178882194445,"name":"Butter","quantity":"57","unit":"G","costPerUnit":0.006547},{"id":178882194446,"name":"Cheddar Cheese","quantity":"113","unit":"G","costPerUnit":0.008822},{"id":178882194447,"name":"Bacon","quantity":"227","unit":"EACH","costPerUnit":0.011028},{"id":178882194448,"name":"Heavy Cream","quantity":"198","unit":"TSP","costPerUnit":0.005439},{"id":178882194449,"name":"Scallion","quantity":"14","unit":"G","costPerUnit":0.004411}]},{"id":178882194481,"name":"Gluten Free Cookies","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194461,"name":"Gluten Free Flour","quantity":"241","unit":"G","costPerUnit":0.007055},{"id":178882194462,"name":"Baking Soda","quantity":"1.25","unit":"TSP","costPerUnit":0.007582},{"id":178882194463,"name":"Baking Powder","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194464,"name":"Salt","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194465,"name":"Butter","quantity":"282.5","unit":"G","costPerUnit":0.006547},{"id":178882194466,"name":"Brown Sugar","quantity":"284","unit":"G","costPerUnit":0.002028},{"id":178882194467,"name":"Sugar","quantity":"227","unit":"G","costPerUnit":0.00194},{"id":178882194468,"name":"Egg","quantity":"2","unit":"EACH","costPerUnit":0.005754},{"id":178882194469,"name":"Vanilla","quantity":"2","unit":"TSP","costPerUnit":0.015856},{"id":178882194470,"name":"Chocolate","quantity":"567","unit":"G","costPerUnit":0.016735}]},{"id":178882194503,"name":"Brownie","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194482,"name":"Sir Galahad","quantity":"130","unit":"G","costPerUnit":0.000794},{"id":178882194483,"name":"Baking Powder","quantity":"5","unit":"G","costPerUnit":0.007582},{"id":178882194484,"name":"Salt","quantity":"2","unit":"G","costPerUnit":0.007582},{"id":178882194485,"name":"Butter","quantity":"170","unit":"G","costPerUnit":0.006547},{"id":178882194486,"name":"Brown Sugar","quantity":"395","unit":"G","costPerUnit":0.002028},{"id":178882194487,"name":"Egg","quantity":"280","unit":"G","costPerUnit":0.005754},{"id":178882194488,"name":"Vanilla","quantity":"5","unit":"G","costPerUnit":0.015856},{"id":178882194489,"name":"Chocolate","quantity":"455","unit":"G","costPerUnit":0.016735}]},{"id":178882194545,"name":"Almond Lemon","category":"Pastry","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194522,"name":"Cake Flour","quantity":"1140","unit":"G","costPerUnit":0.002116},{"id":178882194523,"name":"Almond Flour","quantity":"1200","unit":"G","costPerUnit":0.012},{"id":178882194524,"name":"Lemon Zest","quantity":"60","unit":"G","costPerUnit":0.004874},{"id":178882194525,"name":"Orange Zest","quantity":"60","unit":"G","costPerUnit":0.002384},{"id":178882194526,"name":"Egg","quantity":"3360","unit":"G","costPerUnit":0.005754},{"id":178882194527,"name":"Vanilla","quantity":"80","unit":"G","costPerUnit":0.015856},{"id":178882194528,"name":"Baking Powder","quantity":"24","unit":"G","costPerUnit":0.007582},{"id":178882194529,"name":"Butter","quantity":"2700","unit":"G","costPerUnit":0.006547},{"id":178882194530,"name":"Sugar","quantity":"960","unit":"G","costPerUnit":0.00194},{"id":178882194531,"name":"Salt","quantity":"24","unit":"G","costPerUnit":0.007582}]},{"id":178882194568,"name":"Gluten Free Cookie","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194546,"name":"Gluten Free Flour","quantity":"6200","unit":"G","costPerUnit":0.007055},{"id":178882194547,"name":"Baking Soda","quantity":"50","unit":"G","costPerUnit":0.007582},{"id":178882194548,"name":"Salt","quantity":"70","unit":"G","costPerUnit":0.007582},{"id":178882194549,"name":"Butter","quantity":"4200","unit":"G","costPerUnit":0.006547},{"id":178882194550,"name":"Brown Sugar","quantity":"3400","unit":"G","costPerUnit":0.002028},{"id":178882194551,"name":"Sugar","quantity":"3400","unit":"G","costPerUnit":0.00194},{"id":178882194552,"name":"Egg","quantity":"2140","unit":"G","costPerUnit":0.005754},{"id":178882194553,"name":"Vanilla","quantity":"120","unit":"G","costPerUnit":0.015856},{"id":178882194554,"name":"Chocolate","quantity":"6000","unit":"G","costPerUnit":0.016735}]},{"id":178882194591,"name":"Chocolate Walnut Cookie","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194569,"name":"Cake Flour","quantity":"241","unit":"G","costPerUnit":0.002116},{"id":178882194570,"name":"Sp Flour","quantity":"241","unit":"G","costPerUnit":0.000824},{"id":178882194571,"name":"Baking Soda","quantity":"1.25","unit":"TSP","costPerUnit":0.007582},{"id":178882194572,"name":"Baking Powder","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194573,"name":"Salt","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194574,"name":"Butter","quantity":"282.5","unit":"G","costPerUnit":0.006547},{"id":178882194575,"name":"Brown Sugar","quantity":"284","unit":"G","costPerUnit":0.002028},{"id":178882194576,"name":"Sugar","quantity":"227","unit":"G","costPerUnit":0.00194},{"id":178882194577,"name":"Egg","quantity":"2","unit":"EACH","costPerUnit":0.005754},{"id":178882194578,"name":"Vanilla","quantity":"2","unit":"TSP","costPerUnit":0.015856},{"id":178882194579,"name":"Chocolate","quantity":"567","unit":"G","costPerUnit":0.016735},{"id":178882194580,"name":"Walnut","quantity":"","unit":"G","costPerUnit":0.008158}]},{"id":178882194614,"name":"Raspberry White Chocolate","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194592,"name":"Cake Flour","quantity":"241","unit":"G","costPerUnit":0.002116},{"id":178882194593,"name":"Sp Flour","quantity":"241","unit":"G","costPerUnit":0.000824},{"id":178882194594,"name":"Baking Soda","quantity":"1.25","unit":"TSP","costPerUnit":0.007582},{"id":178882194595,"name":"Baking Powder","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194596,"name":"Salt","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194597,"name":"Butter","quantity":"282.5","unit":"G","costPerUnit":0.006547},{"id":178882194598,"name":"Brown Sugar","quantity":"284","unit":"G","costPerUnit":0.002028},{"id":178882194599,"name":"Sugar","quantity":"227","unit":"G","costPerUnit":0.00194},{"id":178882194600,"name":"Egg","quantity":"2","unit":"EACH","costPerUnit":0.005754},{"id":178882194601,"name":"Vanilla","quantity":"2","unit":"TSP","costPerUnit":0.015856},{"id":178882194602,"name":"White Chocolate","quantity":"","unit":"G","costPerUnit":0.0344},{"id":178882194603,"name":"Raspberries","quantity":"","unit":"G","costPerUnit":0.010905}]},{"id":178882194637,"name":"Double Chocolate Chip","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194615,"name":"Cake Flour","quantity":"241","unit":"G","costPerUnit":0.002116},{"id":178882194616,"name":"Sp Flour","quantity":"241","unit":"G","costPerUnit":0.000824},{"id":178882194617,"name":"Baking Soda","quantity":"1.25","unit":"TSP","costPerUnit":0.007582},{"id":178882194618,"name":"Baking Powder","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194619,"name":"Salt","quantity":"1.5","unit":"TSP","costPerUnit":0.007582},{"id":178882194620,"name":"Butter","quantity":"282.5","unit":"G","costPerUnit":0.006547},{"id":178882194621,"name":"Brown Sugar","quantity":"284","unit":"G","costPerUnit":0.002028},{"id":178882194622,"name":"Sugar","quantity":"227","unit":"G","costPerUnit":0.00194},{"id":178882194623,"name":"Egg","quantity":"2","unit":"EACH","costPerUnit":0.005754},{"id":178882194624,"name":"Vanilla","quantity":"2","unit":"TSP","costPerUnit":0.015856},{"id":178882194625,"name":"Chocolate","quantity":"567","unit":"G","costPerUnit":0.016735},{"id":178882194626,"name":"Walnut","quantity":"","unit":"G","costPerUnit":0.008158}]},{"id":178882194700,"name":"Sourdough","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194681,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194682,"name":"Flour 1","quantity":"0.65","unit":"G","costPerUnit":0.000794},{"id":178882194683,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.000847},{"id":178882194684,"name":"Flour 3","quantity":"0","unit":"G","costPerUnit":0.001069},{"id":178882194685,"name":"Levain","quantity":"0.8","unit":"G","costPerUnit":0.000847},{"id":178882194686,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194721,"name":"Class Sourdough","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194702,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194703,"name":"Flour 1","quantity":"0.65","unit":"G","costPerUnit":0.000794},{"id":178882194704,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.000847},{"id":178882194705,"name":"Flour 3","quantity":"0","unit":"G","costPerUnit":0.001069},{"id":178882194706,"name":"Levain","quantity":"0.8","unit":"G","costPerUnit":0.000847},{"id":178882194707,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194742,"name":"Organic Sourdough","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194723,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194724,"name":"Flour 1","quantity":"0.65","unit":"G","costPerUnit":0.002533},{"id":178882194725,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.002618},{"id":178882194726,"name":"Flour 3","quantity":"0","unit":"G","costPerUnit":0.001069},{"id":178882194727,"name":"Levain","quantity":"0.8","unit":"G","costPerUnit":0.000847},{"id":178882194728,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194762,"name":"Master Sourdough","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194744,"name":"Water","quantity":"0.6","unit":"G","costPerUnit":0},{"id":178882194745,"name":"Flour 1","quantity":"0.63","unit":"G","costPerUnit":0.002293},{"id":178882194746,"name":"Flour 2","quantity":"0.37","unit":"G","costPerUnit":0.002293},{"id":178882194747,"name":"Levain","quantity":"0.8","unit":"G","costPerUnit":0.002293},{"id":178882194748,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194782,"name":"Master Baguette","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194764,"name":"Water","quantity":"0.6","unit":"G","costPerUnit":0},{"id":178882194765,"name":"Flour 1","quantity":"0.63","unit":"G","costPerUnit":0.002293},{"id":178882194766,"name":"Flour 2","quantity":"0.37","unit":"G","costPerUnit":0.002293},{"id":178882194767,"name":"Levain","quantity":"0.8","unit":"G","costPerUnit":0.002293},{"id":178882194768,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194803,"name":"Baguette","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194783,"name":"Water","quantity":"0.55","unit":"G","costPerUnit":0},{"id":178882194784,"name":"Flour 1","quantity":"0.65","unit":"G","costPerUnit":0.000794},{"id":178882194785,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.000847},{"id":178882194786,"name":"Flour 3","quantity":"0","unit":"G","costPerUnit":0},{"id":178882194787,"name":"Poolish","quantity":"0.4","unit":"G","costPerUnit":0.000847},{"id":178882194788,"name":"Levain","quantity":"0.4","unit":"G","costPerUnit":0.000847},{"id":178882194789,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194820,"name":"Ciabatta","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194804,"name":"Water","quantity":"0.85","unit":"G","costPerUnit":0},{"id":178882194805,"name":"Flour 1","quantity":"0.25","unit":"G","costPerUnit":0.000794},{"id":178882194806,"name":"Flour 2","quantity":"0.75","unit":"G","costPerUnit":0.000847},{"id":178882194807,"name":"Flour 3","quantity":"0.01","unit":"G","costPerUnit":0.002618},{"id":178882194808,"name":"Levain","quantity":"0.32","unit":"G","costPerUnit":0.000847},{"id":178882194809,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194841,"name":"Bagels","category":"Bagel","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194821,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194822,"name":"Flour 1","quantity":"0.65","unit":"G","costPerUnit":0.002469},{"id":178882194823,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.00366},{"id":178882194824,"name":"Malted Barley","quantity":"0.03","unit":"G","costPerUnit":0.002618},{"id":178882194825,"name":"Levain","quantity":"0.8","unit":"G","costPerUnit":0.00366},{"id":178882194826,"name":"Poolish","quantity":"0.4","unit":"G","costPerUnit":0.000847},{"id":178882194827,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582}]},{"id":178882194863,"name":"Olive Loaf","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194842,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194843,"name":"Flour 1","quantity":"0.55","unit":"G","costPerUnit":0.000794},{"id":178882194844,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.000847},{"id":178882194845,"name":"Flour 3","quantity":"0.1","unit":"G","costPerUnit":0.001069},{"id":178882194846,"name":"Levain","quantity":"0.4","unit":"G","costPerUnit":0.000824},{"id":178882194847,"name":"Poolish","quantity":"0.4","unit":"G","costPerUnit":0.000794},{"id":178882194848,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582},{"id":178882194849,"name":"Olives","quantity":"","unit":"G","costPerUnit":0.015}]},{"id":178882194885,"name":"Organic Olive Loaf","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194864,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194865,"name":"Flour 1","quantity":"0.55","unit":"G","costPerUnit":0.000794},{"id":178882194866,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.000847},{"id":178882194867,"name":"Flour 3","quantity":"0.1","unit":"G","costPerUnit":0.001069},{"id":178882194868,"name":"Levain","quantity":"0.4","unit":"G","costPerUnit":0.000824},{"id":178882194869,"name":"Poolish","quantity":"0.4","unit":"G","costPerUnit":0.000794},{"id":178882194870,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582},{"id":178882194871,"name":"Olives","quantity":"","unit":"G","costPerUnit":0.015}]},{"id":178882194907,"name":"Cranberry Walnut","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194886,"name":"Water","quantity":"0.5","unit":"G","costPerUnit":0},{"id":178882194887,"name":"Flour 1","quantity":"0.55","unit":"G","costPerUnit":0.000794},{"id":178882194888,"name":"Flour 2","quantity":"0.35","unit":"G","costPerUnit":0.000847},{"id":178882194889,"name":"Flour 3","quantity":"0.1","unit":"G","costPerUnit":0.001069},{"id":178882194890,"name":"Levain","quantity":"0.4","unit":"G","costPerUnit":0.000824},{"id":178882194891,"name":"Poolish","quantity":"0.4","unit":"G","costPerUnit":0.000794},{"id":178882194892,"name":"Salt","quantity":"0.03","unit":"G","costPerUnit":0.007582},{"id":178882194893,"name":"Walnuts","quantity":"","unit":"G","costPerUnit":0.008158}]},{"id":178882194921,"name":"Cannoli","category":"Pastry","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194908,"name":"Ricotta","quantity":"900","unit":"G","costPerUnit":0.009365},{"id":178882194909,"name":"Sugar","quantity":"300","unit":"G","costPerUnit":0.00194},{"id":178882194910,"name":"Shells","quantity":"","unit":"G","costPerUnit":0}]},{"id":178882194942,"name":"Biscotti","category":"Cookie / Bar","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194922,"name":"Cake Flour","quantity":"169","unit":"G","costPerUnit":0.002116},{"id":178882194923,"name":"Sp Flour","quantity":"169","unit":"G","costPerUnit":0.000824},{"id":178882194924,"name":"Baking Powder","quantity":"10","unit":"G","costPerUnit":0.007582},{"id":178882194925,"name":"Salt","quantity":"2","unit":"G","costPerUnit":0.007582},{"id":178882194926,"name":"Butter","quantity":"113","unit":"G","costPerUnit":0.006547},{"id":178882194927,"name":"Sugar","quantity":"198","unit":"G","costPerUnit":0.00194},{"id":178882194928,"name":"Egg","quantity":"","unit":"G","costPerUnit":0.005754},{"id":178882194929,"name":"Vanilla","quantity":"12","unit":"G","costPerUnit":0.015856},{"id":178882194930,"name":"Chocolate","quantity":"","unit":"G","costPerUnit":0},{"id":178882194931,"name":"Walnuts","quantity":"","unit":"G","costPerUnit":0}]},{"id":178882194963,"name":"Burger Bun","category":"Bread","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194943,"name":"Water","quantity":"","unit":"G","costPerUnit":0},{"id":178882194944,"name":"Butter","quantity":"","unit":"G","costPerUnit":0},{"id":178882194945,"name":"Egg","quantity":"","unit":"G","costPerUnit":0},{"id":178882194946,"name":"AP Flour","quantity":"","unit":"G","costPerUnit":0.000794},{"id":178882194947,"name":"Sugar","quantity":"","unit":"G","costPerUnit":0},{"id":178882194948,"name":"Salt","quantity":"","unit":"G","costPerUnit":0},{"id":178882194949,"name":"Instant Dry Yeast","quantity":"","unit":"G","costPerUnit":0}]},{"id":178882194980,"name":"Crobun Cream Cheese Glaze","category":"Croissant","yield":"","notes":"","batchCapacity":0,"stages":[],"ingredients":[{"id":178882194964,"name":"Cream Cheese","quantity":"570","unit":"G","costPerUnit":0},{"id":178882194965,"name":"Butter","quantity":"140","unit":"G","costPerUnit":0.006547},{"id":178882194966,"name":"Vanilla","quantity":"75","unit":"G","costPerUnit":0.015856},{"id":178882194967,"name":"Salt","quantity":"8","unit":"G","costPerUnit":0},{"id":178882194968,"name":"Lemon Juice","quantity":"25","unit":"G","costPerUnit":0.004874},{"id":178882194969,"name":"Powdered Sugar","quantity":"1000","unit":"G","costPerUnit":0.002028}]}];
+  const existing = JSON.parse(localStorage.getItem('bk_recipes') || '[]');
+  const existingNames = new Set(existing.map(r => r.name.toLowerCase()));
+  let added = 0;
+  IMPORTED.forEach(r => {
+    if (!existingNames.has(r.name.toLowerCase())) {
+      existing.push(r);
+      added++;
+    }
+  });
+  localStorage.setItem('bk_recipes', JSON.stringify(existing));
+  localStorage.setItem('bk_recipes_imported_v2', '1');
+  if (added > 0) console.log('[Bella] Recipe import: added ' + added + ' recipes');
+})();
+// ============ END BELLA RECIPES STARTUP MIGRATION ============
 
 // ============ DATA STORE ============
 let recipes = JSON.parse(localStorage.getItem('bk_recipes') || '[]');
@@ -3785,6 +3845,147 @@ function updateStage(recipeId, stageId, field, val) {
   if (wpill) wpill.textContent = `${totalWait}m wait`;
 }
 
+// ============ INGREDIENT CRUD ============
+function addIngredient(recipeId) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r) return;
+  const name = (document.getElementById(`ing-name-${recipeId}`)?.value || '').trim();
+  if (!name) return;
+  if (!r.ingredients) r.ingredients = [];
+  r.ingredients.push({
+    id: Date.now() + Math.random(),
+    name,
+    quantity: (document.getElementById(`ing-qty-${recipeId}`)?.value || '').trim(),
+    unit:     (document.getElementById(`ing-unit-${recipeId}`)?.value || '').trim(),
+    costPerUnit: parseFloat(document.getElementById(`ing-cost-${recipeId}`)?.value) || 0
+  });
+  save();
+  renderRecipes();
+  setTimeout(() => toggleRecipe(recipeId), 30);
+}
+
+function deleteIngredient(recipeId, ingId) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r || !r.ingredients) return;
+  r.ingredients = r.ingredients.filter(i => i.id !== ingId);
+  save();
+  renderRecipes();
+  setTimeout(() => toggleRecipe(recipeId), 30);
+}
+
+function updateIngredient(recipeId, ingId, field, val) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r || !r.ingredients) return;
+  const ing = r.ingredients.find(i => i.id === ingId);
+  if (!ing) return;
+  ing[field] = val;
+  save();
+}
+
+// ============ BULK IMPORT ============
+let _bulkImportData = null;
+
+function openBulkImportModal() {
+  const m = document.getElementById('recipe-bulk-import-modal');
+  m.style.display = 'flex';
+  document.getElementById('bulk-import-paste').value = '';
+  document.getElementById('bulk-import-preview').innerHTML = '';
+  document.getElementById('bulk-import-confirm-btn').style.display = 'none';
+  _bulkImportData = null;
+}
+
+function closeBulkImportModal() {
+  document.getElementById('recipe-bulk-import-modal').style.display = 'none';
+}
+
+function parseBulkImport() {
+  const raw = document.getElementById('bulk-import-paste').value.trim();
+  if (!raw) { document.getElementById('bulk-import-preview').innerHTML = '<p style="color:var(--danger);font-size:13px">Nothing pasted yet.</p>'; return; }
+
+  const lines = raw.split(/\r?\n/).filter(l => l.trim());
+  const parsed = [];
+  const headerKeywords = ['recipe','ingredient','qty','quantity','unit','cost'];
+  let skipFirst = false;
+  if (lines.length > 0) {
+    const first = lines[0].toLowerCase();
+    skipFirst = headerKeywords.some(k => first.includes(k));
+  }
+
+  (skipFirst ? lines.slice(1) : lines).forEach(line => {
+    const cols = line.split(/\t/).map(c => c.trim());
+    if (cols.length < 2) return;
+    const [recipeName, ingredientName, quantity, unit, costPerUnit] = cols;
+    if (!recipeName || !ingredientName) return;
+    parsed.push({ recipeName, ingredientName, quantity: quantity||'', unit: unit||'', costPerUnit: parseFloat(costPerUnit)||0 });
+  });
+
+  if (!parsed.length) {
+    document.getElementById('bulk-import-preview').innerHTML = '<p style="color:var(--danger);font-size:13px">Could not parse any rows. Make sure columns are tab-separated (paste directly from Excel/Sheets).</p>';
+    return;
+  }
+
+  // Group by recipe name
+  const grouped = {};
+  parsed.forEach(row => {
+    if (!grouped[row.recipeName]) grouped[row.recipeName] = [];
+    grouped[row.recipeName].push({ name: row.ingredientName, quantity: row.quantity, unit: row.unit, costPerUnit: row.costPerUnit });
+  });
+
+  _bulkImportData = grouped;
+  const names = Object.keys(grouped);
+  const existing = names.filter(n => recipes.some(r => r.name.toLowerCase() === n.toLowerCase()));
+  const isNew    = names.filter(n => !recipes.some(r => r.name.toLowerCase() === n.toLowerCase()));
+
+  let html = `<div style="font-size:13px;margin-bottom:8px">Found <strong>${names.length} recipes</strong> · <strong>${parsed.length} ingredients</strong></div>`;
+  if (existing.length) html += `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">These recipes already exist — ingredients will be <strong>merged</strong> (added): ${existing.map(n=>`<em>${n}</em>`).join(', ')}</div>`;
+  if (isNew.length)    html += `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">New recipes to create: ${isNew.map(n=>`<em>${n}</em>`).join(', ')}</div>`;
+
+  html += `<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--surface2);position:sticky;top:0">
+        <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Recipe</th>
+        <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Ingredient</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Qty</th>
+        <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Unit</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">$/Unit</th>
+      </tr></thead>
+      <tbody>`;
+  parsed.forEach((row, i) => {
+    html += `<tr style="${i%2===0?'':'background:var(--surface2)'}">
+      <td style="padding:4px 8px;color:var(--accent)">${row.recipeName}</td>
+      <td style="padding:4px 8px">${row.ingredientName}</td>
+      <td style="padding:4px 8px;text-align:right">${row.quantity}</td>
+      <td style="padding:4px 8px">${row.unit}</td>
+      <td style="padding:4px 8px;text-align:right">${row.costPerUnit||''}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  document.getElementById('bulk-import-preview').innerHTML = html;
+  document.getElementById('bulk-import-confirm-btn').style.display = 'inline-flex';
+}
+
+function confirmBulkImport() {
+  if (!_bulkImportData) return;
+  const names = Object.keys(_bulkImportData);
+  names.forEach(recipeName => {
+    const ings = _bulkImportData[recipeName];
+    let r = recipes.find(x => x.name.toLowerCase() === recipeName.toLowerCase());
+    if (!r) {
+      r = { id: Date.now() + Math.random(), name: recipeName, category: 'Other', yield: '', notes: '', batchCapacity: 0, stages: [], ingredients: [] };
+      recipes.push(r);
+    }
+    if (!r.ingredients) r.ingredients = [];
+    ings.forEach(ing => {
+      r.ingredients.push({ id: Date.now() + Math.random(), name: ing.name, quantity: ing.quantity, unit: ing.unit, costPerUnit: ing.costPerUnit });
+    });
+  });
+  save();
+  renderRecipes();
+  closeBulkImportModal();
+  alert(`Imported ${names.length} recipes with ingredients!`);
+}
+
 function renderRecipes() {
   const el = document.getElementById('recipe-list');
   const empty = document.getElementById('recipe-empty');
@@ -3890,8 +4091,110 @@ function renderRecipes() {
                 onchange="updateRecipe(${r.id},'notes',this.value)">
             </div>
           </div>
-        </div>`
+        </div>
+        ${recipeIngredientsHtml(r)}
+        ${recipeCostSummaryHtml(r)}`
     + recipeStagesHtml(r, SKILLS);
+  }
+
+  function recipeIngredientsHtml(r) {
+    const ings = r.ingredients || [];
+    const rows = ings.map(ing => `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 6px">
+          <input type="text" value="${(ing.name||'').replace(/"/g,'&quot;')}"
+            style="width:100%;background:transparent;border:none;font-size:13px;color:var(--text)"
+            onchange="updateIngredient(${r.id},${ing.id},'name',this.value)">
+        </td>
+        <td style="padding:5px 6px;text-align:right">
+          <input type="text" value="${ing.quantity||''}"
+            style="width:70px;background:transparent;border:none;font-size:13px;color:var(--text);text-align:right"
+            onchange="updateIngredient(${r.id},${ing.id},'quantity',this.value)">
+        </td>
+        <td style="padding:5px 6px">
+          <input type="text" value="${ing.unit||''}"
+            style="width:55px;background:transparent;border:none;font-size:13px;color:var(--text)"
+            onchange="updateIngredient(${r.id},${ing.id},'unit',this.value)">
+        </td>
+        <td style="padding:5px 6px;text-align:right">
+          <input type="number" min="0" step="0.01" value="${ing.costPerUnit||''}"
+            placeholder="0.00"
+            style="width:70px;background:transparent;border:none;font-size:13px;color:var(--text);text-align:right"
+            onchange="updateIngredient(${r.id},${ing.id},'costPerUnit',parseFloat(this.value)||0)">
+        </td>
+        <td style="padding:5px 6px;text-align:right;color:var(--muted);font-size:12px">
+          ${(ing.quantity && ing.costPerUnit) ? '$'+((parseFloat(ing.quantity)||0)*(parseFloat(ing.costPerUnit)||0)).toFixed(2) : '—'}
+        </td>
+        <td style="padding:5px 4px;text-align:center">
+          <button onclick="deleteIngredient(${r.id},${ing.id})"
+            style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;line-height:1">✕</button>
+        </td>
+      </tr>`).join('');
+    return `
+      <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-label">Ingredients</div>
+          <span style="font-size:11px;color:var(--muted)">${ings.length} ingredient${ings.length!==1?'s':''}</span>
+        </div>
+        ${ings.length > 0 ? `
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:4px 6px">Ingredient</th>
+              <th style="text-align:right;padding:4px 6px;width:80px">Qty</th>
+              <th style="text-align:left;padding:4px 6px;width:60px">Unit</th>
+              <th style="text-align:right;padding:4px 6px;width:80px">$/Unit</th>
+              <th style="text-align:right;padding:4px 6px;width:80px">Cost</th>
+              <th style="width:30px"></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">No ingredients yet</div>'}
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <input type="text" id="ing-name-${r.id}" placeholder="Ingredient name" style="flex:2;min-width:120px;font-size:12px">
+          <input type="text" id="ing-qty-${r.id}" placeholder="Qty" style="width:60px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
+          <input type="text" id="ing-unit-${r.id}" placeholder="Unit" style="width:55px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
+          <input type="number" id="ing-cost-${r.id}" placeholder="$/Unit" min="0" step="0.01" style="width:70px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
+          <button class="btn btn-ghost btn-sm" onclick="addIngredient(${r.id})">+ Add</button>
+        </div>
+      </div>`;
+  }
+
+  function recipeCostSummaryHtml(r) {
+    const ings = r.ingredients || [];
+    const ingCost = ings.reduce((sum, ing) => sum + (parseFloat(ing.quantity)||0)*(parseFloat(ing.costPerUnit)||0), 0);
+    const totalActiveMins = r.stages.reduce((s, x) => s + (x.activeMins||0), 0);
+    const laborRate = r.laborRatePerHour || 18;
+    const laborCost = (totalActiveMins / 60) * laborRate;
+    const totalCost = ingCost + laborCost;
+    if (ingCost === 0 && laborCost === 0) return '';
+    return `
+      <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-label">Cost per Batch</div>
+          <div style="font-size:13px;color:var(--muted)">Labor rate:
+            <input type="number" min="0" step="1" value="${laborRate}"
+              style="width:50px;background:transparent;border:none;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);text-align:right"
+              onchange="updateRecipe(${r.id},'laborRatePerHour',parseFloat(this.value)||18);renderRecipes();setTimeout(()=>toggleRecipe(${r.id}),30)"
+            > $/hr
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ingredients</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text)">$${ingCost.toFixed(2)}</div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Labor (${totalActiveMins}m active)</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text)">$${laborCost.toFixed(2)}</div>
+          </div>
+          <div style="flex:1;min-width:120px;background:var(--accent);border-radius:6px;padding:8px 14px">
+            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Total / Batch</div>
+            <div style="font-size:22px;font-weight:700;color:#fff">$${totalCost.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>`;
   }
 
   function recipeStagesHtml(r, SKILLS) {
@@ -13813,7 +14116,10 @@ function renderDoughTimer() {
   }).join('') +
   `<button onclick="dtNewRecipe()"
      style="padding:18px 22px;border:3px dashed #ccc;border-radius:4px;background:#fff;
-            color:#888;font-size:17px;font-weight:600;cursor:pointer;min-height:64px">+ New</button>`;
+            color:#888;font-size:17px;font-weight:600;cursor:pointer;min-height:64px">+ New</button>
+   <button onclick="dtOpenLibraryPicker()"
+     style="padding:18px 22px;border:3px dashed var(--accent);border-radius:4px;background:#fff;
+            color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;min-height:64px;white-space:nowrap">📖 From Library</button>`;
 
   // — Alerts —
   const alertEl = document.getElementById('dt-alerts');
@@ -14252,6 +14558,90 @@ function dtEditorDelete() {
   dtHideEditor();
   renderDoughTimer();
 }
+// — Recipe Library Picker —
+function dtOpenLibraryPicker() {
+  const libRecipes = JSON.parse(localStorage.getItem('bk_recipes') || '[]')
+    .filter(r => r.active !== false);
+  const el = document.getElementById('dt-library-list');
+  if (!el) return;
+
+  const CAT_ORDER = ['Bread','Croissant','Bagel','Pastry','Cookie / Bar','Savory','Other'];
+  const byCategory = {};
+  CAT_ORDER.forEach(c => byCategory[c] = []);
+  libRecipes.forEach(r => {
+    const cat = CAT_ORDER.includes(r.category) ? r.category : 'Other';
+    byCategory[cat].push(r);
+  });
+
+  let html = '';
+  CAT_ORDER.forEach(cat => {
+    if (!byCategory[cat].length) return;
+    html += `<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--muted);padding:8px 8px 4px;margin-top:4px">${cat}</div>`;
+    byCategory[cat].forEach(r => {
+      const stageCount = (r.stages || []).length;
+      const ingCount = (r.ingredients || []).length;
+      const totalMins = (r.stages || []).reduce((s,st) => s + (st.activeMins||0) + (st.waitMins||0), 0);
+      const timeLabel = totalMins >= 60
+        ? `${Math.floor(totalMins/60)}h ${totalMins%60?totalMins%60+'m':''}`
+        : totalMins ? `${totalMins}m` : '';
+      html += `<div onclick="dtImportFromLibrary(${r.id})"
+        style="display:flex;align-items:center;justify-content:space-between;
+          padding:12px 14px;border-radius:6px;cursor:pointer;margin-bottom:4px;
+          border:1px solid var(--border);background:var(--surface2)"
+        onmouseover="this.style.background='var(--surface3,var(--surface))'"
+        onmouseout="this.style.background='var(--surface2)'">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${r.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            ${stageCount} stage${stageCount!==1?'s':''} ${timeLabel ? '· '+timeLabel : ''} ${ingCount ? '· '+ingCount+' ingredients' : ''}
+            ${r.yield ? '· '+r.yield : ''}
+          </div>
+        </div>
+        <div style="font-size:20px;color:var(--muted)">→</div>
+      </div>`;
+    });
+  });
+
+  if (!html) html = '<div style="color:var(--muted);font-size:13px;padding:16px">No recipes in the Recipe Library yet. Add recipes there first.</div>';
+  el.innerHTML = html;
+  document.getElementById('dt-library-picker-modal').style.display = 'flex';
+}
+
+function dtCloseLibraryPicker() {
+  document.getElementById('dt-library-picker-modal').style.display = 'none';
+}
+
+function dtImportFromLibrary(recipeId) {
+  const libRecipes = JSON.parse(localStorage.getItem('bk_recipes') || '[]');
+  const r = libRecipes.find(x => x.id === recipeId);
+  if (!r) return;
+  dtCloseLibraryPicker();
+
+  const stages = r.stages || [];
+  let steps;
+  if (stages.length > 0) {
+    steps = stages.map((s, i) => ({
+      id: 'step_' + Date.now() + '_' + i,
+      name: s.name,
+      duration: Math.max(1, (s.activeMins || 0) + (s.waitMins || 0)),
+      type: (s.waitMins > 0 && (s.activeMins || 0) === 0) ? 'wait' : 'active',
+      manualStart: false
+    }));
+  } else {
+    // No stages — create a single placeholder step for the baker to fill in
+    steps = [{ id: 'step_' + Date.now(), name: r.name + ' — Step 1', duration: 30, type: 'active', manualStart: false }];
+  }
+
+  _dtEditingRecipe = {
+    id: 'dr_' + Date.now(),
+    name: r.name,
+    steps,
+    _sourceRecipeId: r.id
+  };
+  dtShowEditor();
+}
+
 function dtDuplicateRecipe() {
   if (!_dtEditingRecipe) return;
   // Save current edits first so we don't lose them, then open fresh copy
@@ -19131,6 +19521,13 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.1.4': [
+    '⏱ Dough Timer — "📖 From Library" button lets you pick any recipe from the Recipe Library and import its stages as suggested timer steps; review and edit in the normal step editor before saving',
+  ],
+  '2.1.3': [
+    '🧾 Recipe Costing — each recipe now has an Ingredients table with Qty, Unit, and $/Unit; ingredient cost + labor cost = Total Cost per Batch shown automatically',
+    '📋 Bulk Import — paste rows from Excel/Google Sheets to import recipes & ingredients at once (Recipe | Ingredient | Qty | Unit | $/Unit)',
+  ],
   '2.1.2': [
     '🐛 Fixed tab-freeze bug — clicking ↓ Square could leave an invisible full-screen modal blocking all clicks; _dvSelLabel promoted to global; entire Square sync wrapped in top-level try/catch so errors always show a dismissible message',
   ],
