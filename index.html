@@ -20,6 +20,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Great+Vibes&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap');
 
@@ -1993,6 +1994,10 @@
         <option value="">— Not linked —</option>
       </select>
       <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:8px">Production Phase
+        <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — controls sort order)</span></label>
+      <div id="wp-phase-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px"></div>
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
         letter-spacing:1px;color:#777;margin-bottom:8px">Category
         <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
       <div id="wp-cat-picker" style="display:flex;flex-wrap:wrap;gap:7px"></div>
@@ -2775,6 +2780,24 @@
 <!-- ======== SCRIPT ======== -->
 <script>
 
+// SOURCE: prelude.js
+// Existing browser data remains untouched until staff explicitly choose to save it.
+window.bakerySession = null;
+window.bakeryAccess = {};
+if (!localStorage.getItem('bk_pre_secure_backup')) {
+  const snapshot = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('bk_')) snapshot[key] = localStorage.getItem(key);
+  }
+  try { localStorage.setItem('bk_pre_secure_backup', JSON.stringify(snapshot)); }
+  catch (e) { alert('Browser backup could not be saved. Export a full backup before using this upgrade.'); throw e; }
+}
+
+
+// SOURCE: core.js
+
+
 // ============ DAILY STATUS SYSTEM ============
 function _dsToday() { return new Date().toISOString().slice(0,10); }
 function _dsTodayLocale() {
@@ -2894,7 +2917,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.4';
+const APP_VERSION      = '2.1.5';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2995,11 +3018,6 @@ const defaultRoleSlots = [
 ];
 
 let staff = JSON.parse(localStorage.getItem('bk_staff') || 'null') || defaultStaff;
-// Ensure David (owner) always exists — add only if missing, don't rewrite the whole list
-if (!staff.find(s => s.id === 's0')) {
-  staff.unshift({ id:'s0', name:'David', title:'Owner', color:'#c4a44a', initials:'DC', hourlyRate:0, role:'Owner', email:'david@bellasbakeshop.com', taskOverrides:{} });
-  localStorage.setItem('bk_staff', JSON.stringify(staff));
-}
 function saveStaff() { localStorage.setItem('bk_staff', JSON.stringify(staff)); }
 
 let roleSlots = JSON.parse(localStorage.getItem('bk_role_slots') || 'null') || defaultRoleSlots;
@@ -3327,7 +3345,7 @@ function renderStaffPage() {
             <div style="display:flex;align-items:center;gap:8px">
               <span style="width:8px;height:8px;border-radius:50%;background:${hasPin?'#2e7d52':'#b87000'};display:inline-block;flex-shrink:0"></span>
               <span style="font-size:12px;font-weight:700;color:${hasPin?'#2e7d52':'#b87000'}">${hasPin ? 'Active' : 'No PIN — cannot log in'}</span>
-              ${hasPin ? `<span style="font-family:monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 10px">${pin}</span>` : ''}
+              ${hasPin ? `<span style="font-family:monospace;font-size:14px;font-weight:900;letter-spacing:3px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 10px">••••</span>` : ''}
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="authSetPin('${m.id}');renderStaffPage()"
@@ -3487,6 +3505,8 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 function showDeployChecklist() {
+  alert('This upgrade needs a staged server and staff-access migration before publishing. Use the reviewed ROLLOUT.md procedure supplied with the app. Do not publish just this HTML file.');
+  return;
   // Reset check states
   [1,2,3,4].forEach(n => {
     const el = document.getElementById('deploy-check-' + n);
@@ -3562,7 +3582,7 @@ function handleImportBackupFile(fileInput) {
       return;
     }
     const data = (parsed && parsed.data) ? parsed.data : parsed;
-    const keys = Object.keys(data || {}).filter(k => k.startsWith(BACKUP_KEY_PREFIX));
+    const keys = Object.keys(data || {}).filter(k => k.startsWith(BACKUP_KEY_PREFIX) && !/^bk_(outbox_|archived_draft_|pre_secure_backup|auth_session|staff_pins|ts_)/.test(k));
     if (keys.length === 0) {
       alert("That file doesn't look like a Bakery Scheduler backup.");
       fileInput.value = '';
@@ -3574,7 +3594,7 @@ function handleImportBackupFile(fileInput) {
       return;
     }
     keys.forEach(k => localStorage.setItem(k, data[k]));
-    alert('Backup restored. Reloading now.');
+    alert('Backup loaded as local drafts. Shared records still need server approval; conflicting edits will require review after sign-in.');
     location.reload();
   };
   reader.readAsText(file);
@@ -4446,6 +4466,9 @@ function getDemandForRecipe(recipe) {
   return { totalUnits, batchesNeeded, yieldPerBatch: yieldPer, breakdown, day };
 }
 
+
+
+// SOURCE: scheduling.js
 // ============ WEEKLY BAKING SCHEDULE ============
 
 let weeklyBuffers   = JSON.parse(localStorage.getItem('bk_weekly_buffers')    || '{}');
@@ -6992,6 +7015,9 @@ if (localStorage.getItem('bk_staff_mode_active') === 'true') {
   enterStaffMode();
 }
 
+
+
+// SOURCE: inventory.js
 // ============ INVENTORY DASHBOARD ============
 
 // Product catalog from your MAIN spreadsheet
@@ -9454,6 +9480,9 @@ function renderChannelsPage() {
   });
 }
 
+
+
+// SOURCE: orders.js
 // ============ ORDERS MODULE ============
 
 // MSRP pricing from your WHOLESALE PRICING sheet
@@ -10107,6 +10136,9 @@ function printOrderSheet(chId) {
   win.document.close();
 }
 
+
+
+// SOURCE: operations.js
 // ============ PRINT INVENTORY SHEET ============
 function printInventorySheet() {
   const today = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
@@ -12427,16 +12459,15 @@ function authRoleIndex(role) {
   return i < 0 ? 0 : i;
 }
 
-function authGetPins() {
-  try { return JSON.parse(localStorage.getItem(AUTH_PINS_KEY) || '{}'); } catch { return {}; }
-}
-function authSavePins(p) { localStorage.setItem(AUTH_PINS_KEY, JSON.stringify(p)); }
+function authGetPins() { return window.bakeryAccess; }
 
-function authGetSession() {
-  try { return JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null'); } catch { return null; }
-}
-function authSaveSession(s) { localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(s)); }
-function authClearSession() { localStorage.removeItem(AUTH_SESSION_KEY); }
+function authSavePins() { throw new Error("Use server staff access management."); }
+
+function authGetSession() { return window.bakerySession || null; }
+
+function authSaveSession(s) { window.bakerySession = s; }
+
+function authClearSession() { secureSignOut(); }
 
 // ── Global save toast ──────────────────────────────────────
 let _toastTimer = null;
@@ -12672,23 +12703,7 @@ function authPinBackspace() {
   authRenderDots();
 }
 
-function authPinConfirm() {
-  const pins = authGetPins();
-  const member = staff.find(s => s.id === _authPickedStaffId);
-  if (pins[_authPickedStaffId] === _authPinEntry) {
-    authSaveSession({ staffId: member.id, name: member.name, role: member.role });
-    idleTouch();
-    const note = document.getElementById('auth-idle-note');
-    if (note) note.style.display = 'none';
-    authHideModal();
-    authUpdateChip();
-    authRedirectForRole(member.role);
-  } else {
-    document.getElementById('auth-pin-error').textContent = 'Incorrect PIN — try again';
-    _authPinEntry = '';
-    authRenderDots();
-  }
-}
+async function authPinConfirm() { await secureSignIn(_authPickedStaffId, _authPinEntry); }
 
 function authLogout() {
   authClearSession();
@@ -12698,24 +12713,18 @@ function authLogout() {
 }
 
 // ── PIN management (called from Staff page) ──────────────────
-function authSetPin(staffId) {
-  const member = staff.find(s => s.id === staffId);
-  if (!member) return;
-  const pin = prompt(`Set a 4-digit PIN for ${member.name}:`);
+async function authSetPin(staffId) {
+  const pin = prompt('Set a four-digit PIN. The PIN will be stored securely on the server:');
   if (pin === null) return;
-  if (!/^\d{4}$/.test(pin)) { alert('PIN must be exactly 4 digits.'); return; }
-  const pins = authGetPins();
-  pins[staffId] = pin;
-  authSavePins(pins);
-  alert(`PIN set for ${member.name} ✓`);
+  if (!/^\d{4}$/.test(pin)) return alert('Enter exactly four digits.');
+  try { await secureCall('staffAccount', { staffId, pin, enabled: true }); window.bakeryAccess[staffId] = true; renderStaffPage(); toastSaved('PIN updated'); if (authGetSession()?.staffId === staffId) secureSignOut(); }
+  catch(e) { alert(e.message); }
 }
 
-function authClearPin(staffId) {
-  const member = staff.find(s => s.id === staffId);
-  if (!confirm(`Clear PIN for ${member ? member.name : staffId}?`)) return;
-  const pins = authGetPins();
-  delete pins[staffId];
-  authSavePins(pins);
+async function authClearPin(staffId) {
+  if (!confirm('Disable this staff member’s sign-in?')) return;
+  try { await secureCall('staffAccount', { staffId, enabled: false }); window.bakeryAccess[staffId] = false; renderStaffPage(); toastSaved('Access disabled'); }
+  catch(e) { alert(e.message); }
 }
 
 // ============================================================
@@ -17239,6 +17248,13 @@ const WP_CATEGORIES = [
   { key:'beverage', label:'Beverage', color:'#005a4a', bg:'#e8f8f4' },
 ];
 
+const WP_PHASES = [
+  { key:'dough', label:'Make Dough',  icon:'🫙', color:'#1a3a6a', bg:'#eaf0fb', sortOrder:0 },
+  { key:'shape', label:'Shape & Form',icon:'✂️', color:'#7a3a10', bg:'#fdf4ec', sortOrder:1 },
+  { key:'prep',  label:'Prep',        icon:'🥄', color:'#1a5a2a', bg:'#edf9f1', sortOrder:2 },
+  { key:'bake',  label:'Bake',        icon:'🔥', color:'#8a1a1a', bg:'#fdf0f0', sortOrder:3 },
+];
+
 const WP_KEY       = 'bk_week_plan';
 const WP_DAYS      = ['mon','tue','wed','thu','fri','sat','sun'];
 const WP_DAY_NAMES = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
@@ -17251,6 +17267,7 @@ let _wpCopyFromDay   = null;
 let _wpEditDay       = null;
 let _wpEditItemId    = null;
 let _wpEditCategory  = null;
+let _wpEditPhase     = null;
 let _wpBakerDay      = null;
 let _wpGest          = null;  // active gesture state
 let _wpDragGhost     = null;  // floating ghost element during drag
@@ -17357,44 +17374,69 @@ function renderWeekPlan() {
         }).join('')
       : `<span style="font-size:11px;color:#bbb;font-style:italic">None assigned</span>`;
 
-    const itemCards = dayData.items.map((item, iIdx) => {
-      const isFirst = iIdx === 0;
-      const cat     = WP_CATEGORIES.find(c => c.key === item.category);
-      const leftBdr = cat ? `border-left:5px solid ${cat.color};padding-left:5px;` : '';
-      return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"
-        style="position:relative;overflow:hidden;margin-bottom:5px;border-radius:4px;
-          touch-action:none;user-select:none">
-        <div class="wp-swipe-delete"
-          style="position:absolute;right:0;top:0;bottom:0;width:72px;background:#cc3300;
-            display:flex;align-items:center;justify-content:center;flex-direction:column;
-            gap:2px;opacity:0.25;transition:opacity 0.15s;pointer-events:none">
-          <span style="font-size:20px">🗑</span>
-          <span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:1px">DELETE</span>
-        </div>
-        <div class="wp-item-card"
-          style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
-            border:2px solid ${isFirst?'#111':'#e0e0e0'};border-radius:4px;
-            background:#fff;position:relative;z-index:1;cursor:grab;${leftBdr}">
-          <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
-            background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
-            font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
-          <div style="flex:1;min-width:0">
-            ${cat ? `<div style="font-size:9px;font-weight:900;letter-spacing:1.5px;
-              text-transform:uppercase;color:${cat.color};margin-bottom:2px">${cat.label}</div>` : ''}
-            <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
-              line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}</div>
-            ${item.qty  ? `<div style="font-size:12px;color:#777;margin-top:2px">${item.qty}</div>`  : ''}
-            ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
+    // Group items by production phase (sorted by phase sortOrder), unphased at end
+    const phaseGroups = {};
+    WP_PHASES.forEach(p => { phaseGroups[p.key] = []; });
+    phaseGroups['__none__'] = [];
+    dayData.items.forEach(item => {
+      const key = item.phase && phaseGroups[item.phase] ? item.phase : '__none__';
+      phaseGroups[key].push(item);
+    });
+    const phaseOrder = [...WP_PHASES.map(p => p.key), '__none__'];
+    let globalIdx = 0;
+    const itemCards = phaseOrder.map(phaseKey => {
+      const grpItems = phaseGroups[phaseKey];
+      if (!grpItems.length) return '';
+      const phase = WP_PHASES.find(p => p.key === phaseKey);
+      const groupHeader = phase
+        ? `<div style="display:flex;align-items:center;gap:5px;padding:5px 4px 4px;
+            margin-top:${globalIdx===0?'0':'8'}px;margin-bottom:3px">
+            <span style="font-size:13px">${phase.icon}</span>
+            <span style="font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;
+              color:${phase.color}">${phase.label}</span>
+          </div>`
+        : '';
+      const cards = grpItems.map(item => {
+        const iIdx = globalIdx++;
+        const isFirst = iIdx === 0;
+        const cat     = WP_CATEGORIES.find(c => c.key === item.category);
+        const leftBdr = cat ? `border-left:5px solid ${cat.color};padding-left:5px;` : '';
+        return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"
+          style="position:relative;overflow:hidden;margin-bottom:5px;border-radius:4px;
+            touch-action:none;user-select:none">
+          <div class="wp-swipe-delete"
+            style="position:absolute;right:0;top:0;bottom:0;width:72px;background:#cc3300;
+              display:flex;align-items:center;justify-content:center;flex-direction:column;
+              gap:2px;opacity:0.25;transition:opacity 0.15s;pointer-events:none">
+            <span style="font-size:20px">🗑</span>
+            <span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:1px">DELETE</span>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
-            <button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
-              title="Copy to other days"
-              style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
-                     padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>
-            <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
+          <div class="wp-item-card"
+            style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
+              border:2px solid ${isFirst?'#111':'#e0e0e0'};border-radius:4px;
+              background:#fff;position:relative;z-index:1;cursor:grab;${leftBdr}">
+            <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
+              background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
+              font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
+            <div style="flex:1;min-width:0">
+              ${cat ? `<div style="font-size:9px;font-weight:900;letter-spacing:1.5px;
+                text-transform:uppercase;color:${cat.color};margin-bottom:2px">${cat.label}</div>` : ''}
+              <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
+                line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}</div>
+              ${item.qty  ? `<div style="font-size:12px;color:#777;margin-top:2px">${item.qty}</div>`  : ''}
+              ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
+              <button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+                title="Copy to other days"
+                style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
+                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>
+              <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
+            </div>
           </div>
-        </div>
-      </div>`;
+        </div>`;
+      }).join('');
+      return groupHeader + cards;
     }).join('');
 
     return `<div style="flex:0 0 max(170px,calc(100%/7));min-width:170px;display:flex;
@@ -17444,6 +17486,18 @@ function wpOpenItemModal(day, itemId) {
       recipes.map(r => `<option value="${r.id}"${item?.dtRecipeId===r.id?' selected':''}>${r.name}</option>`).join('');
   }
   _wpEditCategory = item?.category || null;
+  _wpEditPhase    = item?.phase    || null;
+  const phasePicker = document.getElementById('wp-phase-picker');
+  if (phasePicker) {
+    phasePicker.innerHTML = WP_PHASES.map(p =>
+      `<button type="button" onclick="wpSelectPhase('${p.key}')" id="wp-phase-btn-${p.key}"
+        style="padding:8px 14px;border-radius:4px;border:2px solid ${p.color};
+          background:${_wpEditPhase===p.key?p.color:'#fff'};
+          color:${_wpEditPhase===p.key?'#fff':p.color};
+          font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.5px;
+          touch-action:manipulation">${p.icon} ${p.label}</button>`
+    ).join('');
+  }
   const catPicker = document.getElementById('wp-cat-picker');
   if (catPicker) {
     catPicker.innerHTML = WP_CATEGORIES.map(c =>
@@ -17460,7 +17514,7 @@ function wpOpenItemModal(day, itemId) {
 }
 function wpCloseItemModal() {
   document.getElementById('wp-item-modal').style.display = 'none';
-  _wpEditDay = _wpEditItemId = _wpEditCategory = null;
+  _wpEditDay = _wpEditItemId = _wpEditCategory = _wpEditPhase = null;
 }
 function wpSelectCat(key) {
   _wpEditCategory = _wpEditCategory === key ? null : key;
@@ -17472,21 +17526,32 @@ function wpSelectCat(key) {
     btn.style.color      = active ? '#fff'  : c.color;
   });
 }
+function wpSelectPhase(key) {
+  _wpEditPhase = _wpEditPhase === key ? null : key;
+  WP_PHASES.forEach(p => {
+    const btn = document.getElementById('wp-phase-btn-' + p.key);
+    if (!btn) return;
+    const active = _wpEditPhase === p.key;
+    btn.style.background = active ? p.color : '#fff';
+    btn.style.color      = active ? '#fff'  : p.color;
+  });
+}
 function wpSaveItem() {
   const name = (document.getElementById('wp-item-name').value || '').trim();
   if (!name) { alert('Enter an item name.'); return; }
   const qty        = (document.getElementById('wp-item-qty').value  || '').trim();
   const note       = (document.getElementById('wp-item-note').value || '').trim();
   const cat        = _wpEditCategory || null;
+  const phase      = _wpEditPhase    || null;
   const dtRecipeId = document.getElementById('wp-item-dt-recipe')?.value || null;
   const mondayStr  = wpMondayStr(_wpWeekMonday);
   const weekData   = wpGetWeek(mondayStr);
   const dayItems   = weekData[_wpEditDay].items;
   if (_wpEditItemId) {
     const item = dayItems.find(i => i.id === _wpEditItemId);
-    if (item) { item.name = name; item.qty = qty; item.note = note; item.category = cat; item.dtRecipeId = dtRecipeId || null; }
+    if (item) { item.name = name; item.qty = qty; item.note = note; item.category = cat; item.phase = phase; item.dtRecipeId = dtRecipeId || null; }
   } else {
-    dayItems.push({ id: 'wpi_' + Date.now(), name, qty, note, category: cat, dtRecipeId: dtRecipeId || null });
+    dayItems.push({ id: 'wpi_' + Date.now(), name, qty, note, category: cat, phase, dtRecipeId: dtRecipeId || null });
   }
   wpSaveWeek(mondayStr, weekData);
   wpCloseItemModal();
@@ -18069,246 +18134,203 @@ function wpCloseBakerPicker() {
   _wpBakerDay = null;
 }
 
-// Keys that sync across devices
-const FB_SYNC_KEYS = new Set([
-  'bk_freezer', 'bk_freezer_defs', 'bk_freezer_last_submit', 'bk_freezer_last_scan',
-  'bk_ingredients', 'bk_ing_defs', 'bk_ing_last_submit',
-  'bk_cl_state_opening', 'bk_cl_state_closing', 'bk_cl_state_baker',
-  'bk_cl_defs_opening',  'bk_cl_defs_closing',  'bk_cl_defs_baker',
-  'bk_cl_log_opening',   'bk_cl_log_closing',   'bk_cl_log_baker',
-  'bk_eod_log', 'bk_eod_locations',
-  'bk_staff', 'bk_recipes', 'bk_standing_tasks', 'bk_role_slots',
-  'bk_side_tasks', 'bk_side_task_log',
-  'bk_staff_board', 'bk_alert',
-  'bk_dough_recipes', 'bk_dough_batches',
-  'bk_sandwich_recipes',
-  'bk_week_plan',
-  'bk_shift_templates',
-  'bk_staff', 'bk_staff_pins',
-  'bk_display_defs', 'bk_display_log',
-]);
 
-// Which page to re-render when a key changes remotely
-const FB_KEY_PAGE = {
-  'bk_freezer':           () => { if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
-  'bk_freezer_defs':      () => { if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
-  'bk_freezer_last_submit':()=>{ if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
-  'bk_freezer_last_scan': () => { if (activePage() === 'freezer')     try { renderFreezerPage();      } catch(e){} },
-  'bk_ingredients':       () => { if (activePage() === 'ingredients') try { renderIngredientsPage();  } catch(e){} },
-  'bk_ing_defs':          () => { if (activePage() === 'ingredients') try { renderIngredientsPage();  } catch(e){} },
-  'bk_ing_last_submit':   () => { if (activePage() === 'ingredients') try { renderIngredientsPage();  } catch(e){} },
-  'bk_cl_state_opening':  () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
-  'bk_cl_state_closing':  () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
-  'bk_cl_state_baker':    () => { if (activePage() === 'opening')     try { renderOpeningPage();      } catch(e){} },
-  'bk_side_tasks':        () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
-  'bk_side_task_log':     () => { if (activePage() === 'opening' && _openActiveTab === 'side') try { renderSideTasks(); } catch(e){} },
-  'bk_staff_board':       () => { if (activePage() === 'staffboard') try { renderStaffBoard(); } catch(e){} },
-  'bk_alert':             () => { try { sbHandleIncomingAlert(); } catch(e){} },
-  'bk_dough_recipes':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
-  'bk_dough_batches':     () => { if (activePage() === 'doughtimer') try { renderDoughTimer(); } catch(e){} },
-  'bk_sg_recipes':        () => { if (activePage() === 'stationguide') try { renderStationGuide(); } catch(e){} },
-  'bk_week_plan':         () => { if (activePage() === 'weekplan')   try { renderWeekPlan(); wpInitGestures(); } catch(e){} },
-  'bk_shift_templates':   () => { if (activePage() === 'dayview')   try { renderDayView(); } catch(e){} },
-  'bk_staff': () => {
-    // Reload in-memory staff from the freshly-synced localStorage value so
-    // deletions/additions made on another device take effect immediately and
-    // aren't overwritten the next time saveStaff() is called from this device.
-    try { const fresh = JSON.parse(_ls.get('bk_staff') || 'null'); if (fresh) staff = fresh; } catch(e) {}
-    if (activePage() === 'staff') try { renderStaffPage(); } catch(e) {}
-  },
-  'bk_staff_pins':        () => { if (activePage() === 'staff')     try { renderStaffPage(); } catch(e){} },
-  'bk_eod_log':           () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
-  'bk_eod_locations':     () => { if (activePage() === 'eod')         try { renderEodPage();          } catch(e){} },
-  'bk_display_defs':      () => { if (activePage() === 'displaystock') try { renderDisplayStock(); } catch(e){} },
-  'bk_display_log':       () => { if (activePage() === 'displaystock') try { renderDisplayStock(); } catch(e){} },
-};
 
-function activePage() {
-  return (document.querySelector('.page.active')?.id || '').replace('page-','');
-}
-
-// Intercept localStorage writes for sync keys
+// SOURCE: sync.js
+const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
-const _fbWriteTimers = {};
-let _fbDb = null;
-let _fbFunctions = null;
-let _fbIgnoreKeys = new Set(); // keys we just received from Firestore — don't echo back
-let _fbLastSync = null;
-let _fbSyncDotTimer = null;
-
+let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
+const secureBases = {}, secureStops = [];
+const secureHeld = {};
+let secureQueue = {}, secureBusy = false, secureReady = false, secureQueueKey = null;
+const secureTab = sessionStorage.getItem('bakery_tab') || crypto.randomUUID();
+sessionStorage.setItem('bakery_tab', secureTab);
+FB_SYNC_KEYS.forEach(key => { secureBases[key] = _ls.get(key); });
+function activePage() { return (document.querySelector('.page.active')?.id || '').replace('page-', ''); }
 function fbSetSyncStatus(status) {
-  const dot = document.getElementById('fb-sync-dot');
+  const pending = Object.keys(secureQueue).length;
+  const labels = { online: 'Saved to cloud', offline: 'Offline — drafts kept on this device', connecting: 'Connecting…', syncing: 'Saving…', error: 'Save needs attention — review drafts' };
   const label = document.getElementById('fb-sync-label');
-  if (!dot || !label) return;
-  const map = {
-    connecting: { color: '#888',    text: 'Connecting…' },
-    online:     { color: '#4caf50', text: 'Synced' },
-    syncing:    { color: '#e8a045', text: 'Syncing…' },
-    offline:    { color: '#f44336', text: 'Offline' },
-    error:      { color: '#f44336', text: 'Sync Error' },
-  };
-  const s = map[status] || map.offline;
-  dot.style.background = s.color;
-  label.textContent = s.text;
-  if (status === 'online' && _fbLastSync) {
-    const t = new Date(_fbLastSync);
-    label.textContent = 'Synced ' + t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  if (label) label.textContent = (labels[status] || status) + (pending ? ` (${pending} pending)` : '');
+  const dot = document.getElementById('fb-sync-dot');
+  if (dot) dot.style.background = status === 'online' && !pending ? '#4caf50' : '#e8a045';
+  const button = document.getElementById('fb-save-btn');
+  if (button) { button.style.display = pending ? '' : 'none'; button.textContent = 'Review / save drafts'; }
+}
+async function secureCall(name, data = {}) { return (await _fbFunctions.httpsCallable(name)(data)).data; }
+function securePersist() { if (secureQueueKey) _ls.set(secureQueueKey, JSON.stringify(secureQueue)); }
+function secureRefresh(key) {
+  // Refresh cached models as well as the visible page so a later save cannot revive stale data.
+  const val = _ls.get(key); let parsed;
+  try { parsed = JSON.parse(val); } catch { parsed = val; }
+  switch(key) {
+    case 'bk_staff': staff = parsed || []; break;
+    case 'bk_recipes': recipes = parsed || []; break;
+    case 'bk_role_slots': roleSlots = parsed || []; break;
+    case 'bk_inv_state': invState = parsed || {}; break;
+    case 'bk_orders_state': ordersState = parsed || {}; break;
+    case 'bk_order_batches': orderBatches = parsed || {}; break;
+    case 'bk_channels': channels = parsed || []; break;
+    case 'bk_ing_lib': ingLib = parsed || {}; break;
+    case 'bk_ingredient_status': ingredientStatus = parsed || {}; break;
+    case 'bk_custom_ingredients': customIngredients = parsed || []; break;
+    case 'bk_hidden_ingredients': hiddenIngredients = parsed || []; break;
+    case 'bk_prep_status': prepStatus = parsed || {}; break;
+    case 'bk_custom_prep_items': customPrepItems = parsed || []; break;
+    case 'bk_hidden_prep_items': hiddenPrepItems = parsed || []; break;
+    case 'bk_daily_sel': dailySelections = parsed || {}; break;
+    case 'bk_weekly_buffers': weeklyBuffers = parsed || {}; break;
+    case 'bk_weekly_confirmed': weeklyConfirmed = parsed || {}; break;
+    case 'bk_levain_pool': levainPool = parsed || {}; break;
+    case 'bk_closed_days': closedDays = parsed || []; break;
+    case 'bk_dough_pool': doughPool = parsed || []; break;
+    case 'bk_standing_tasks': standingTasks = parsed || []; break;
+    case 'bk_today_tasks': todayCustomTasks = parsed || []; break;
+    case 'bk_crew_shifts': crewShifts = parsed || {}; break;
+    case 'bk_vis_blocks': visBlocks = parsed || []; break;
+    case 'bk_vis_checks': tlChecked = new Set(parsed || []); break;
   }
-  const indicator = document.getElementById('fb-sync-indicator');
-  if (indicator) indicator.title = 'Cloud sync: ' + s.text + (_fbLastSync ? ' (last sync ' + new Date(_fbLastSync).toLocaleTimeString() + ')' : '');
+  // Do not rebuild a form while somebody is typing. Models are already current.
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+  const renderers = { freezer: () => renderFreezerPage(), ingredients: () => renderIngredientsPage(), opening: () => renderOpeningPage(), staffboard: () => renderStaffBoard(), doughtimer: () => renderDoughTimer(), weekplan: () => renderWeekPlan(), dayview: () => renderDayView(), staff: () => renderStaffPage(), eod: () => renderEodPage(), displaystock: () => renderDisplayStock(), inventory: () => runInventoryCalc(), orders: () => renderOrdersPage() };
+  try { renderers[activePage()]?.(); } catch(e) { console.warn('Page refresh deferred', e); }
 }
-
-let _fbPendingCount = 0;
-function _fbPendingDelta(delta) {
-  _fbPendingCount = Math.max(0, _fbPendingCount + delta);
-  const btn = document.getElementById('fb-save-btn');
-  if (btn) btn.style.display = _fbPendingCount > 0 ? '' : 'none';
+function secureApply(key, value) {
+  secureBases[key] = value;
+  if (value !== null) _ls.set(key, value);
+  secureRefresh(key);
 }
-
+async function secureReconcile(key) {
+  const session = authGetSession();
+  try {
+    const snap = await _fbDb.collection('bakery_data').doc(key).get();
+    if (!secureReady || authGetSession() !== session || secureQueue[key]) return;
+    const value = snap.data()?.value ?? null;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) secureHeld[key] = value;
+    else secureApply(key, value);
+  } catch(e) { console.warn('Latest cloud refresh deferred', e.code); }
+}
 localStorage.setItem = function(key, value) {
+  value = String(value);
+  if (!FB_SYNC_KEYS.has(key)) { _ls.set(key, value); return; }
+  if (!secureReady || !authGetSession()) throw new Error('Sign in and connect before editing shared bakery data.');
+  const previous = secureQueue[key];
+  if (previous) previous.value = value;
+  else secureQueue[key] = { base: secureBases[key] ?? null, value, operationId: crypto.randomUUID() };
+  // Durable draft is written first. If storage is full, do not claim a successful save.
+  securePersist();
   _ls.set(key, value);
-  if (FB_SYNC_KEYS.has(key) && !_fbIgnoreKeys.has(key)) {
-    const ts = new Date().toISOString();
-    _ls.set('bk_ts_' + key, ts);           // always stamp — protects local data even before Firebase connects
-    if (_fbDb) {
-      if (!_fbWriteTimers[key]) _fbPendingDelta(1);  // count new pending write
-      clearTimeout(_fbWriteTimers[key]);
-      fbSetSyncStatus('syncing');
-      _fbWriteTimers[key] = setTimeout(() => {
-        _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: _ls.get('bk_ts_' + key) || ts })
-          .then(() => {
-            _fbLastSync = new Date().toISOString();
-            delete _fbWriteTimers[key];
-            _fbPendingDelta(-1);
-            if (_fbPendingCount <= 0) fbSetSyncStatus('online');
-          })
-          .catch(e => { console.warn('FB write error:', key, e); fbSetSyncStatus('error'); });
-      }, 400);
-    }
-  }
-};
-
-function forceSaveKeys(keys) {
-  const ts = new Date().toISOString();
-  keys.forEach(key => { if (_ls.get(key) !== null) _ls.set('bk_ts_' + key, ts); });
-  if (!_fbDb) { toastBy('Saved locally (cloud not connected yet)'); return; }
-  let pending = 0;
-  keys.forEach(key => {
-    const val = _ls.get(key);
-    if (val === null) return;
-    pending++;
-    _fbDb.collection('bakery_data').doc(key).set({ value: val, updatedAt: ts })
-      .then(() => { if (--pending <= 0) { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); toastBy('Saved to cloud ✓'); } })
-      .catch(e => { console.warn('forceSaveKeys error:', key, e); toastBy('Save failed — check connection'); });
-  });
-  if (!pending) toastBy('Nothing to save');
-}
-
-function pageSaveBtn(keys) {
-  return `<button onclick="forceSaveKeys(${JSON.stringify(keys).replace(/"/g,"'")})" style="padding:8px 14px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation" title="Save to cloud now">☁ Save</button>`;
-}
-
-function fbFlushNow() {
-  const keys = Object.keys(_fbWriteTimers);
-  if (!keys.length) { toastBy('Already saved to cloud.'); return; }
   fbSetSyncStatus('syncing');
-  let pending = keys.length;
-  keys.forEach(key => {
-    clearTimeout(_fbWriteTimers[key]);
-    delete _fbWriteTimers[key];
-    _fbPendingDelta(-1);
-    const value = _ls.get(key);
-    const ts    = _ls.get('bk_ts_' + key) || new Date().toISOString();
-    if (value !== null && _fbDb) {
-      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: ts })
-        .then(() => { _fbLastSync = new Date().toISOString(); if (--pending <= 0) fbSetSyncStatus('online'); })
-        .catch(e => { console.warn('FB flush error:', key, e); fbSetSyncStatus('error'); });
-    } else { --pending; }
-  });
-}
-
-window.addEventListener('beforeunload', () => {
-  // Best-effort: fire any pending writes before the page unloads
-  Object.keys(_fbWriteTimers).forEach(key => {
-    clearTimeout(_fbWriteTimers[key]);
-    delete _fbWriteTimers[key];
-    const value = _ls.get(key);
-    const ts    = _ls.get('bk_ts_' + key) || new Date().toISOString();
-    if (value !== null && _fbDb) {
-      _fbDb.collection('bakery_data').doc(key).set({ value, updatedAt: ts });
-    }
-  });
-});
-
-function fbSetupListeners(db) {
-  FB_SYNC_KEYS.forEach(key => {
-    if (!FB_KEY_PAGE[key]) return; // skip config-only keys for listeners
-    db.collection('bakery_data').doc(key).onSnapshot(snap => {
-      if (!snap.exists) return;
-      const val  = snap.data().value;
-      const fbAt = snap.data().updatedAt;
-      if (val === undefined || _ls.get(key) === val) return;
-
-      // Never overwrite local data that is newer than what Firebase has
-      const localAt = _ls.get('bk_ts_' + key);
-      if (localAt && (!fbAt || localAt > fbAt)) {
-        // Local is newer (or Firebase has no timestamp) — push local back rather than overwriting
-        if (!_fbIgnoreKeys.has(key)) {
-          _fbDb.collection('bakery_data').doc(key)
-            .set({ value: _ls.get(key), updatedAt: localAt })
-            .then(() => { _fbLastSync = new Date().toISOString(); fbSetSyncStatus('online'); })
-            .catch(e => console.warn('FB re-push error:', key, e));
+  clearTimeout(window.secureSaveTimer);
+  window.secureSaveTimer = setTimeout(secureFlush, 400);
+};
+async function secureFlush() {
+  if (secureBusy || !secureReady || !authGetSession()) return;
+  secureBusy = true;
+  const queue = secureQueue;
+  try {
+    for (const key of Object.keys(queue)) {
+      if (queue !== secureQueue || !secureReady) break;
+      const job = queue[key];
+      if (job.blocked) continue;
+      job.inflight ||= { base: job.base, value: job.value, operationId: job.operationId };
+      securePersist();
+      const sent = job.inflight;
+      try {
+        const result = await secureCall('commitBakeryChange', { key, ...sent });
+        if (queue !== secureQueue) break;
+        if (job.value === sent.value) { delete queue[key]; secureApply(key, result.value); secureReconcile(key); }
+        else { job.base = sent.value; job.operationId = crypto.randomUUID(); delete job.inflight; }
+        securePersist();
+        _fbLastSync = new Date().toISOString();
+      } catch(e) {
+        if (queue !== secureQueue) break;
+        if (['functions/aborted', 'functions/permission-denied', 'functions/invalid-argument', 'functions/failed-precondition'].includes(e.code)) {
+          job.blocked = { message: e.message, remote: e.details?.remote, paths: e.details?.paths };
+          securePersist();
+          secureDraftNotice();
         }
+        fbSetSyncStatus(e.code === 'functions/unavailable' ? 'offline' : 'error');
         return;
       }
-
-      _fbIgnoreKeys.add(key);
-      _ls.set(key, val);
-      if (fbAt) _ls.set('bk_ts_' + key, fbAt);
-      setTimeout(() => _fbIgnoreKeys.delete(key), 500);
-      FB_KEY_PAGE[key]?.();
-    });
-  });
+    }
+    fbSetSyncStatus(Object.values(queue).some(j => j.blocked) ? 'error' : Object.keys(queue).length ? 'syncing' : 'online');
+  } finally {
+    secureBusy = false;
+  }
 }
+function secureDraftNotice() { toastSaved('Draft kept. Use Review / save drafts to resolve this save.'); }
+function secureDownload(name, value) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function fbFlushNow() {
+  const blocked = Object.entries(secureQueue).filter(([, j]) => j.blocked);
+  if (!blocked.length) { secureFlush(); return; }
+  const [key, job] = blocked[0];
+  const box = document.createElement('dialog');
+  box.style.cssText = 'max-width:700px;width:90%;max-height:85vh;overflow:auto;padding:24px';
+  const title = document.createElement('h2'); title.textContent = 'Review conflicting draft: ' + key.replace(/^bk_/, '').replaceAll('_',' '); box.append(title);
+  const msg = document.createElement('p'); msg.textContent = job.blocked.message + ' Your draft is preserved on this device. Compare the values before choosing.'; box.append(msg);
+  const pre = document.createElement('pre'); pre.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere';
+  pre.textContent = 'YOUR DRAFT\n' + job.value + '\n\nCLOUD VALUE\n' + (job.blocked.remote ?? '(not available)'); box.append(pre);
+  const button = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.style.margin = '8px'; b.onclick = fn; box.append(b); };
+  button('Download draft', () => secureDownload('bakery-draft-' + key + '.json', job));
+  if (typeof job.blocked.remote === 'string') {
+    button('Use cloud value (save draft copy)', () => {
+      _ls.set('bk_archived_draft_' + crypto.randomUUID(), JSON.stringify({ key, ...job }));
+      delete secureQueue[key]; securePersist(); secureApply(key, job.blocked.remote); box.close(); box.remove(); secureFlush();
+    });
+    button('Save my reviewed draft', () => {
+      job.base = job.blocked.remote; job.operationId = crypto.randomUUID(); delete job.inflight; delete job.blocked;
+      securePersist(); box.close(); box.remove(); secureFlush();
+    });
+  }
+  else button('Archive draft and reload cloud value', async () => {
+    try {
+      const snap = await _fbDb.collection('bakery_data').doc(key).get();
+      const value = snap.data()?.value ?? null;
+      _ls.set('bk_archived_draft_' + crypto.randomUUID(), JSON.stringify({ key, ...job }));
+      delete secureQueue[key]; securePersist(); secureApply(key, value); box.close(); box.remove(); secureFlush();
+    } catch(e) { alert('Cloud value could not be read. Your draft is still saved. Sign in again or reconnect.'); }
+  });
+  button('Keep for later', () => { box.close(); box.remove(); });
+  document.body.append(box); box.showModal();
+}
+function forceSaveKeys(keys) {
+  // Normal edits are already queued. Missing cloud records require explicit owner migration.
+  secureFlush();
+  if (!Object.keys(secureQueue).length) toastSaved('No pending edits.');
+}
+function pageSaveBtn(keys) { return '<button onclick="fbFlushNow()">☁ Save / review</button>'; }
+function fbUploadLocalData() { alert('Bulk upload is disabled to protect other devices. Use the reviewed migration procedure in ROLLOUT.md.'); }
+function fbSetupListeners(db) {
+  FB_SYNC_KEYS.forEach(key => secureStops.push(db.collection('bakery_data').doc(key).onSnapshot(snap => {
+    if (!secureReady || secureQueue[key]) return;
+    const value = snap.data()?.value ?? null;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { secureHeld[key] = value; return; }
+    if (value !== secureBases[key]) secureApply(key, value);
+  }, () => { fbSetSyncStatus('error'); })));
+}
+document.addEventListener('focusout', () => setTimeout(() => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+  for (const [key, value] of Object.entries(secureHeld)) {
+    delete secureHeld[key];
+    if (!secureQueue[key]) secureApply(key, value);
+  }
+}, 0));
+window.addEventListener('online', secureFlush);
+window.addEventListener('beforeunload', e => { if (Object.keys(secureQueue).length) { e.preventDefault(); e.returnValue = ''; } });
+setInterval(() => { if (Object.values(secureQueue).some(j => !j.blocked)) secureFlush(); }, 15000);
+
+
+// SOURCE: day-view.js
 
 function authBoot() {
-  let staffChanged = false;
-  defaultStaff.forEach(def => {
-    if (!staff.find(s => s.id === def.id)) { staff.push(def); staffChanged = true; }
-  });
-  if (staffChanged) localStorage.setItem('bk_staff', JSON.stringify(staff));
-
-  const pins = authGetPins();
-  let pinsChanged = false;
-  if (!pins['s0']) { pins['s0'] = '2704'; pinsChanged = true; }
-  staff.forEach(s => { if (s.id !== 's0' && !pins[s.id]) { pins[s.id] = '1010'; pinsChanged = true; } });
-  if (pinsChanged) authSavePins(pins);
-
-  const davidIdx = staff.findIndex(s => s.id === 's0');
-  if (davidIdx >= 0 && staff[davidIdx].role !== 'Owner') {
-    staff[davidIdx].role = 'Owner';
-    localStorage.setItem('bk_staff', JSON.stringify(staff));
-  }
-  authUpdateChip();
-  updateNavDots();
-  const _vBadge = document.getElementById('app-version-badge');
-  if (_vBadge) _vBadge.textContent = 'v' + APP_VERSION;
-
-  // Idle timeout — touch on any interaction, check every 60 s
-  ['click','keydown','touchstart','mousemove'].forEach(evt =>
-    document.addEventListener(evt, idleTouch, { passive: true })
-  );
+  authUpdateChip(); updateNavDots();
+  ['click','keydown','touchstart'].forEach(evt => document.addEventListener(evt, idleTouch, { passive: true }));
   setInterval(idleCheck, 60000);
-
-  const _bootSession = authGetSession();
-  const seenVersion = localStorage.getItem('bk_seen_version');
-  if (seenVersion !== APP_VERSION) {
-    versionShow(() => {
-      if (!_bootSession) { authShowModal(); } else { idleTouch(); authRedirectForRole(_bootSession.role); }
-    });
-  } else {
-    if (!_bootSession) { authShowModal(); } else { idleTouch(); authRedirectForRole(_bootSession.role); }
-  }
+  authShowModal();
 }
 
 // ============ DAY VIEW — SHIFT SCHEDULE ============
@@ -19521,6 +19543,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.1.5': [
+    '📋 Bake Board — Production Phases: tag each item as 🫙 Make Dough, ✂️ Shape & Form, 🥄 Prep, or 🔥 Bake; each day column auto-sorts by phase so the daily workflow is clear at a glance',
+  ],
   '2.1.4': [
     '⏱ Dough Timer — "📖 From Library" button lets you pick any recipe from the Recipe Library and import its stages as suggested timer steps; review and edit in the normal step editor before saving',
   ],
@@ -19744,84 +19769,100 @@ function versionDismiss() {
   if (_versionCallback) { _versionCallback(); _versionCallback = null; }
 }
 
-function fbUploadLocalData() {
-  if (!_fbDb) return;
-  const banner = document.getElementById('fb-upload-banner');
-  if (banner) banner.style.display = 'none';
-  const loadBanner = document.getElementById('fb-loading');
-  if (loadBanner) loadBanner.style.display = 'block';
-  const writes = [];
-  FB_SYNC_KEYS.forEach(key => {
-    const val = _ls.get(key);
-    if (val) {
-      writes.push(
-        _fbDb.collection('bakery_data').doc(key).set({ value: val, updatedAt: new Date().toISOString() })
-      );
-    }
-  });
-  Promise.all(writes).then(() => {
-    if (loadBanner) loadBanner.style.display = 'none';
-    alert('✅ All local data uploaded to cloud successfully!');
-  }).catch(e => {
-    if (loadBanner) loadBanner.style.display = 'none';
-    alert('Upload failed: ' + e.message);
-  });
-}
 
-(async function() {
-  const loadBanner = document.getElementById('fb-loading');
-  const uploadBanner = document.getElementById('fb-upload-banner');
+
+
+// SOURCE: bootstrap.js
+let secureLoginBusy = false;
+async function secureSignOut() {
+  secureReady = false;
+  window.bakerySession = null;
+  secureStops.splice(0).forEach(stop => stop());
+  if (typeof firebase !== 'undefined' && firebase.apps.length) await firebase.auth().signOut();
+  authUpdateChip(); authShowModal();
+}
+async function secureSignIn(staffId, pin) {
+  if (secureLoginBusy) return;
+  secureLoginBusy = true;
+  try {
+    const result = await secureCall('staffSignIn', { staffId, pin });
+    await firebase.auth().signInWithCustomToken(result.token);
+    window.bakerySession = result.member;
+    secureQueueKey = 'bk_outbox_' + staffId + '_' + secureTab;
+    secureQueue = JSON.parse(_ls.get(secureQueueKey) || '{}');
+    // Reads use individual known documents: the denied legacy PIN document is never queried.
+    const snapshots = await Promise.all([...FB_SYNC_KEYS].map(key => _fbDb.collection('bakery_data').doc(key).get()));
+    snapshots.forEach((snap, i) => {
+      const key = [...FB_SYNC_KEYS][i];
+      if (secureQueue[key]) { _ls.set(key, secureQueue[key].value); secureRefresh(key); }
+      else secureApply(key, snap.data()?.value ?? null);
+    });
+    secureReady = true;
+    localStorage.removeItem('bk_staff_pins');
+    localStorage.removeItem('bk_auth_session');
+    idleTouch(); authHideModal(); authUpdateChip(); authRedirectForRole(result.member.role);
+    fbSetupListeners(_fbDb);
+    fbSetSyncStatus('online');
+    secureRecoverDrafts(staffId);
+    await secureFlush();
+    // Session expiry is enforced by the server and the UI, regardless of client idle settings.
+    clearTimeout(window.secureExpiryTimer);
+    window.secureExpiryTimer = setTimeout(secureSignOut, 8 * 3600000);
+  } catch(e) {
+    secureReady = false; window.bakerySession = null;
+    const error = document.getElementById('auth-pin-error');
+    if (error) error.textContent = e.message || 'Sign-in unavailable. Please try again.';
+    _authPinEntry = ''; authRenderDots(); authUpdateChip();
+    fbSetSyncStatus('error');
+  } finally { secureLoginBusy = false; }
+}
+function secureRecoverDrafts(staffId) {
+  const prefix = 'bk_outbox_' + staffId + '_';
+  const others = Object.keys(localStorage).filter(k => k.startsWith(prefix) && k !== secureQueueKey && _ls.get(k) !== '{}');
+  if (!others.length) return;
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999999;background:#fff3cd;color:#222;padding:12px';
+  banner.textContent = 'Saved drafts from another tab are on this device. Close that tab before recovering them. ';
+  const b = document.createElement('button'); b.textContent = 'Recover saved drafts';
+  b.onclick = () => {
+    if (!confirm('Have you closed the other bakery tabs? Recover their drafts now?')) return;
+    for (const storageKey of others) {
+      const jobs = JSON.parse(_ls.get(storageKey) || '{}');
+      for (const [key, job] of Object.entries(jobs)) {
+        if (secureQueue[key]) continue; // Keep both drafts if this tab already edits the same record.
+        secureQueue[key] = job; securePersist(); delete jobs[key];
+        _ls.set(key, job.value); secureRefresh(key);
+      }
+      _ls.set(storageKey, JSON.stringify(jobs));
+    }
+    banner.remove(); secureFlush();
+  };
+  banner.append(b); document.body.append(banner);
+}
+(async function secureBootstrap() {
+  const loading = document.getElementById('fb-loading');
   try {
     firebase.initializeApp(FB_CONFIG);
-    const db = firebase.firestore();
-    _fbDb = db;
-    _fbFunctions = firebase.functions();
-    fbSetSyncStatus('connecting');
-
-    // Pull all sync keys from Firestore before boot
-    loadBanner.style.display = 'block';
-    const snap = await db.collection('bakery_data').get();
-
-    // Check if Firestore has data
-    const firestoreKeys = new Set();
-    snap.forEach(doc => { if (FB_SYNC_KEYS.has(doc.id)) firestoreKeys.add(doc.id); });
-
-    // Count how much real local data exists (non-default bk_staff check)
-    const localHasData = _ls.get('bk_staff') || _ls.get('bk_ingredients') || _ls.get('bk_freezer');
-    const firestoreEmpty = firestoreKeys.size === 0;
-
-    if (localHasData && firestoreEmpty) {
-      // Local has data, Firestore is empty — offer to upload
-      loadBanner.style.display = 'none';
-      if (uploadBanner) uploadBanner.style.display = 'block';
-    } else {
-      // Pull Firestore data into localStorage
-      snap.forEach(doc => {
-        if (FB_SYNC_KEYS.has(doc.id)) {
-          const val = doc.data().value;
-          if (val !== undefined) _ls.set(doc.id, val);
-        }
-      });
-      loadBanner.style.display = 'none';
-
-      // If local had data that Firestore doesn't, offer to upload missing keys
-      if (localHasData && firestoreKeys.size < FB_SYNC_KEYS.size) {
-        const missingLocally = [...FB_SYNC_KEYS].some(k => !firestoreKeys.has(k) && _ls.get(k));
-        if (missingLocally && uploadBanner) uploadBanner.style.display = 'block';
-      }
+    _fbDb = firebase.firestore(); _fbFunctions = firebase.functions();
+    if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).get('emulator') === '1') {
+      _fbDb.useEmulator('127.0.0.1', 8080);
+      _fbFunctions.useEmulator('127.0.0.1', 5001);
+      firebase.auth().useEmulator('http://127.0.0.1:9099');
     }
-
-    // Boot app, then set up live listeners
-    _fbLastSync = new Date().toISOString();
-    fbSetSyncStatus('online');
+    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    await firebase.auth().signOut(); // Never trust the old browser-only session.
+    const directory = await secureCall('staffDirectory');
+    window.bakeryAccess = Object.fromEntries(directory.staff.map(s => [s.id, s.hasPin === true]));
+    staff = directory.staff;
     authBoot();
-    fbSetupListeners(db);
+    fbSetSyncStatus('connecting');
   } catch(e) {
-    console.warn('Firebase init failed, running offline:', e);
-    loadBanner.style.display = 'none';
-    fbSetSyncStatus('offline');
     authBoot();
-  }
+    const list = document.getElementById('auth-staff-list');
+    if (list) list.textContent = 'Secure sign-in is not available yet. Existing data is preserved on this device. Ask the owner to complete the upgrade setup, then reload.';
+    fbSetSyncStatus('offline');
+    console.warn('Secure startup unavailable:', e.code || e.message);
+  } finally { if (loading) loading.style.display = 'none'; }
 })();
 
 </script>
