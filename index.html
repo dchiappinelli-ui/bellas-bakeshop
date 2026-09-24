@@ -895,10 +895,10 @@
              animation:fbSavePulse 1.5s ease-in-out infinite">
       ☁ Save Now
     </button>
-    <button onclick="showDeployChecklist()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Pre-deploy checklist">🚀 Deploy</button>
-    <button onclick="toggleFullscreen()" id="fs-btn" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Fullscreen (F11)">⛶ Fullscreen</button>
-    <button onclick="exportFullBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Backup">💾 Backup</button>
-    <button onclick="triggerImportBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap">📂 Restore</button>
+    <button onclick="showDeployChecklist()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Pre-deploy checklist">🚀</button>
+    <button onclick="toggleFullscreen()" id="fs-btn" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Fullscreen (F11)">⛶</button>
+    <button onclick="exportFullBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Backup">💾</button>
+    <button onclick="triggerImportBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Restore">📂</button>
     <input type="file" id="backup-import-input" accept="application/json" style="display:none" onchange="handleImportBackupFile(this)">
     <button id="staff-mode-btn" onclick="enterStaffMode()" class="btn btn-ghost btn-sm" style="white-space:nowrap">👤 Staff Mode</button>
   </div>
@@ -2938,7 +2938,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.7';
+const APP_VERSION      = '2.1.8';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -19587,6 +19587,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.1.8': [
+    '🔢 Header version badge restored — app version now appears between the User chip and Saved to cloud indicator',
+  ],
   '2.1.7': [
     '👨‍🍳 Bake Board — assign a Primary and Secondary baker to each item; color-coded initials badges appear on the card; bakers pulled from the staff roster',
   ],
@@ -19910,7 +19913,11 @@ function secureRecoverDrafts(staffId) {
     authBoot();
     fbSetSyncStatus('offline');
     console.warn('Secure startup unavailable:', e.code || e.message);
-  } finally { if (loading) loading.style.display = 'none'; }
+  } finally {
+    if (loading) loading.style.display = 'none';
+    const vb = document.getElementById('app-version-badge');
+    if (vb) vb.textContent = 'v' + APP_VERSION;
+  }
 })();
 
 </script>
