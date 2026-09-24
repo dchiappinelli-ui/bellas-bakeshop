@@ -1948,11 +1948,62 @@
         style="padding:10px 18px;border:none;border-radius:4px;background:#2a7d4f;
           color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
           white-space:nowrap" title="Save to cloud now">☁ Save</button>
+      <button onclick="wpOpenPrintModal()"
+        style="padding:10px 18px;border:2px solid #555;border-radius:4px;background:#fff;
+          color:#333;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
+          white-space:nowrap" title="Print checklists">🖨 Print</button>
     </div>
   </div>
   <div id="wp-board"
     style="display:flex;gap:0;border:3px solid #111;border-radius:4px;overflow:hidden;
       overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:420px"></div>
+</div>
+
+<!-- Bake Board — Print modal -->
+<div id="wp-print-modal"
+  style="display:none;position:fixed;inset:0;z-index:99994;background:rgba(0,0,0,0.65);
+    align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:440px;
+              box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:20px;font-weight:800">🖨 Print Checklists</div>
+      <button onclick="wpClosePrintModal()"
+        style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:26px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="padding:28px">
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:8px">Day</label>
+      <select id="wp-print-day-select"
+        style="width:100%;font-size:15px;padding:11px 14px;border:2px solid #ccc;
+          border-radius:4px;box-sizing:border-box;margin-bottom:20px;background:#fff;color:#333">
+      </select>
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:10px">Checklist Type</label>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 14px;
+          border:2px solid #e0e0e0;border-radius:4px;background:#fafafa">
+          <input type="radio" name="wp-print-type" value="manager" checked
+            style="margin-top:3px;flex-shrink:0;accent-color:#111">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#111">Manager's Checklist</div>
+            <div style="font-size:12px;color:#888;margin-top:2px">All items for the day grouped by phase — shows baker assignments, category, qty, notes. One page.</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:12px 14px;
+          border:2px solid #e0e0e0;border-radius:4px;background:#fafafa">
+          <input type="radio" name="wp-print-type" value="bakers"
+            style="margin-top:3px;flex-shrink:0;accent-color:#111">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#111">Baker Checklists</div>
+            <div style="font-size:12px;color:#888;margin-top:2px">One page per baker — shows only their assigned items (primary &amp; secondary), grouped by phase.</div>
+          </div>
+        </label>
+      </div>
+      <button onclick="wpPrintChecklist()"
+        style="width:100%;padding:14px;background:#111;color:#fff;border:none;border-radius:4px;
+          font-size:15px;font-weight:800;cursor:pointer;letter-spacing:0.3px">🖨 Open Print Preview</button>
+    </div>
+  </div>
 </div>
 
 <!-- Bake Board — Item editor modal -->
@@ -2938,7 +2989,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.8';
+const APP_VERSION      = '2.1.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -18178,7 +18229,212 @@ function wpCloseBakerPicker() {
   _wpBakerDay = null;
 }
 
+// ── Bake Board print checklists ──────────────────────────────────────────────
 
+function wpOpenPrintModal() {
+  if (!_wpWeekMonday) return;
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const today     = new Date(); today.setHours(0,0,0,0);
+  const opts = WP_DAYS.map((day, idx) => {
+    const d = new Date(_wpWeekMonday); d.setDate(d.getDate() + idx);
+    const isToday = d.getTime() === today.getTime();
+    const dStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const n = weekData[day].items.length;
+    return `<option value="${day}" ${isToday?'selected':''}>${WP_DAY_NAMES[day]} — ${dStr} (${n} item${n!==1?'s':''})</option>`;
+  }).join('');
+  document.getElementById('wp-print-day-select').innerHTML = opts;
+  document.getElementById('wp-print-modal').style.display = 'flex';
+}
+
+function wpClosePrintModal() {
+  document.getElementById('wp-print-modal').style.display = 'none';
+}
+
+function wpPrintChecklist() {
+  const day  = document.getElementById('wp-print-day-select').value;
+  const type = document.querySelector('input[name="wp-print-type"]:checked').value;
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const dayData   = weekData[day];
+  const dayIdx    = WP_DAYS.indexOf(day);
+  const dayDate   = new Date(_wpWeekMonday); dayDate.setDate(dayDate.getDate() + dayIdx);
+  const dateStr   = dayDate.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  wpClosePrintModal();
+  if (type === 'manager') wpPrintManagerChecklist(dayData, dateStr);
+  else                    wpPrintBakerChecklists(dayData, dateStr);
+}
+
+function _wpChecklistCss() {
+  return `<style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;600;700;800;900&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#fff;color:#111;padding:24px 28px;font-size:13px}
+    .bk-header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:14px}
+    .bk-name{font-family:'Playfair Display',serif;font-size:26px;font-weight:900}
+    .bk-subtitle{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#555;margin-top:3px}
+    .bk-date{font-size:12px;font-weight:600;color:#555;text-align:right;line-height:1.5}
+    .summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .pill{background:#f2f2f2;border:1px solid #ddd;border-radius:3px;padding:4px 10px;font-size:11px;font-weight:700;color:#444}
+    .ph-hdr{display:flex;align-items:center;gap:6px;background:#f0f0f0;padding:5px 10px;margin:12px 0 4px;border-left:4px solid #333}
+    .ph-hdr-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:2px}
+    thead th{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#666;padding:4px 8px;border-bottom:2px solid #333;text-align:left}
+    tbody td{padding:8px 8px;border-bottom:1px solid #e8e8e8;vertical-align:middle}
+    tbody tr:last-child td{border-bottom:none}
+    .cb{width:18px;text-align:center}
+    .cb-box{display:inline-block;width:15px;height:15px;border:2px solid #333;border-radius:2px;flex-shrink:0}
+    .num{font-size:11px;font-weight:900;color:#bbb;width:22px;text-align:center}
+    .iname{font-size:13px;font-weight:700;color:#111;line-height:1.3}
+    .iqty{font-size:11px;color:#555;font-weight:600;margin-top:1px}
+    .inote{font-size:10px;color:#888;font-style:italic;margin-top:1px}
+    .cat-tag{display:inline-block;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;border-radius:2px;padding:1px 4px;margin-bottom:2px}
+    .bchip{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:8px;font-weight:900;color:#fff;flex-shrink:0}
+    .bname{font-size:11px;font-weight:600;color:#333}
+    .role-p{background:#1a3a8a;color:#fff;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:3px}
+    .role-s{background:#888;color:#fff;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:3px}
+    .footer{border-top:2px solid #333;margin-top:20px;padding-top:12px;display:flex;gap:20px}
+    .sig{flex:1}.sig-lbl{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:4px}
+    .sig-line{border-bottom:1px solid #888;height:22px}
+    .print-btn{padding:7px 18px;background:#111;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;margin-bottom:10px}
+    @media print{.print-btn{display:none!important} @page{margin:10mm;size:letter portrait} .baker-page{page-break-after:always} .baker-page:last-child{page-break-after:avoid}}
+  </style>`;
+}
+
+function _wpPhaseGroups(items) {
+  const g = {}; WP_PHASES.forEach(p => { g[p.key] = []; }); g['__none__'] = [];
+  items.forEach(item => { const k = item.phase && g[item.phase] !== undefined ? item.phase : '__none__'; g[k].push(item); });
+  return g;
+}
+
+function wpPrintManagerChecklist(dayData, dateStr) {
+  const items = dayData.items;
+  if (!items.length) { alert('No items on this day to print.'); return; }
+  const g = _wpPhaseGroups(items);
+  const phaseOrder = [...WP_PHASES.map(p => p.key), '__none__'];
+  let idx = 0, sectionsHtml = '';
+  phaseOrder.forEach(pk => {
+    const grp = g[pk]; if (!grp.length) return;
+    const phase = WP_PHASES.find(p => p.key === pk);
+    sectionsHtml += (phase
+      ? `<div class="ph-hdr"><span>${phase.icon}</span><span class="ph-hdr-label" style="color:${phase.color}">${phase.label}</span></div>`
+      : `<div class="ph-hdr"><span class="ph-hdr-label">Unassigned</span></div>`);
+    sectionsHtml += `<table><thead><tr><th class="num">#</th><th class="cb">✓</th><th>Item</th><th>Baker(s)</th><th class="cb">Done</th></tr></thead><tbody>`;
+    grp.forEach(item => {
+      idx++;
+      const cat = WP_CATEGORIES.find(c => c.key === item.category);
+      const pb  = item.primaryBaker   ? staff.find(s => s.id === item.primaryBaker)   : null;
+      const sb  = item.secondaryBaker ? staff.find(s => s.id === item.secondaryBaker) : null;
+      const bakerCell = [pb, sb].filter(Boolean).map((s, i) => {
+        const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+        return `<div style="display:flex;align-items:center;gap:5px;${i>0?'margin-top:3px':''}">
+          <span class="bchip" style="background:${wpBakerColor(s.name)};${i>0?'opacity:.75':''}">` + ini + `</span>
+          <span class="bname">${s.name.split(' ')[0]}</span>
+          <span class="${i===0?'role-p':'role-s'}">${i===0?'1°':'2°'}</span></div>`;
+      }).join('') || '<span style="color:#bbb;font-size:11px">—</span>';
+      sectionsHtml += `<tr>
+        <td class="num">${idx}</td>
+        <td class="cb"><span class="cb-box"></span></td>
+        <td>${cat?`<div><span class="cat-tag" style="background:${cat.bg};color:${cat.color}">${cat.label}</span></div>`:''}
+          <div class="iname">${item.name}</div>
+          ${item.qty?`<div class="iqty">${item.qty}</div>`:''}
+          ${item.note?`<div class="inote">${item.note}</div>`:''}
+        </td>
+        <td>${bakerCell}</td>
+        <td class="cb"><span class="cb-box"></span></td></tr>`;
+    });
+    sectionsHtml += `</tbody></table>`;
+  });
+  const crew = dayData.bakers.length ? dayData.bakers.join(', ') : '—';
+  const pills = `<div class="summary">
+    <div class="pill">${items.length} items</div>
+    ${WP_PHASES.map(p => g[p.key].length ? `<div class="pill">${p.icon} ${p.label}: ${g[p.key].length}</div>` : '').join('')}
+    ${g['__none__'].length ? `<div class="pill">Unassigned: ${g['__none__'].length}</div>` : ''}
+  </div>`;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Manager Checklist</title>${_wpChecklistCss()}</head><body>
+    <div style="text-align:right"><button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button></div>
+    <div class="bk-header">
+      <div><div class="bk-name">Bella's Bakeshop</div><div class="bk-subtitle">Production Manager's Checklist</div></div>
+      <div class="bk-date">${dateStr}<br><span style="color:#aaa;font-size:10px">Crew: ${crew}</span></div>
+    </div>
+    ${pills}${sectionsHtml}
+    <div class="footer">
+      <div class="sig"><div class="sig-lbl">Reviewed by</div><div class="sig-line"></div></div>
+      <div class="sig"><div class="sig-lbl">Time</div><div class="sig-line"></div></div>
+      <div class="sig"><div class="sig-lbl">Notes</div><div class="sig-line"></div></div>
+    </div>
+    <script>window.onload=()=>{setTimeout(()=>window.print(),300)}<\/script>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  if (!win) { alert('Allow pop-ups to open the print window.'); return; }
+  win.document.write(html); win.document.close();
+}
+
+function wpPrintBakerChecklists(dayData, dateStr) {
+  const items = dayData.items;
+  if (!items.length) { alert('No items on this day to print.'); return; }
+  const bakerIds = new Set();
+  items.forEach(i => { if (i.primaryBaker) bakerIds.add(i.primaryBaker); if (i.secondaryBaker) bakerIds.add(i.secondaryBaker); });
+  if (!bakerIds.size) { alert('No bakers assigned to items on this day. Assign bakers to items first.'); return; }
+  const pages = [];
+  bakerIds.forEach(bakerId => {
+    const baker = staff.find(s => s.id === bakerId); if (!baker) return;
+    const myItems = items.filter(i => i.primaryBaker === bakerId || i.secondaryBaker === bakerId);
+    const g = _wpPhaseGroups(myItems);
+    const phaseOrder = [...WP_PHASES.map(p => p.key), '__none__'];
+    let idx = 0, sectionsHtml = '';
+    phaseOrder.forEach(pk => {
+      const grp = g[pk]; if (!grp.length) return;
+      const phase = WP_PHASES.find(p => p.key === pk);
+      sectionsHtml += (phase
+        ? `<div class="ph-hdr"><span>${phase.icon}</span><span class="ph-hdr-label" style="color:${phase.color}">${phase.label}</span></div>`
+        : `<div class="ph-hdr"><span class="ph-hdr-label">Unassigned</span></div>`);
+      sectionsHtml += `<table><thead><tr><th class="num">#</th><th class="cb">✓</th><th>Item</th><th>Role</th><th class="cb">Done</th></tr></thead><tbody>`;
+      grp.forEach(item => {
+        idx++;
+        const cat     = WP_CATEGORIES.find(c => c.key === item.category);
+        const isPrimary = item.primaryBaker === bakerId;
+        sectionsHtml += `<tr>
+          <td class="num">${idx}</td>
+          <td class="cb"><span class="cb-box"></span></td>
+          <td>${cat?`<div><span class="cat-tag" style="background:${cat.bg};color:${cat.color}">${cat.label}</span></div>`:''}
+            <div class="iname">${item.name}</div>
+            ${item.qty?`<div class="iqty">${item.qty}</div>`:''}
+            ${item.note?`<div class="inote">${item.note}</div>`:''}
+          </td>
+          <td><span class="${isPrimary?'role-p':'role-s'}">${isPrimary?'Primary':'Secondary'}</span></td>
+          <td class="cb"><span class="cb-box"></span></td></tr>`;
+      });
+      sectionsHtml += `</tbody></table>`;
+    });
+    const ini = baker.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+    const bg  = wpBakerColor(baker.name);
+    pages.push(`<div class="baker-page">
+      <div style="text-align:right"><button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button></div>
+      <div class="bk-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:42px;height:42px;border-radius:50%;background:${bg};color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ini}</div>
+          <div><div class="bk-name">${baker.name}</div><div class="bk-subtitle">Baker Production Checklist</div></div>
+        </div>
+        <div class="bk-date">${dateStr}<br><span style="color:#aaa;font-size:10px">${myItems.length} item${myItems.length!==1?'s':''} assigned</span></div>
+      </div>
+      ${sectionsHtml}
+      <div class="footer">
+        <div class="sig"><div class="sig-lbl">Start Time</div><div class="sig-line"></div></div>
+        <div class="sig"><div class="sig-lbl">End Time</div><div class="sig-line"></div></div>
+        <div class="sig"><div class="sig-lbl">Completed by</div><div class="sig-line"></div></div>
+      </div>
+    </div>`);
+  });
+  if (!pages.length) { alert('No baker sheets to print.'); return; }
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Baker Checklists</title>${_wpChecklistCss()}</head><body>
+    ${pages.join('')}
+    <script>window.onload=()=>{setTimeout(()=>window.print(),300)}<\/script>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  if (!win) { alert('Allow pop-ups to open the print window.'); return; }
+  win.document.write(html); win.document.close();
+}
 
 // SOURCE: sync.js
 const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates"]);
@@ -19587,6 +19843,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.1.9': [
+    '🖨 Bake Board Print Checklists — new 🖨 Print button on the Bake Board toolbar opens a day/type picker; prints a Manager\'s Checklist (all items by phase with baker assignments) or individual Baker Checklists (one page per assigned baker) — both print-optimized with checkboxes and sign-off lines',
+  ],
   '2.1.8': [
     '🔢 Header version badge restored — app version now appears between the User chip and Saved to cloud indicator',
   ],
