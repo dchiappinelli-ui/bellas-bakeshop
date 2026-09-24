@@ -2917,7 +2917,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.5';
+const APP_VERSION      = '2.1.6';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -19543,6 +19543,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.1.6': [
+    '🔇 Suppressed Firebase auth unavailable banner — app silently falls back to local mode when cloud auth is not configured',
+  ],
   '2.1.5': [
     '📋 Bake Board — Production Phases: tag each item as 🫙 Make Dough, ✂️ Shape & Form, 🥄 Prep, or 🔥 Bake; each day column auto-sorts by phase so the daily workflow is clear at a glance',
   ],
@@ -19858,8 +19861,6 @@ function secureRecoverDrafts(staffId) {
     fbSetSyncStatus('connecting');
   } catch(e) {
     authBoot();
-    const list = document.getElementById('auth-staff-list');
-    if (list) list.textContent = 'Secure sign-in is not available yet. Existing data is preserved on this device. Ask the owner to complete the upgrade setup, then reload.';
     fbSetSyncStatus('offline');
     console.warn('Secure startup unavailable:', e.code || e.message);
   } finally { if (loading) loading.style.display = 'none'; }
