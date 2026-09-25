@@ -765,6 +765,33 @@
     .page { display: block !important; }
     body { background: white; color: black; }
   }
+
+  /* ── Tablet-safe modals: scroll within the backdrop, not behind it ── */
+  #recipe-bulk-import-modal,
+  #tl-export-modal, #tl-load-modal, #tl-modal, #tl-recipe-modal,
+  #dt-library-picker-modal,
+  #wp-copy-modal, #wp-push-modal,
+  #deploy-modal, #sq-import-modal, #yield-modal, #freezer-scan-modal {
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+  }
+  #recipe-bulk-import-modal > *,
+  #tl-export-modal > *, #tl-load-modal > *, #tl-modal > *, #tl-recipe-modal > *,
+  #dt-library-picker-modal > *,
+  #wp-copy-modal > *, #wp-push-modal > *,
+  #deploy-modal > *, #sq-import-modal > *, #yield-modal > *, #freezer-scan-modal > * {
+    flex-shrink: 0 !important;
+  }
+  /* Lock body scroll whenever any modal overlay is visible */
+  body:has([id$="-modal"][style*="display:flex"]),
+  body:has([id$="-modal"][style*="display:block"]),
+  body:has(#dv-modal[style*="flex"]),
+  body:has(#dv-copy-modal[style*="flex"]),
+  body:has(#dv-sq-modal[style*="flex"]) {
+    overflow: hidden !important;
+  }
 </style>
 </head>
 <body>
@@ -1962,8 +1989,8 @@
 <!-- Bake Board — Print modal -->
 <div id="wp-print-modal"
   style="display:none;position:fixed;inset:0;z-index:99994;background:rgba(0,0,0,0.65);
-    align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:4px;width:100%;max-width:440px;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:440px;flex-shrink:0;
               box-shadow:0 20px 60px rgba(0,0,0,0.4)">
     <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:20px;font-weight:800">🖨 Print Checklists</div>
@@ -2009,15 +2036,16 @@
 <!-- Bake Board — Item editor modal -->
 <div id="wp-item-modal"
   style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(0,0,0,0.65);
-    align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:4px;width:100%;max-width:480px;
-              box-shadow:0 20px 60px rgba(0,0,0,0.4)">
-    <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:480px;flex-shrink:0;
+              display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;
+                justify-content:space-between;flex-shrink:0;border-radius:4px 4px 0 0">
       <div id="wp-item-modal-title" style="font-size:20px;font-weight:800">Add Item</div>
       <button onclick="wpCloseItemModal()"
         style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:26px;cursor:pointer;line-height:1">✕</button>
     </div>
-    <div style="padding:28px">
+    <div style="padding:28px;overflow-y:auto;-webkit-overflow-scrolling:touch">
       <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
         letter-spacing:1px;color:#777;margin-bottom:8px">Item / Recipe Name *</label>
       <input type="text" id="wp-item-name" placeholder="e.g. Sourdough, Croissants, Muffins…"
@@ -2075,7 +2103,8 @@
       <div id="wp-cat-picker" style="display:flex;flex-wrap:wrap;gap:7px"></div>
     </div>
     <div style="padding:16px 28px;border-top:2px solid #eee;display:flex;
-      justify-content:space-between;align-items:center">
+      justify-content:space-between;align-items:center;flex-shrink:0;
+      position:sticky;bottom:0;background:#fff;border-radius:0 0 4px 4px">
       <button id="wp-item-delete-btn" onclick="wpDeleteItem()"
         style="padding:12px 20px;border:2px solid #e03030;border-radius:4px;background:#fff;
           color:#e03030;font-size:14px;font-weight:700;cursor:pointer">🗑 Delete</button>
@@ -2154,8 +2183,8 @@
 <!-- Bake Board — Baker picker modal -->
 <div id="wp-baker-modal"
   style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(0,0,0,0.65);
-    align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:4px;width:100%;max-width:420px;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:4px;width:100%;max-width:420px;flex-shrink:0;
               box-shadow:0 20px 60px rgba(0,0,0,0.4)">
     <div style="background:#111;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between">
       <div id="wp-baker-modal-title" style="font-size:20px;font-weight:800">Bakers on shift</div>
@@ -2989,7 +3018,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.2.0';
+const APP_VERSION      = '2.2.2';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17603,10 +17632,12 @@ function wpOpenItemModal(day, itemId) {
     ).join('');
   }
   document.getElementById('wp-item-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('wp-item-name').focus(), 80);
 }
 function wpCloseItemModal() {
   document.getElementById('wp-item-modal').style.display = 'none';
+  document.body.style.overflow = '';
   _wpEditDay = _wpEditItemId = _wpEditCategory = _wpEditPhase = null;
 }
 function wpSelectCat(key) {
@@ -18213,6 +18244,7 @@ function wpOpenBakerPicker(day) {
     }).join('');
   }
   document.getElementById('wp-baker-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 }
 function wpToggleBaker(name, btn) {
   const mondayStr = wpMondayStr(_wpWeekMonday);
@@ -18226,6 +18258,7 @@ function wpToggleBaker(name, btn) {
 }
 function wpCloseBakerPicker() {
   document.getElementById('wp-baker-modal').style.display = 'none';
+  document.body.style.overflow = '';
   _wpBakerDay = null;
 }
 
@@ -18245,10 +18278,12 @@ function wpOpenPrintModal() {
   }).join('');
   document.getElementById('wp-print-day-select').innerHTML = opts;
   document.getElementById('wp-print-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 }
 
 function wpClosePrintModal() {
   document.getElementById('wp-print-modal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function wpPrintChecklist() {
@@ -18976,7 +19011,7 @@ function dvShowModal(block, colId, startSlot) {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'dv-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box';
     modal.onclick = e => { if (e.target === modal) dvHideModal(); };
     document.body.appendChild(modal);
   }
@@ -19224,7 +19259,7 @@ function dvPromptCopy() {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'dv-copy-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box';
     modal.onclick = e => { if (e.target === modal) modal.style.display='none'; };
     document.body.appendChild(modal);
   }
@@ -19535,7 +19570,7 @@ function dvSqShowModal(html, wide) {
   if (!m) {
     m = document.createElement('div');
     m.id = 'dv-sq-modal';
-    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box';
     m.innerHTML = `<div id="dv-sq-modal-inner" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:100%;box-sizing:border-box;max-height:90vh;overflow-y:auto"></div>`;
     document.body.appendChild(m);
   }
@@ -19849,6 +19884,12 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.2.2': [
+    '📱 Global modal tablet fix — all 15+ popups across the app (Recipes, Timeline, Dough Timer, Orders, Inventory, Deploy checklist, etc.) now scroll correctly on tablet; body scroll is locked behind any open modal via a single CSS rule',
+  ],
+  '2.2.1': [
+    '📱 Tablet modal fix — Bake Board Add/Edit modal no longer gets cut off on small screens; backdrop locks page scroll, modal inner content scrolls independently, and the Save/Cancel buttons stay pinned at the bottom so they\'re always reachable',
+  ],
   '2.2.0': [
     '🛡 Data safety fix — Bake Board (and all sync keys) now always save locally even when not signed in; data entered before sign-in is automatically queued and pushed to Firestore on next login. On sign-in, cloud data no longer overwrites local data when cloud is empty — local content is preserved and uploaded instead.',
   ],
