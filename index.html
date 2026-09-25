@@ -2989,7 +2989,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.1.9';
+const APP_VERSION      = '2.2.0';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -18513,13 +18513,19 @@ async function secureReconcile(key) {
 localStorage.setItem = function(key, value) {
   value = String(value);
   if (!FB_SYNC_KEYS.has(key)) { _ls.set(key, value); return; }
-  if (!secureReady || !authGetSession()) throw new Error('Sign in and connect before editing shared bakery data.');
+  // Always write locally so data is never lost while unauthenticated.
+  _ls.set(key, value);
+  if (!secureReady || !authGetSession()) {
+    // Mark as needing sync once auth is available; will be picked up by secureSignIn.
+    if (!window._securePreAuthDrafts) window._securePreAuthDrafts = {};
+    window._securePreAuthDrafts[key] = value;
+    return;
+  }
   const previous = secureQueue[key];
   if (previous) previous.value = value;
   else secureQueue[key] = { base: secureBases[key] ?? null, value, operationId: crypto.randomUUID() };
   // Durable draft is written first. If storage is full, do not claim a successful save.
   securePersist();
-  _ls.set(key, value);
   fbSetSyncStatus('syncing');
   clearTimeout(window.secureSaveTimer);
   window.secureSaveTimer = setTimeout(secureFlush, 400);
@@ -19843,6 +19849,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.2.0': [
+    '🛡 Data safety fix — Bake Board (and all sync keys) now always save locally even when not signed in; data entered before sign-in is automatically queued and pushed to Firestore on next login. On sign-in, cloud data no longer overwrites local data when cloud is empty — local content is preserved and uploaded instead.',
+  ],
   '2.1.9': [
     '🖨 Bake Board Print Checklists — new 🖨 Print button on the Bake Board toolbar opens a day/type picker; prints a Manager\'s Checklist (all items by phase with baker assignments) or individual Baker Checklists (one page per assigned baker) — both print-optimized with checkboxes and sign-off lines',
   ],
@@ -20104,10 +20113,29 @@ async function secureSignIn(staffId, pin) {
     secureQueue = JSON.parse(_ls.get(secureQueueKey) || '{}');
     // Reads use individual known documents: the denied legacy PIN document is never queried.
     const snapshots = await Promise.all([...FB_SYNC_KEYS].map(key => _fbDb.collection('bakery_data').doc(key).get()));
+    // Merge any edits made before auth was ready into the queue so they win over cloud.
+    const preAuth = window._securePreAuthDrafts || {};
+    window._securePreAuthDrafts = {};
+    Object.entries(preAuth).forEach(([key, value]) => {
+      if (!secureQueue[key]) secureQueue[key] = { base: secureBases[key] ?? null, value, operationId: crypto.randomUUID() };
+    });
     snapshots.forEach((snap, i) => {
       const key = [...FB_SYNC_KEYS][i];
-      if (secureQueue[key]) { _ls.set(key, secureQueue[key].value); secureRefresh(key); }
-      else secureApply(key, snap.data()?.value ?? null);
+      const cloudVal = snap.data()?.value ?? null;
+      if (secureQueue[key]) {
+        // Local has pending or pre-auth draft — keep it, update local storage.
+        _ls.set(key, secureQueue[key].value); secureRefresh(key);
+      } else if (cloudVal === null) {
+        // Cloud has no data — keep local value as-is and queue it for upload if present.
+        const localVal = _ls.get(key);
+        if (localVal !== null) {
+          secureQueue[key] = { base: null, value: localVal, operationId: crypto.randomUUID() };
+          securePersist();
+        }
+        secureBases[key] = cloudVal;
+      } else {
+        secureApply(key, cloudVal);
+      }
     });
     secureReady = true;
     localStorage.removeItem('bk_staff_pins');
