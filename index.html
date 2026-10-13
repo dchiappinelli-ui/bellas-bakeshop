@@ -937,10 +937,8 @@
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('ordering')">🛒 Ordering</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('inventory')">📦 Inventory</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">💰 Price Library</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('prep')">🫙 Prep Items</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('countsheet')">📋 Staff Count Sheet</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('orders')">📋 Orders</button>
@@ -1117,6 +1115,68 @@
   </div>
 </div>
 
+<!-- ======== PRICE LIBRARY PAGE ======== -->
+<div class="page" id="page-pricelib">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">💰 Raw Material Prices</h2>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">Shared price library — ingredient costs auto-fill in recipes when the name matches · edit any cell to update across all recipes</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="pl-search" type="text" placeholder="Search…" oninput="renderPriceLib()"
+        style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;width:160px">
+      <select id="pl-cat-filter" onchange="renderPriceLib()"
+        style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+        <option value="">All Categories</option>
+        <option>Flour</option><option>Dairy</option><option>Fat</option>
+        <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
+        <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
+        <option>Spice</option><option>Other</option>
+      </select>
+      <button onclick="plShowAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+    </div>
+  </div>
+  <div id="pl-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">New Ingredient</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:2;min-width:140px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Name</div>
+        <input id="pl-add-name" type="text" placeholder="e.g. Bread Flour"
+          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="flex:1;min-width:110px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Category</div>
+        <select id="pl-add-cat" style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+          <option>Flour</option><option>Dairy</option><option>Fat</option>
+          <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
+          <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
+          <option>Spice</option><option>Other</option>
+        </select>
+      </div>
+      <div style="width:100px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">$/gram</div>
+        <input id="pl-add-ppg" type="number" step="0.00001" min="0" placeholder="0.00000"
+          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="width:90px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case $</div>
+        <input id="pl-add-case" type="number" step="0.01" min="0" placeholder="—"
+          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="width:100px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case wt (g)</div>
+        <input id="pl-add-casewt" type="number" step="1" min="0" placeholder="—"
+          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="plConfirmAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+        <button onclick="plHideAdd()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:9px 12px;font-size:13px;cursor:pointer">✕</button>
+      </div>
+    </div>
+  </div>
+  <div id="pl-table-wrap"></div>
+</div>
+
 <!-- ======== ORDER CHECK SHEET ======== -->
 <div class="page" id="page-checksheet">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
@@ -1145,35 +1205,6 @@
   <div id="board-content" style="margin-top:14px"></div>
 </div>
 
-<!-- ======== INVENTORY DASHBOARD ======== -->
-<div class="page" id="page-inventory">
-  <h2>Inventory Dashboard</h2>
-  <p class="subtitle">All 38 products · grouped by category · par-driven daily action list</p>
-
-  <!-- Day selector + summary strip -->
-  <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
-    <div class="form-group" style="min-width:160px;margin:0">
-      <label>Day of Week</label>
-      <select id="inv-day" onchange="onDayChange()">
-        <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-        <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
-      </select>
-    </div>
-    <button class="btn btn-primary" onclick="runInventoryCalc()">⚡ Refresh All</button>
-    <span id="inv-save-indicator" style="font-size:12px;color:var(--success);display:flex;align-items:center;gap:4px">✓ All counts saved</span>
-    <button class="btn btn-ghost btn-sm" onclick="setStaffPin()" title="Change the PIN required to exit Staff Mode">🔑 Change Staff PIN</button>
-    <button class="btn btn-ghost btn-sm" onclick="printInventorySheet()" style="margin-left:auto">🖨 Print Inventory Sheet</button>
-    <button class="btn btn-ghost btn-sm" onclick="eodOrderSheet()">📋 EOD Order Sheet</button>
-  </div>
-
-  <!-- Summary strip -->
-  <div id="inv-summary-strip" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px"></div>
-
-  <!-- Category sections rendered here -->
-  <div id="inv-dashboard"></div>
-</div>
-
-<!-- page-ingredients is defined below near line 1627 -->
 
 <!-- ======== PREP ITEMS STATUS (in-house made items: pesto, ganache, garlic butter, etc.) ======== -->
 <div class="page staff-page" id="page-prep">
@@ -1203,23 +1234,6 @@
   </div>
 </div>
 
-<!-- ======== STAFF COUNT SHEET (simplified, touch-friendly) ======== -->
-<div class="page staff-page" id="page-countsheet">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-    <div>
-      <h2 style="margin-bottom:2px">📋 Count Inventory</h2>
-      <p class="subtitle" style="margin:0">Tap a product, type what you counted. Saves instantly — no submit button needed.</p>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <select id="cs-day" onchange="renderCountSheet()" style="font-size:14px;padding:8px 12px">
-        <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-        <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
-      </select>
-      <span id="cs-progress" style="font-size:13px;color:var(--muted);font-weight:600"></span>
-    </div>
-  </div>
-  <div id="countsheet-body" style="display:flex;flex-direction:column;gap:18px"></div>
-</div>
 
 <!-- ======== ORDERING PAGE ======== -->
 <div class="page" id="page-ordering">
@@ -1551,6 +1565,10 @@
         style="padding:10px 18px;border:2px solid #1a4a8a;border-radius:4px;background:#1a4a8a;
           color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
           white-space:nowrap">📤 Push to Dough Timer</button>
+      <button onclick="mpsOpen()"
+        style="padding:10px 18px;border:2px solid #8a5a00;border-radius:4px;background:#8a5a00;
+          color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
+          white-space:nowrap">📊 Plan from Sheet</button>
       <button onclick="forceSaveKeys(['bk_week_plan'])"
         style="padding:10px 18px;border:none;border-radius:4px;background:#2a7d4f;
           color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
@@ -1814,6 +1832,62 @@
         style="padding:12px 20px;border:2px solid #ccc;border-radius:4px;background:#fff;color:#777;font-size:15px;cursor:pointer">Cancel</button>
       <button onclick="wpConfirmPush()"
         style="padding:12px 28px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;font-size:16px;font-weight:800;cursor:pointer">⏱ Schedule All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bake Board — Plan from MAIN Sheet modal -->
+<div id="mps-modal" style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,0.72);
+     align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px;box-sizing:border-box">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;
+              width:100%;max-width:920px;margin:auto;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:16px;font-weight:700">📊 Plan from MAIN Sheet</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Paste your spreadsheet → app calculates batches → push to Bake Board</div>
+      </div>
+      <button onclick="mpsClose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
+    </div>
+
+    <!-- Step 1: Paste -->
+    <div id="mps-step1" style="padding:20px 22px">
+      <div style="background:var(--surface2);border-radius:4px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7">
+        <strong style="color:var(--text)">How to paste:</strong> Open your spreadsheet, go to the <strong>MAIN</strong> sheet.
+        Select from cell <strong>A1</strong> through column <strong>I</strong> (Sunday), all rows down to the last product.
+        Copy (Ctrl+C or Cmd+C), then paste below.<br>
+        The header row with "MONDAY", "TUESDAY"… will be detected automatically — it doesn't matter where it is.
+      </div>
+      <textarea id="mps-paste" rows="16" placeholder="Paste your MAIN sheet data here (tab-separated from Excel)…"
+        style="width:100%;box-sizing:border-box;font-family:'DM Mono',monospace;font-size:11px;
+               background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+               padding:10px;color:var(--text);resize:vertical"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px">
+        <button onclick="mpsClose()" style="padding:10px 18px;border:1px solid var(--border);background:none;color:var(--muted);border-radius:4px;font-size:13px;cursor:pointer">Cancel</button>
+        <button onclick="mpsParse()" style="padding:10px 22px;background:var(--accent);color:#1a1209;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer">Parse →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Preview -->
+    <div id="mps-step2" style="display:none;padding:20px 22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div id="mps-summary" style="font-size:14px;font-weight:600"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Unit qty shown large · <span style="color:#4a9c6e;font-weight:700">green = batch count</span> (units ÷ recipe yield) · pushed to the week you're viewing on the Bake Board</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer">
+            <input type="checkbox" id="mps-clear-first"> Clear day items first
+          </label>
+          <button onclick="document.getElementById('mps-step2').style.display='none';document.getElementById('mps-step1').style.display=''"
+            style="padding:8px 14px;border:1px solid var(--border);background:none;color:var(--muted);border-radius:4px;font-size:13px;cursor:pointer">← Back</button>
+          <button onclick="mpsPush()"
+            style="padding:8px 22px;background:#1a4a8a;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Push to Bake Board →</button>
+        </div>
+      </div>
+      <div id="mps-week-info" style="font-size:11px;color:var(--muted);margin-bottom:10px"></div>
+      <div style="overflow-x:auto;max-height:58vh;overflow-y:auto;border:1px solid var(--border);border-radius:4px">
+        <div id="mps-preview-table"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2389,110 +2463,6 @@
   </div>
 </div>
 
-<!-- ======== YIELD RULES PAGE ======== -->
-<div class="page" id="page-yield">
-
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
-    <div>
-      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">♻️ Yield Rules</h2>
-      <p style="font-size:12px;color:var(--muted);margin-top:4px">
-        Define how leftover products convert into new ones. Bakers see morning tasks automatically.
-      </p>
-    </div>
-    <button onclick="yieldOpenAddModal()"
-      style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:10px 20px;
-             font-size:14px;font-weight:700;cursor:pointer">+ Add Rule</button>
-  </div>
-
-  <!-- Morning tasks banner — shown if there are pending conversions -->
-  <div id="yield-morning-banner" style="display:none;background:#1e3a2a;border:1px solid #4a9c6e;
-       border-radius:4px;padding:14px 18px;margin-bottom:20px">
-    <div style="font-size:13px;font-weight:700;color:#4a9c6e;margin-bottom:10px">
-      🌅 Today's Conversions — based on yesterday's EOD leftovers
-    </div>
-    <div id="yield-morning-tasks" style="display:flex;flex-direction:column;gap:8px"></div>
-  </div>
-
-  <!-- Rules list -->
-  <div id="yield-rules-list" style="display:flex;flex-direction:column;gap:10px"></div>
-  <div id="yield-empty" style="display:none;text-align:center;color:var(--muted);padding:40px;font-size:13px">
-    No yield rules yet — add your first one above.
-  </div>
-</div>
-
-<!-- Add/Edit Rule Modal -->
-<div id="yield-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);
-     align-items:center;justify-content:center">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;
-              width:480px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
-    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:16px;font-weight:700;color:var(--text)" id="yield-modal-title">Add Yield Rule</div>
-      <button onclick="yieldCloseModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
-    </div>
-    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
-      <!-- Source -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Source Product (leftover)</label>
-        <input id="yr-source" type="text" placeholder="e.g. Baguette"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px">
-      </div>
-      <!-- Source qty -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Source Quantity (per conversion)</label>
-        <input id="yr-source-qty" type="number" min="1" value="1" placeholder="e.g. 1"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px">
-      </div>
-      <!-- Arrow -->
-      <div style="text-align:center;font-size:20px;color:var(--muted)">↓</div>
-      <!-- Output -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Output Product</label>
-        <input id="yr-output" type="text" placeholder="e.g. Garlic Bread"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px">
-      </div>
-      <!-- Output qty -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Output Quantity (per conversion)</label>
-        <input id="yr-output-qty" type="number" min="1" value="1" placeholder="e.g. 2"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px">
-      </div>
-      <!-- Destination freezer -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Destination Freezer</label>
-        <select id="yr-freezer"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px"></select>
-      </div>
-      <!-- Trigger -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Trigger</label>
-        <select id="yr-trigger"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px">
-          <option value="daily">Daily — auto from EOD leftovers</option>
-          <option value="manual">Manual — baker triggers when ready</option>
-        </select>
-      </div>
-      <!-- Notes -->
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Notes (optional)</label>
-        <input id="yr-notes" type="text" placeholder="e.g. Baker makes first thing in the morning"
-          style="width:100%;margin-top:6px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
-                 border-radius:4px;color:var(--text);font-size:14px">
-      </div>
-    </div>
-    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="yieldCloseModal()"
-        style="padding:10px 20px;border:1px solid var(--border);background:none;color:var(--muted);border-radius:4px;cursor:pointer;font-size:14px">Cancel</button>
-      <button onclick="yieldSaveRule()"
-        style="padding:10px 24px;background:var(--accent);color:#1a1209;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer">Save Rule</button>
-    </div>
-  </div>
-</div>
 
 <!-- Freezer Scan Review Modal -->
 <div id="freezer-scan-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);
@@ -2656,7 +2626,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.3.0';
+const APP_VERSION      = '2.3.3';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3412,6 +3382,7 @@ function showPageDirect(page) {
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
   if (page === 'stationguide') renderStationGuide();
   if (page === 'displaystock') renderDisplayStock();
+  if (page === 'pricelib') renderPriceLib();
 }
 
 function showPage(page) {
@@ -3437,6 +3408,7 @@ function showPage(page) {
   if (page === 'freezer') renderFreezerPage();
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
+  if (page === 'pricelib') renderPriceLib();
   if (page === 'staffboard') renderStaffBoard();
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
@@ -3656,13 +3628,38 @@ function addIngredient(recipeId) {
   const name = (document.getElementById(`ing-name-${recipeId}`)?.value || '').trim();
   if (!name) return;
   if (!r.ingredients) r.ingredients = [];
+  const costEl  = document.getElementById(`ing-cost-${recipeId}`);
+  const unitEl  = document.getElementById(`ing-unit-${recipeId}`);
+  let costPerUnit = parseFloat(costEl?.value) || 0;
+  let unit        = (unitEl?.value || '').trim();
+  if (!costPerUnit) {
+    const lib = plLookupByName(name);
+    if (lib && lib.pricePerGram > 0) {
+      costPerUnit = lib.pricePerGram;
+      if (!unit) unit = 'g';
+    }
+  }
   r.ingredients.push({
     id: Date.now() + Math.random(),
     name,
     quantity: (document.getElementById(`ing-qty-${recipeId}`)?.value || '').trim(),
-    unit:     (document.getElementById(`ing-unit-${recipeId}`)?.value || '').trim(),
-    costPerUnit: parseFloat(document.getElementById(`ing-cost-${recipeId}`)?.value) || 0
+    unit,
+    costPerUnit
   });
+  save();
+  renderRecipes();
+  setTimeout(() => toggleRecipe(recipeId), 30);
+}
+
+function plSyncIngredient(recipeId, ingId) {
+  const r   = recipes.find(r => r.id === recipeId);
+  if (!r || !r.ingredients) return;
+  const ing = r.ingredients.find(i => i.id === ingId);
+  if (!ing) return;
+  const lib = plLookupByName(ing.name);
+  if (!lib) return;
+  ing.costPerUnit = lib.pricePerGram;
+  if (!ing.unit) ing.unit = 'g';
   save();
   renderRecipes();
   setTimeout(() => toggleRecipe(recipeId), 30);
@@ -3919,7 +3916,10 @@ function renderRecipes() {
 
   function recipeIngredientsHtml(r) {
     const ings = r.ingredients || [];
-    const rows = ings.map(ing => `
+    const rows = ings.map(ing => {
+      const lib = plLookupByName(ing.name);
+      const badge = lib ? `<span title="Price from library: $${lib.pricePerGram}/g" style="font-size:10px;color:#4a9c6e;cursor:pointer" onclick="plSyncIngredient(${r.id},${ing.id})">📚</span>` : '';
+      return `
       <tr style="border-bottom:1px solid var(--border)">
         <td style="padding:5px 6px">
           <input type="text" value="${(ing.name||'').replace(/"/g,'&quot;')}"
@@ -3937,24 +3937,26 @@ function renderRecipes() {
             onchange="updateIngredient(${r.id},${ing.id},'unit',this.value)">
         </td>
         <td style="padding:5px 6px;text-align:right">
-          <input type="number" min="0" step="0.01" value="${ing.costPerUnit||''}"
-            placeholder="0.00"
-            style="width:70px;background:transparent;border:none;font-size:13px;color:var(--text);text-align:right"
+          <input type="number" min="0" step="0.00001" value="${ing.costPerUnit||''}"
+            placeholder="${lib ? lib.pricePerGram.toFixed(5) : '0.00'}"
+            style="width:80px;background:transparent;border:none;font-size:13px;color:var(--text);text-align:right"
             onchange="updateIngredient(${r.id},${ing.id},'costPerUnit',parseFloat(this.value)||0)">
         </td>
         <td style="padding:5px 6px;text-align:right;color:var(--muted);font-size:12px">
           ${(ing.quantity && ing.costPerUnit) ? '$'+((parseFloat(ing.quantity)||0)*(parseFloat(ing.costPerUnit)||0)).toFixed(2) : '—'}
         </td>
+        <td style="padding:5px 4px;text-align:center">${badge}</td>
         <td style="padding:5px 4px;text-align:center">
           <button onclick="deleteIngredient(${r.id},${ing.id})"
             style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;line-height:1">✕</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
     return `
       <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div class="section-label">Ingredients</div>
-          <span style="font-size:11px;color:var(--muted)">${ings.length} ingredient${ings.length!==1?'s':''}</span>
+          <span style="font-size:11px;color:var(--muted)">${ings.length} ingredient${ings.length!==1?'s':''} · 📚 = price in library (click to sync)</span>
         </div>
         ${ings.length > 0 ? `
         <div style="overflow-x:auto">
@@ -3966,16 +3968,21 @@ function renderRecipes() {
               <th style="text-align:left;padding:4px 6px;width:60px">Unit</th>
               <th style="text-align:right;padding:4px 6px;width:80px">$/Unit</th>
               <th style="text-align:right;padding:4px 6px;width:80px">Cost</th>
-              <th style="width:30px"></th>
+              <th style="width:22px"></th>
+              <th style="width:22px"></th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">No ingredients yet</div>'}
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
-          <input type="text" id="ing-name-${r.id}" placeholder="Ingredient name" style="flex:2;min-width:120px;font-size:12px">
+          <datalist id="pl-names-${r.id}">${(plLoad()||[]).map(e=>`<option value="${e.name}">`).join('')}</datalist>
+          <input type="text" id="ing-name-${r.id}" placeholder="Ingredient name" list="pl-names-${r.id}"
+            style="flex:2;min-width:120px;font-size:12px"
+            oninput="(function(el){const m=plLookupByName(el.value);const h=document.getElementById('ing-lib-hint-${r.id}');if(h)h.textContent=m&&m.pricePerGram?'📚 $'+m.pricePerGram.toFixed(5)+'/g':'';})(this)">
+          <span id="ing-lib-hint-${r.id}" style="font-size:11px;color:var(--muted)"></span>
           <input type="text" id="ing-qty-${r.id}" placeholder="Qty" style="width:60px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
           <input type="text" id="ing-unit-${r.id}" placeholder="Unit" style="width:55px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
-          <input type="number" id="ing-cost-${r.id}" placeholder="$/Unit" min="0" step="0.01" style="width:70px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
+          <input type="number" id="ing-cost-${r.id}" placeholder="$/g (auto)" min="0" step="0.00001" style="width:80px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
           <button class="btn btn-ghost btn-sm" onclick="addIngredient(${r.id})">+ Add</button>
         </div>
       </div>`;
@@ -20146,7 +20153,418 @@ function dsPrintChecklist() {
 }
 // ============ END DISPLAY STOCK ============
 
+// ============================================================
+// PLAN FROM MAIN SHEET  (mps)
+// ============================================================
+let _mpsData = [];
+
+function mpsOpen() {
+  document.getElementById('mps-modal').style.display = 'flex';
+  document.getElementById('mps-step1').style.display = '';
+  document.getElementById('mps-step2').style.display = 'none';
+}
+function mpsClose() { document.getElementById('mps-modal').style.display = 'none'; }
+
+function mpsGetYield(recipe) {
+  if (recipe.yieldQty > 0) return parseInt(recipe.yieldQty);
+  const m = (recipe.yield || '').match(/\d+/);
+  return m ? parseInt(m[0]) : 0;
+}
+
+function mpsMatchRecipe(productName) {
+  if (!recipes || !recipes.length) return null;
+  const q = productName.toUpperCase().trim();
+  let m = recipes.find(r => r.name.toUpperCase() === q);
+  if (m) return m;
+  m = recipes.find(r => q.includes(r.name.toUpperCase()) && r.name.length > 3);
+  if (m) return m;
+  m = recipes.find(r => r.name.toUpperCase().includes(q) && q.length > 3);
+  if (m) return m;
+  const firstWord = q.split(' ')[0];
+  if (firstWord.length > 4) {
+    m = recipes.find(r => r.name.toUpperCase().startsWith(firstWord));
+    if (m) return m;
+    m = recipes.find(r => r.name.toUpperCase().includes(firstWord));
+    if (m) return m;
+  }
+  return null;
+}
+
+function mpsParse() {
+  const raw = (document.getElementById('mps-paste')?.value || '').trim();
+  if (!raw) { alert('Paste your MAIN sheet data first.'); return; }
+
+  const lines = raw.split('\n').map(l => l.split('\t').map(c => c.trim()));
+  const DAY_HEADERS = { 'MONDAY':0,'MON':0,'TUESDAY':1,'TUE':1,'WEDNESDAY':2,'WED':2,
+                        'THURSDAY':3,'THU':3,'FRIDAY':4,'FRI':4,'SATURDAY':5,'SAT':5,'SUNDAY':6,'SUN':6 };
+  const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
+
+  // detect day column positions from header row
+  let dayColIdx = [2,3,4,5,6,7,8];
+  for (const row of lines) {
+    const found = {};
+    row.forEach((cell, ci) => {
+      const k = cell.toUpperCase().replace(/\s+/g,'');
+      if (DAY_HEADERS[k] !== undefined) found[DAY_HEADERS[k]] = ci;
+    });
+    if (Object.keys(found).length >= 5) {
+      dayColIdx = DAY_KEYS.map((_, di) => found[di] ?? (2 + di));
+      break;
+    }
+  }
+
+  const SKIP = new Set(['CHECK','SHEET CHECK','FREEZER STOCK','TOTAL RETAIL + WHOLESALE',
+                        'CATEGORY','LABEL','TIME','SUBTOTAL']);
+  const parsed = [];
+  for (const row of lines) {
+    const name = (row[0] || '').trim();
+    if (!name || SKIP.has(name.toUpperCase())) continue;
+    // skip header-like rows (day name in col 0 or 2)
+    if (DAY_HEADERS[name.toUpperCase()] !== undefined) continue;
+    if (DAY_HEADERS[(row[2]||'').toUpperCase()] !== undefined) continue;
+
+    const days = {};
+    DAY_KEYS.forEach((dk, i) => {
+      const cell = (row[dayColIdx[i]] || '').replace(/[\s,]/g,'');
+      const n = parseInt(cell);
+      days[dk] = (!cell || cell.includes('VALUE') || cell.includes('#') || isNaN(n)) ? 0 : Math.max(0, n);
+    });
+    if (Object.values(days).every(v => v === 0)) continue;
+
+    const cat = (row[1] || '').trim();
+    const rec = mpsMatchRecipe(name);
+    const yld = rec ? mpsGetYield(rec) : 0;
+    parsed.push({ name, cat, days, recipeId: rec?.id || null, recipeName: rec?.name || null, recipeYield: yld });
+  }
+
+  if (!parsed.length) { alert('No product rows found — make sure you include rows with quantities and at least the Mon–Sun columns.'); return; }
+  _mpsData = parsed;
+  mpsShowPreview();
+}
+
+function mpsShowPreview() {
+  document.getElementById('mps-step1').style.display = 'none';
+  document.getElementById('mps-step2').style.display = '';
+
+  const matched = _mpsData.filter(r => r.recipeId).length;
+  document.getElementById('mps-summary').textContent =
+    `${_mpsData.length} products · ${matched} matched to recipes · ${_mpsData.length - matched} unmatched`;
+
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  document.getElementById('mps-week-info').textContent =
+    `Will push to week of ${mondayStr} (the week you're viewing on the Bake Board)`;
+
+  const DAY_KEYS  = ['mon','tue','wed','thu','fri','sat','sun'];
+  const DAY_SHORT = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+  const catGroups = {};
+  _mpsData.forEach(item => {
+    const g = item.cat || 'Other';
+    if (!catGroups[g]) catGroups[g] = [];
+    catGroups[g].push(item);
+  });
+
+  let tbody = '';
+  Object.entries(catGroups).forEach(([cat, items]) => {
+    tbody += `<tr style="background:var(--surface2)">
+      <td colspan="${9 + DAY_KEYS.length}" style="padding:4px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">${cat}</td>
+    </tr>`;
+    items.forEach(item => {
+      const cells = DAY_KEYS.map(dk => {
+        const qty = item.days[dk];
+        if (!qty) return `<td style="padding:5px 6px;text-align:center;color:var(--muted);font-size:11px">—</td>`;
+        const batches = item.recipeYield > 0 ? Math.ceil(qty / item.recipeYield) : null;
+        const bStr = batches !== null
+          ? `<div style="font-size:10px;font-weight:700;color:#4a9c6e">${batches}×</div>` : '';
+        return `<td style="padding:5px 6px;text-align:center"><div style="font-size:12px">${qty}</div>${bStr}</td>`;
+      }).join('');
+      const recCell = item.recipeId
+        ? `<span style="color:#4a9c6e;font-size:10px">✓ ${item.recipeName}</span>`
+        : `<span style="color:#e05252;font-size:10px">— no match</span>`;
+      tbody += `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 10px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${item.name}">${item.name}</td>
+        ${cells}
+        <td style="padding:5px 8px">${recCell}</td>
+      </tr>`;
+    });
+  });
+
+  document.getElementById('mps-preview-table').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead style="position:sticky;top:0;background:var(--surface);z-index:1">
+        <tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:6px 10px">Product</th>
+          ${DAY_SHORT.map(d => `<th style="text-align:center;padding:6px 6px;min-width:46px">${d}</th>`).join('')}
+          <th style="text-align:left;padding:6px 8px">Recipe Match</th>
+        </tr>
+      </thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
+}
+
+function mpsPush() {
+  if (!_mpsData.length) return;
+  const mondayStr  = wpMondayStr(_wpWeekMonday);
+  const weekData   = wpGetWeek(mondayStr);
+  const DAY_KEYS   = ['mon','tue','wed','thu','fri','sat','sun'];
+  const clearFirst = document.getElementById('mps-clear-first')?.checked;
+  const CAT_PHASE  = {
+    'BREAD':'Bread','COOKIE':'Cookie / Bar','MACARON':'Pastry',
+    'CAKE':'Cake','CROISSANT':'Croissant','FREEZER':'Frozen','PLAIN CROISSANT':'Croissant'
+  };
+
+  if (clearFirst) {
+    DAY_KEYS.forEach(dk => { weekData[dk].items = []; });
+  }
+
+  let added = 0;
+  _mpsData.forEach(item => {
+    DAY_KEYS.forEach(dk => {
+      const unitQty = item.days[dk];
+      if (!unitQty) return;
+      const batches = item.recipeYield > 0 ? Math.ceil(unitQty / item.recipeYield) : null;
+      const qtyStr  = batches !== null ? String(batches) : String(unitQty);
+      const noteStr = batches !== null ? `${unitQty} units` : '';
+      const phase   = CAT_PHASE[(item.cat||'').toUpperCase()] || null;
+      weekData[dk].items.push({
+        id:             'wpi_mps_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        name:           item.name,
+        qty:            qtyStr,
+        note:           noteStr,
+        category:       item.cat || null,
+        phase,
+        primaryBaker:   null,
+        secondaryBaker: null,
+        dtRecipeId:     item.recipeId ? String(item.recipeId) : null,
+        estMins:        null
+      });
+      added++;
+    });
+  });
+
+  wpSaveWeek(mondayStr, weekData);
+  renderWeekPlan();
+  mpsClose();
+}
+// ============ END PLAN FROM MAIN SHEET ============
+
+// ============================================================
+// PRICE LIBRARY  (bk_price_lib)
+// ============================================================
+const PL_KEY = 'bk_price_lib';
+function plLoad() { return JSON.parse(localStorage.getItem(PL_KEY) || 'null'); }
+function plSave(data) { localStorage.setItem(PL_KEY, JSON.stringify(data)); }
+
+const PL_DEFAULTS = [
+  { name:'WATER',                        cat:'Other',     pricePerGram:0,        caseCost:0,      caseWeightGrams:0      },
+  { name:'YEAST',                        cat:'Leavening', pricePerGram:0.00634,  caseCost:0,      caseWeightGrams:0      },
+  { name:'EGG',                          cat:'Dairy',     pricePerGram:0.00198,  caseCost:0.111,  caseWeightGrams:56     },
+  { name:'HEAVY CREAM',                  cat:'Dairy',     pricePerGram:0.00544,  caseCost:59,     caseWeightGrams:10848  },
+  { name:'LEVAIN',                       cat:'Leavening', pricePerGram:0.00366,  caseCost:0,      caseWeightGrams:0      },
+  { name:'SIR GALAHAD',                  cat:'Flour',     pricePerGram:0.00079,  caseCost:18,     caseWeightGrams:22679  },
+  { name:'BAKERS CLASSIC',               cat:'Flour',     pricePerGram:0.00247,  caseCost:56,     caseWeightGrams:22679  },
+  { name:'HIGH GLUTEN ORGANIC',          cat:'Flour',     pricePerGram:0.00366,  caseCost:83,     caseWeightGrams:22679  },
+  { name:'SELECT ARTISAN',               cat:'Flour',     pricePerGram:0.00247,  caseCost:56,     caseWeightGrams:22679  },
+  { name:'CAKE FLOUR',                   cat:'Flour',     pricePerGram:0.00212,  caseCost:48,     caseWeightGrams:22679  },
+  { name:'SIR LANCE',                    cat:'Flour',     pricePerGram:0.00085,  caseCost:19.2,   caseWeightGrams:22679  },
+  { name:'SALT',                         cat:'Spice',     pricePerGram:0.00758,  caseCost:31.06,  caseWeightGrams:22679  },
+  { name:'BAKING SODA',                  cat:'Leavening', pricePerGram:0.00758,  caseCost:0,      caseWeightGrams:340185 },
+  { name:'BAKING POWDER',                cat:'Leavening', pricePerGram:0.00758,  caseCost:0,      caseWeightGrams:0      },
+  { name:'SP FLOUR',                     cat:'Flour',     pricePerGram:0.00082,  caseCost:18.69,  caseWeightGrams:22679  },
+  { name:'BUTTER',                       cat:'Fat',       pricePerGram:0.00655,  caseCost:107,    caseWeightGrams:16344  },
+  { name:'SUGAR',                        cat:'Sugar',     pricePerGram:0.00194,  caseCost:44,     caseWeightGrams:22679  },
+  { name:'VANILLA',                      cat:'Spice',     pricePerGram:0.01586,  caseCost:0,      caseWeightGrams:0      },
+  { name:'OLIVE OIL',                    cat:'Fat',       pricePerGram:0.00852,  caseCost:23,     caseWeightGrams:2700   },
+  { name:'MILK',                         cat:'Dairy',     pricePerGram:0.00061,  caseCost:0,      caseWeightGrams:0      },
+  { name:'CHOCOLATE',                    cat:'Chocolate', pricePerGram:0.01674,  caseCost:167,    caseWeightGrams:9979   },
+  { name:'BITTER CHOCOLATE',             cat:'Chocolate', pricePerGram:0.01984,  caseCost:45,     caseWeightGrams:2267   },
+  { name:'BROWN SUGAR',                  cat:'Sugar',     pricePerGram:0.00203,  caseCost:0,      caseWeightGrams:22679  },
+  { name:'CAPUTO FLOUR',                 cat:'Flour',     pricePerGram:0.00243,  caseCost:55,     caseWeightGrams:22679  },
+  { name:'WHOLE WHEAT',                  cat:'Flour',     pricePerGram:0.00107,  caseCost:24.25,  caseWeightGrams:22679  },
+  { name:'ALMOND FLOUR',                 cat:'Nut/Seed',  pricePerGram:0.01200,  caseCost:0,      caseWeightGrams:0      },
+  { name:'CINNAMON',                     cat:'Spice',     pricePerGram:0.00882,  caseCost:0,      caseWeightGrams:0      },
+  { name:'WALNUT',                       cat:'Nut/Seed',  pricePerGram:0.00816,  caseCost:0,      caseWeightGrams:0      },
+  { name:'COCOA',                        cat:'Chocolate', pricePerGram:0.01411,  caseCost:32,     caseWeightGrams:2268   },
+  { name:'BF',                           cat:'Flour',     pricePerGram:0.00229,  caseCost:26,     caseWeightGrams:11339  },
+  { name:'MP',                           cat:'Flour',     pricePerGram:0.00229,  caseCost:26,     caseWeightGrams:11339  },
+  { name:'CRANBERRIES',                  cat:'Fruit',     pricePerGram:0.00735,  caseCost:10,     caseWeightGrams:1360   },
+  { name:'RASPBERRIES',                  cat:'Fruit',     pricePerGram:0.01091,  caseCost:0,      caseWeightGrams:0      },
+  { name:'WHITE CHOCOLATE',              cat:'Chocolate', pricePerGram:0.03440,  caseCost:86,     caseWeightGrams:2500   },
+  { name:'VEGETABLE OIL',                cat:'Fat',       pricePerGram:0.00238,  caseCost:8.33,   caseWeightGrams:3496   },
+  { name:'ORANGE ZEST',                  cat:'Spice',     pricePerGram:0.00238,  caseCost:8.33,   caseWeightGrams:3496   },
+  { name:'POPPY SEED',                   cat:'Nut/Seed',  pricePerGram:0.00441,  caseCost:100,    caseWeightGrams:22679  },
+  { name:'BLUEBERRIES',                  cat:'Fruit',     pricePerGram:0.00772,  caseCost:105,    caseWeightGrams:13607  },
+  { name:'BUTTERMILK',                   cat:'Dairy',     pricePerGram:0.00061,  caseCost:0,      caseWeightGrams:0      },
+  { name:'LEMON JUICE',                  cat:'Spice',     pricePerGram:0.00487,  caseCost:19,     caseWeightGrams:3898   },
+  { name:'LEMON ZEST',                   cat:'Spice',     pricePerGram:0.00487,  caseCost:19,     caseWeightGrams:3898   },
+  { name:'RICOTTA',                      cat:'Dairy',     pricePerGram:0.00661,  caseCost:90,     caseWeightGrams:13607  },
+  { name:'OATS',                         cat:'Nut/Seed',  pricePerGram:0.00434,  caseCost:62,     caseWeightGrams:14280  },
+  { name:'GLUTEN FREE FLOUR',            cat:'Flour',     pricePerGram:0.00706,  caseCost:80,     caseWeightGrams:11339  },
+  { name:"FARMER'S GROUND MULTIPURPOSE", cat:'Flour',     pricePerGram:0.00882,  caseCost:26,     caseWeightGrams:11339  },
+  { name:'ORGANIC FARMERS GROUND HWBF',  cat:'Flour',     pricePerGram:0.00882,  caseCost:0,      caseWeightGrams:0      },
+  { name:'ORGANIC SELECT ARTISAN',       cat:'Flour',     pricePerGram:0.00253,  caseCost:57.44,  caseWeightGrams:22679  },
+  { name:"ORGANIC BAKER'S CLASSIC",      cat:'Flour',     pricePerGram:0.00262,  caseCost:59.38,  caseWeightGrams:22679  },
+  { name:'ORGANIC HIGH GLUTEN',          cat:'Flour',     pricePerGram:0.00262,  caseCost:59.38,  caseWeightGrams:22679  },
+  { name:'CHEDDAR CHEESE',               cat:'Savory',    pricePerGram:0.00882,  caseCost:20,     caseWeightGrams:2267   },
+  { name:'BACON',                        cat:'Savory',    pricePerGram:0.01103,  caseCost:25,     caseWeightGrams:2267   },
+  { name:'SCALLION',                     cat:'Savory',    pricePerGram:0.00441,  caseCost:10,     caseWeightGrams:2267   },
+  { name:'MALT POWDER',                  cat:'Flour',     pricePerGram:0.00262,  caseCost:59.38,  caseWeightGrams:22679  },
+];
+
+function plGetAll() {
+  const data = plLoad();
+  if (data === null) {
+    const seeded = PL_DEFAULTS.map((d, i) => ({ id: Date.now() + i, ...d, updatedAt: Date.now() }));
+    plSave(seeded);
+    return seeded;
+  }
+  return data;
+}
+
+function plLookupByName(name) {
+  if (!name) return null;
+  const q = name.trim().toUpperCase();
+  return (plLoad() || []).find(e => e.name.toUpperCase() === q) || null;
+}
+
+const PL_CAT_COLORS = {
+  'Flour':'#c8a87a','Dairy':'#7ab8c8','Fat':'#c8b87a','Sugar':'#c87a9e',
+  'Leavening':'#a8c87a','Chocolate':'#8b6249','Fruit':'#c87a7a',
+  'Nut/Seed':'#9e8b6a','Savory':'#7ac87a','Spice':'#b87ac8','Other':'#8a8a8a'
+};
+
+function renderPriceLib() {
+  const wrap = document.getElementById('pl-table-wrap');
+  if (!wrap) return;
+  const all = plGetAll();
+  const search = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
+  const catF   = document.getElementById('pl-cat-filter')?.value || '';
+  const filtered = all.filter(e => {
+    if (catF && e.cat !== catF) return false;
+    if (search && !e.name.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a, b) => a.cat !== b.cat ? a.cat.localeCompare(b.cat) : a.name.localeCompare(b.name));
+
+  if (!filtered.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No ingredients match</div>';
+    return;
+  }
+  const rows = filtered.map(e => {
+    const ppg    = parseFloat(e.pricePerGram) || 0;
+    const per100 = (ppg * 100).toFixed(4);
+    const cc     = PL_CAT_COLORS[e.cat] || '#8a8a8a';
+    return `<tr style="border-bottom:1px solid var(--border)" id="pl-row-${e.id}">
+      <td style="padding:6px 10px">
+        <input type="text" value="${(e.name||'').replace(/"/g,'&quot;')}"
+          style="background:transparent;border:none;font-size:13px;color:var(--text);width:100%;min-width:150px"
+          onchange="plUpdateField(${e.id},'name',this.value)">
+      </td>
+      <td style="padding:6px 8px">
+        <select style="background:transparent;border:none;font-size:12px;color:${cc};font-weight:600;cursor:pointer"
+          onchange="plUpdateField(${e.id},'cat',this.value)">
+          ${['Flour','Dairy','Fat','Sugar','Leavening','Chocolate','Fruit','Nut/Seed','Savory','Spice','Other'].map(c =>
+            `<option value="${c}"${e.cat===c?' selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td style="padding:6px 8px;text-align:right">
+        <input type="number" step="0.00001" min="0" value="${ppg||''}" placeholder="0.00000"
+          style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:90px"
+          onchange="plUpdateField(${e.id},'pricePerGram',parseFloat(this.value)||0)">
+      </td>
+      <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:12px" id="pl-100g-${e.id}">$${per100}</td>
+      <td style="padding:6px 8px;text-align:right">
+        <input type="number" step="0.01" min="0" value="${e.caseCost||''}" placeholder="—"
+          style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:75px"
+          onchange="plUpdateField(${e.id},'caseCost',parseFloat(this.value)||0)">
+      </td>
+      <td style="padding:6px 8px;text-align:right">
+        <input type="number" step="1" min="0" value="${e.caseWeightGrams||''}" placeholder="—"
+          style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:80px"
+          onchange="plUpdateField(${e.id},'caseWeightGrams',parseFloat(this.value)||0)">
+      </td>
+      <td style="padding:6px 8px;text-align:center">
+        <button onclick="plDeleteItem(${e.id})"
+          style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${all.length} ingredients total · ${filtered.length} shown · changes save automatically</div>
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:6px 10px">Name</th>
+          <th style="text-align:left;padding:6px 8px">Category</th>
+          <th style="text-align:right;padding:6px 8px">$/gram</th>
+          <th style="text-align:right;padding:6px 8px">$/100g</th>
+          <th style="text-align:right;padding:6px 8px">Case $</th>
+          <th style="text-align:right;padding:6px 8px">Case wt (g)</th>
+          <th style="width:28px"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+function plUpdateField(id, field, val) {
+  const all  = plGetAll();
+  const item = all.find(e => e.id === id);
+  if (!item) return;
+  item[field]     = val;
+  item.updatedAt  = Date.now();
+  plSave(all);
+  if (field === 'pricePerGram') {
+    const cell = document.getElementById(`pl-100g-${id}`);
+    if (cell) cell.textContent = '$' + ((parseFloat(val)||0) * 100).toFixed(4);
+  }
+}
+
+function plDeleteItem(id) {
+  const all  = plGetAll();
+  const item = all.find(e => e.id === id);
+  if (!item || !confirm(`Remove "${item.name}" from the price library?`)) return;
+  plSave(all.filter(e => e.id !== id));
+  renderPriceLib();
+}
+
+function plShowAdd() {
+  document.getElementById('pl-add-form').style.display = '';
+  document.getElementById('pl-add-name').focus();
+}
+function plHideAdd() { document.getElementById('pl-add-form').style.display = 'none'; }
+
+function plConfirmAdd() {
+  const name = (document.getElementById('pl-add-name')?.value || '').trim().toUpperCase();
+  if (!name) { alert('Please enter a name'); return; }
+  const ppg     = parseFloat(document.getElementById('pl-add-ppg')?.value)     || 0;
+  const cat     = document.getElementById('pl-add-cat')?.value                 || 'Other';
+  const caseCost= parseFloat(document.getElementById('pl-add-case')?.value)    || 0;
+  const caseWt  = parseFloat(document.getElementById('pl-add-casewt')?.value)  || 0;
+  const all = plGetAll();
+  all.push({ id: Date.now(), name, cat, pricePerGram: ppg, caseCost, caseWeightGrams: caseWt, updatedAt: Date.now() });
+  plSave(all);
+  plHideAdd();
+  ['pl-add-name','pl-add-ppg','pl-add-case','pl-add-casewt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderPriceLib();
+}
+// ============ END PRICE LIBRARY ============
+
 const VERSION_NOTES = {
+  '2.3.3': [
+    '📊 Bake Board — "Plan from Sheet" button: paste your MAIN sheet (columns A–I, all rows) and the app parses Mon–Sun quantities, auto-matches products to recipes, calculates batch counts (units ÷ recipe yield), shows a grouped preview, then pushes the week\'s items to the Bake Board in one click; "Clear day items first" option lets you replace an existing week',
+  ],
+  '2.3.2': [
+    '🧹 Navigation — removed Inventory Dashboard, Yield Rules, and Staff Count Sheet tabs (superseded by Bake Board and other active tools)',
+  ],
+  '2.3.1': [
+    '💰 Price Library — new owner tab with all 53 raw material ingredients pre-loaded from the master price sheet ($/gram, case cost, case weight); edit any price and it flows to recipes automatically',
+    '🔗 Recipes — ingredient rows now show a 📚 badge when the name matches the price library; click it to sync the current library price into that ingredient; adding a new ingredient auto-fills $/g from the library when the name matches and no price is entered',
+  ],
   '2.3.0': [
     '🌱 Recipes — Pre-ferments section added to every recipe: define Levain, Poolish, Biga, Starter, or custom preferments with grams per batch, lead time (hrs), and optional hydration %; existing levain grams data auto-migrates to the new format',
     '🌱 Bake Board — Each day column now shows a "Pre-ferments" summary aggregating total grams needed per type across all recipe-linked items for that day, with lead time shown so you know how far ahead to start them',
