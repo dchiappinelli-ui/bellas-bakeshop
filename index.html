@@ -2656,7 +2656,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.2.9';
+const APP_VERSION      = '2.3.0';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3562,6 +3562,45 @@ function deleteStage(recipeId, stageId) {
   setTimeout(() => toggleRecipe(recipeId), 50);
 }
 
+function addPreferment(recipeId) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r) return;
+  if (!r.preferments) r.preferments = [];
+  const grams = parseInt(document.getElementById(`pf-grams-${recipeId}`)?.value) || 0;
+  if (!grams) { alert('Enter grams per batch first.'); return; }
+  r.preferments.push({
+    id: Date.now(),
+    type:         document.getElementById(`pf-type-${recipeId}`)?.value || 'Levain',
+    gramsPerBatch: grams,
+    leadHrs:      parseInt(document.getElementById(`pf-lead-${recipeId}`)?.value) || 12,
+    hydration:    parseInt(document.getElementById(`pf-hydration-${recipeId}`)?.value) || null,
+    notes:        document.getElementById(`pf-notes-${recipeId}`)?.value || '',
+  });
+  save();
+  renderRecipes();
+  setTimeout(() => toggleRecipe(recipeId), 50);
+}
+
+function updatePreferment(recipeId, prefId, field, val) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r || !r.preferments) return;
+  const pf = r.preferments.find(p => p.id === prefId);
+  if (!pf) return;
+  pf[field] = (field === 'gramsPerBatch' || field === 'leadHrs' || field === 'hydration')
+    ? (parseInt(val) || (field === 'leadHrs' ? 12 : 0))
+    : val;
+  save();
+}
+
+function deletePreferment(recipeId, prefId) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r || !r.preferments) return;
+  r.preferments = r.preferments.filter(p => p.id !== prefId);
+  save();
+  renderRecipes();
+  setTimeout(() => toggleRecipe(recipeId), 50);
+}
+
 function toggleRecipe(id) {
   const body = document.getElementById(`recipe-body-${id}`);
   if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
@@ -3760,6 +3799,16 @@ function renderRecipes() {
     return;
   }
 
+  // Migrate legacy levainGrams → preferments (runs once per recipe, then levainGrams stays as legacy backup)
+  let migrated = false;
+  recipes.forEach(r => {
+    if ((r.levainGrams > 0) && (!r.preferments || !r.preferments.length)) {
+      r.preferments = [{ id: Date.now() + r.id, type: 'Levain', name: '', gramsPerBatch: r.levainGrams, leadHrs: 12, hydration: 100, notes: '' }];
+      migrated = true;
+    }
+  });
+  if (migrated) save();
+
   const SKILLS   = ['Head Baker','Baker','Bakery Assistant','Anyone'];
   const CAT_ORDER = ['Bread','Croissant','Bagel','Pastry','Cookie / Bar','Savory','Other'];
 
@@ -3840,11 +3889,6 @@ function renderRecipes() {
                 <option value="2" ${(r.leadDays||0)==2?'selected':''}>2 days ahead</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Levain per batch (g)</label>
-              <input type="number" min="0" step="10" value="${r.levainGrams || 0}" placeholder="e.g. 6560"
-                onchange="updateRecipe(${r.id},'levainGrams',parseInt(this.value)||0)" style="width:90px">
-            </div>
             <div class="form-group" style="min-width:110px">
               <label title="Mixer/oven holds this many batches per run. 0 = no limit.">Max batches/run</label>
               <input type="number" min="0" step="1" value="${r.batchCapacity || 0}" placeholder="0 = unlimited"
@@ -3868,7 +3912,8 @@ function renderRecipes() {
           </div>
         </div>
         ${recipeIngredientsHtml(r)}
-        ${recipeCostSummaryHtml(r)}`
+        ${recipeCostSummaryHtml(r)}
+        ${recipePrefermentHtml(r)}`
     + recipeStagesHtml(r, SKILLS);
   }
 
@@ -3984,6 +4029,78 @@ function renderRecipes() {
           </div>` : ''}
         </div>
       </div>`;
+  }
+
+  function recipePrefermentHtml(r) {
+    const pfs = r.preferments || [];
+    const PF_TYPES = ['Levain','Poolish','Biga','Starter','Other'];
+    const rows = pfs.map(pf => `
+      <div style="display:grid;grid-template-columns:110px 100px 90px 75px 1fr 34px;gap:8px;align-items:end;
+        background:var(--surface);border-radius:4px;padding:9px 10px;margin-bottom:6px">
+        <div class="form-group" style="margin:0">
+          <label>Type</label>
+          <select onchange="updatePreferment(${r.id},${pf.id},'type',this.value)">
+            ${PF_TYPES.map(t => `<option ${t===pf.type?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Grams / batch</label>
+          <input type="number" min="0" step="50" value="${pf.gramsPerBatch||0}"
+            onchange="updatePreferment(${r.id},${pf.id},'gramsPerBatch',this.value)">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Lead time (hrs)</label>
+          <input type="number" min="1" max="48" step="1" value="${pf.leadHrs||12}"
+            onchange="updatePreferment(${r.id},${pf.id},'leadHrs',this.value)">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Hydration %</label>
+          <input type="number" min="50" max="200" step="5" value="${pf.hydration||''}" placeholder="—"
+            onchange="updatePreferment(${r.id},${pf.id},'hydration',this.value)">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Notes</label>
+          <input type="text" value="${(pf.notes||'').replace(/"/g,'&quot;')}" placeholder="e.g. Build to 2× volume"
+            onchange="updatePreferment(${r.id},${pf.id},'notes',this.value)">
+        </div>
+        <div style="padding-bottom:1px">
+          <button class="btn btn-danger btn-sm" style="padding:6px 8px" onclick="deletePreferment(${r.id},${pf.id})">✕</button>
+        </div>
+      </div>`).join('');
+
+    return `<div style="border:1px solid #b8e0c8;border-radius:6px;padding:12px 14px;margin-bottom:14px;background:#f4fbf7">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#2a7d4f">🌱 Pre-ferments</div>
+        <div style="font-size:11px;color:#5a9a6f">Each batch of this recipe requires:</div>
+      </div>
+      ${pfs.length ? rows : '<div style="font-size:12px;color:#7ab08a;margin-bottom:10px">No pre-ferments defined — add one if this recipe uses levain, poolish, or biga</div>'}
+      <div style="display:grid;grid-template-columns:110px 100px 90px 75px 1fr auto;gap:8px;align-items:end;
+        border-top:1px dashed #c8e8d4;padding-top:10px;margin-top:${pfs.length?'8':'0'}px">
+        <div class="form-group" style="margin:0">
+          <label>Type</label>
+          <select id="pf-type-${r.id}">
+            ${PF_TYPES.map(t => `<option>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Grams / batch</label>
+          <input type="number" min="0" step="50" id="pf-grams-${r.id}" placeholder="e.g. 500">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Lead time (hrs)</label>
+          <input type="number" min="1" max="48" step="1" id="pf-lead-${r.id}" value="12">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Hydration %</label>
+          <input type="number" min="50" max="200" step="5" id="pf-hydration-${r.id}" placeholder="—">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Notes</label>
+          <input type="text" id="pf-notes-${r.id}" placeholder="Optional notes">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addPreferment(${r.id})" style="white-space:nowrap;align-self:end">+ Add</button>
+      </div>
+    </div>`;
   }
 
   function recipeStagesHtml(r, SKILLS) {
@@ -17360,6 +17477,33 @@ function renderWeekPlan() {
             ${staffRows}${unattRow}
           </div>`;
         })()}
+        ${(()=>{
+          // Pre-ferment needs aggregated from this day's recipe-linked items
+          const pfMap = {};
+          allDayItems.forEach(item => {
+            if (!item.dtRecipeId) return;
+            const rec = recipes.find(r => r.id == item.dtRecipeId);
+            if (!rec) return;
+            const batches = Math.max(parseInt(item.qty)||1, 1);
+            const pfs = rec.preferments && rec.preferments.length ? rec.preferments
+              : (rec.levainGrams > 0 ? [{ type:'Levain', gramsPerBatch:rec.levainGrams, leadHrs:12 }] : []);
+            pfs.forEach(pf => {
+              const key = pf.type || 'Levain';
+              if (!pfMap[key]) pfMap[key] = { total:0, leadHrs: pf.leadHrs||12 };
+              pfMap[key].total += (pf.gramsPerBatch||0) * batches;
+            });
+          });
+          const keys = Object.keys(pfMap);
+          if (!keys.length) return '';
+          return `<div style="margin-top:7px;padding-top:6px;border-top:1px solid #e0e0e0">
+            <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#2a7d4f;margin-bottom:4px">🌱 Pre-ferments</div>
+            ${keys.map(k => `<div style="display:flex;align-items:center;gap:4px;padding:2px 0">
+              <span style="font-size:10px;font-weight:800;color:#2a7d4f;min-width:42px;white-space:nowrap">${k}</span>
+              <span style="font-size:11px;font-weight:900;color:#1a5a2a;flex:1">${pfMap[k].total.toLocaleString()}g</span>
+              <span style="font-size:9px;color:#aaa">${pfMap[k].leadHrs}h lead</span>
+            </div>`).join('')}
+          </div>`;
+        })()}
       </div>
       <div style="flex:1;padding:9px 8px;background:#fafafa">
         ${itemCards}
@@ -20003,6 +20147,10 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.3.0': [
+    '🌱 Recipes — Pre-ferments section added to every recipe: define Levain, Poolish, Biga, Starter, or custom preferments with grams per batch, lead time (hrs), and optional hydration %; existing levain grams data auto-migrates to the new format',
+    '🌱 Bake Board — Each day column now shows a "Pre-ferments" summary aggregating total grams needed per type across all recipe-linked items for that day, with lead time shown so you know how far ahead to start them',
+  ],
   '2.2.9': [
     '👤 Recipes — Stage baker assignment now supports four modes: "Primary (item)" and "Secondary (item)" resolve to whoever is set as primary/secondary baker on the Bake Board item; "Baker on Day" resolves to the first baker assigned to that day column; "Specific Person" locks to a named staff member for skill-gated stages. Attribution panel and timeline both resolve these dynamically.',
   ],
