@@ -1564,6 +1564,8 @@
   <div id="wp-board"
     style="display:flex;gap:0;border:3px solid #111;border-radius:4px;overflow:hidden;
       overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:420px"></div>
+  <!-- Timeline panel — shown when a day's Timeline button is clicked -->
+  <div id="wp-timeline-panel" style="display:none;margin-top:20px;background:#fff;border:2px solid #111;border-radius:4px;padding:20px;overflow:hidden"></div>
 </div>
 
 <!-- Bake Board — Print modal -->
@@ -2654,7 +2656,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.2.7';
+const APP_VERSION      = '2.2.8';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17272,9 +17274,18 @@ function renderWeekPlan() {
       flex-direction:column;border-right:${isLast?'none':'2px solid #111'}">
       <div style="background:${isToday?'#1a3a8a':'#111'};color:#fff;padding:13px 12px;
         border-bottom:2px solid ${isToday?'#3a6acc':'#333'}">
-        <div style="font-size:11px;font-weight:900;letter-spacing:2px;opacity:0.65">${WP_DAY_SHORT[day]}</div>
-        <div style="font-size:20px;font-weight:900;line-height:1.15;margin-top:1px">${dateStr}</div>
-        ${isToday?'<div style="font-size:9px;font-weight:900;letter-spacing:1.5px;color:#88aaff;margin-top:3px">TODAY</div>':''}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div>
+            <div style="font-size:11px;font-weight:900;letter-spacing:2px;opacity:0.65">${WP_DAY_SHORT[day]}</div>
+            <div style="font-size:20px;font-weight:900;line-height:1.15;margin-top:1px">${dateStr}</div>
+            ${isToday?'<div style="font-size:9px;font-weight:900;letter-spacing:1.5px;color:#88aaff;margin-top:3px">TODAY</div>':''}
+          </div>
+          <button onclick="event.stopPropagation();wpShowTimeline('${day}')"
+            title="View baker timeline"
+            style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);
+              color:#fff;border-radius:3px;padding:4px 7px;font-size:10px;font-weight:700;
+              cursor:pointer;white-space:nowrap;touch-action:manipulation;margin-top:2px">📊</button>
+        </div>
       </div>
       <div style="background:#f5f5f5;border-bottom:2px solid #e0e0e0;padding:9px 10px 7px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
@@ -17348,6 +17359,180 @@ function renderWeekPlan() {
       </div>
     </div>`;
   }).join('');
+}
+
+// — Baker Timeline —
+function wpShowTimeline(day) {
+  const panel = document.getElementById('wp-timeline-panel');
+  if (!panel) return;
+
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const dayData   = weekData[day];
+  const recurringItems = wpGetRecurring().filter(r => r.days && r.days.includes(day)).map(r => ({...r, _isRecurring:true}));
+  const allDayItems = [...recurringItems, ...dayData.items];
+
+  const DAY_START_H = 5; // 5:00 AM
+  const DAY_START   = DAY_START_H * 60;
+  const PX_PER_MIN  = 3;
+  const LABEL_W     = 90;
+  const LANE_H      = 48;
+
+  // Build per-baker block arrays
+  const lanes   = {}; // id → { name, color, blocks }
+  const cursors = {}; // id → current offset from DAY_START in minutes
+
+  function getLane(bid) {
+    if (!lanes[bid]) {
+      const m = bid === '_none' ? null : staff.find(s => s.id == bid);
+      const name  = m ? m.name : 'Unassigned';
+      const color = m ? wpBakerColor(m.name) : '#aaa';
+      lanes[bid]   = { name, color, blocks: [] };
+      cursors[bid] = 0;
+    }
+    return lanes[bid];
+  }
+
+  allDayItems.forEach(item => {
+    const phaseColor = (WP_PHASES.find(p => p.key === item.phase) || {color:'#888'}).color;
+
+    if (item.dtRecipeId) {
+      const rec = recipes.find(r => r.id == item.dtRecipeId);
+      if (rec && rec.stages && rec.stages.length) {
+        rec.stages.forEach(stage => {
+          const bid  = stage.baker || '_none';
+          const lane = getLane(bid);
+          const activeMins = stage.activeMins || 0;
+          const waitMins   = stage.waitMins   || 0;
+          if (activeMins > 0) {
+            lane.blocks.push({ label: stage.name || item.name, sub: item.name, start: cursors[bid], dur: activeMins, wait: false, color: phaseColor });
+            cursors[bid] += activeMins;
+          }
+          if (waitMins > 0) {
+            lane.blocks.push({ label: '⏳ ' + (stage.name || item.name), sub: '', start: cursors[bid], dur: waitMins, wait: true, color: phaseColor });
+            cursors[bid] += waitMins;
+          }
+        });
+        return;
+      }
+    }
+    // No recipe — use estMins as a simple block under Unassigned
+    const mins = item.estMins || 0;
+    if (mins > 0) {
+      const lane = getLane('_none');
+      lane.blocks.push({ label: item.name, sub: '', start: cursors['_none'], dur: mins, wait: false, color: phaseColor });
+      cursors['_none'] += mins;
+    }
+  });
+
+  const laneKeys = Object.keys(lanes);
+  if (!laneKeys.length) {
+    panel.innerHTML = `<div style="padding:24px;text-align:center;color:#aaa;font-size:13px">No items with time data for this day. Add estimated times or link recipes with stages.</div>`;
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    return;
+  }
+
+  // Compute visible time range
+  const maxOffset = Math.max(...Object.values(cursors), 180);
+  const visibleMins = Math.ceil((maxOffset + 60) / 60) * 60; // round up to next hour, 1hr padding
+
+  // Time axis ticks every 30 min
+  const ticks = [];
+  for (let m = 0; m <= visibleMins; m += 30) {
+    const totalH = DAY_START + m;
+    const h = Math.floor(totalH / 60), mm = totalH % 60;
+    const label = mm === 0 ? ((h > 12 ? h - 12 : h || 12) + (h >= 12 ? 'pm' : 'am')) : '';
+    ticks.push({ m, label });
+  }
+  const timelineW = visibleMins * PX_PER_MIN;
+
+  // Tick marks HTML (for bg grid lines)
+  const gridLines = ticks.filter(t => t.label).map(t =>
+    `<div style="position:absolute;left:${t.m*PX_PER_MIN}px;top:0;bottom:0;width:1px;background:#e8e8e8"></div>`
+  ).join('');
+
+  const timeAxisHtml = `<div style="display:flex;margin-left:${LABEL_W}px;overflow:hidden;margin-bottom:4px">
+    <div style="position:relative;height:18px;min-width:${timelineW}px">
+      ${ticks.filter(t => t.label).map(t =>
+        `<div style="position:absolute;left:${t.m*PX_PER_MIN}px;font-size:9px;color:#aaa;font-weight:700;transform:translateX(-50%)">${t.label}</div>`
+      ).join('')}
+    </div>
+  </div>`;
+
+  const laneRowsHtml = laneKeys.map(bid => {
+    const lane = lanes[bid];
+    const blocksHtml = lane.blocks.map(b => {
+      const left  = b.start * PX_PER_MIN;
+      const w     = Math.max(b.dur * PX_PER_MIN - 2, 3);
+      const bg    = b.wait
+        ? `repeating-linear-gradient(45deg,${b.color}22,${b.color}22 4px,#fff 4px,#fff 8px)`
+        : b.color;
+      const border = b.wait ? `1px dashed ${b.color}` : 'none';
+      const textCol = '#fff';
+      return `<div style="position:absolute;left:${left}px;top:4px;height:${LANE_H-8}px;width:${w}px;
+          background:${bg};border:${border};border-radius:3px;overflow:hidden;
+          display:flex;flex-direction:column;justify-content:center;padding:0 5px;
+          box-sizing:border-box;cursor:default"
+          title="${b.label}${b.sub&&b.sub!==b.label?' ('+b.sub+')':''} — ${wpFmtMins(b.dur)}">
+        ${!b.wait && w > 28 ? `<div style="font-size:9px;font-weight:800;color:${textCol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.label}</div>` : ''}
+        ${!b.wait && w > 48 ? `<div style="font-size:8px;color:${textCol};opacity:0.75;white-space:nowrap">${wpFmtMins(b.dur)}</div>` : ''}
+      </div>`;
+    }).join('');
+    return `<div style="display:flex;align-items:center;margin-bottom:5px">
+      <div style="width:${LABEL_W}px;flex-shrink:0;padding-right:10px;text-align:right">
+        <span style="display:inline-flex;align-items:center;gap:5px">
+          <span style="width:9px;height:9px;border-radius:50%;background:${lane.color};flex-shrink:0"></span>
+          <span style="font-size:11px;font-weight:800;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px">${lane.name.split(' ')[0]}</span>
+        </span>
+      </div>
+      <div style="position:relative;height:${LANE_H}px;flex:1;background:#f8f8f8;border-radius:3px;overflow:hidden;min-width:${timelineW}px">
+        ${gridLines}
+        ${blocksHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Date label for header
+  const idx = WP_DAYS.indexOf(day);
+  const dayDate = new Date(_wpWeekMonday);
+  dayDate.setDate(dayDate.getDate() + idx);
+  const dateLabel = dayDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  panel.innerHTML = `
+    <div id="wp-tl-printable">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#111">${dateLabel}</div>
+          <div style="font-size:11px;color:#aaa;margin-top:3px">Baker timeline · solid = active · hatched = wait/proof</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="wpPrintTimeline()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:3px;font-size:12px;font-weight:700;cursor:pointer">🖨 Print Schedule</button>
+          <button onclick="document.getElementById('wp-timeline-panel').style.display='none'" style="padding:8px 14px;background:none;border:1px solid #ccc;color:#666;border-radius:3px;font-size:12px;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        ${timeAxisHtml}
+        <div>${laneRowsHtml}</div>
+      </div>
+    </div>
+  `;
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function wpPrintTimeline() {
+  const src = document.getElementById('wp-tl-printable');
+  if (!src) return;
+  const w = window.open('', '_blank', 'width=1200,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><title>Baker Schedule</title>
+    <style>
+      @page { size: landscape; margin: 12mm; }
+      body { margin:0; padding:20px; font-family:'DM Mono',monospace,sans-serif; background:#fff; color:#111; }
+      button { display:none !important; }
+    </style></head><body>${src.innerHTML}</body></html>`);
+  w.document.close();
+  setTimeout(() => { w.focus(); w.print(); }, 400);
 }
 
 // — Item modal —
@@ -19795,6 +19980,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.2.8': [
+    '📊 Bake Board — Baker Timeline: click the 📊 button on any day column to see a full-width Gantt chart for that day; each baker gets a swim lane with solid blocks for active time and hatched blocks for wait/proof time, sequenced from 5 AM; print-ready via "Print Schedule"',
+  ],
   '2.2.7': [
     '🧹 Navigation cleanup — removed 5 tabs superseded by the Bake Board: Daily Planner, Weekly Schedule, Schedule, Timeline, and Standing Tasks; all remaining tabs are active and in use',
   ],
