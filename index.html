@@ -2059,6 +2059,10 @@
         style="width:100%;font-size:16px;padding:12px 14px;border:2px solid #ccc;
           border-radius:4px;box-sizing:border-box;margin-bottom:18px">
       <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#777;margin-bottom:8px">Est. Time
+        <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — used for daily workload total)</span></label>
+      <div id="wp-estmins-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px"></div>
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
         letter-spacing:1px;color:#777;margin-bottom:8px">Note <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
       <input type="text" id="wp-item-note" placeholder="e.g. catering order, gluten-free"
         onkeydown="if(event.key==='Enter')wpSaveItem()"
@@ -2100,7 +2104,59 @@
       <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
         letter-spacing:1px;color:#777;margin-bottom:8px">Category
         <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-      <div id="wp-cat-picker" style="display:flex;flex-wrap:wrap;gap:7px"></div>
+      <div id="wp-cat-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px"></div>
+      <label style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:1px;color:#5a1a8a;margin-bottom:8px">↻ Repeat Every Week
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">(optional — auto-appears on selected days)</span></label>
+      <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" onclick="wpSetRecurringPreset('daily')" id="wp-rec-pre-daily"
+          style="padding:5px 11px;border-radius:20px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:0.5px;
+            touch-action:manipulation">Every Day</button>
+        <button type="button" onclick="wpSetRecurringPreset('weekdays')" id="wp-rec-pre-weekdays"
+          style="padding:5px 11px;border-radius:20px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:0.5px;
+            touch-action:manipulation">Weekdays</button>
+        <button type="button" onclick="wpSetRecurringPreset('weekends')" id="wp-rec-pre-weekends"
+          style="padding:5px 11px;border-radius:20px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:0.5px;
+            touch-action:manipulation">Weekends</button>
+        <button type="button" onclick="wpSetRecurringPreset('none')" id="wp-rec-pre-none"
+          style="padding:5px 11px;border-radius:20px;border:2px solid #ccc;background:#fff;
+            color:#aaa;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:0.5px;
+            touch-action:manipulation">Clear</button>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+        <button type="button" onclick="wpToggleRecurringDay('mon')" id="wp-rec-day-mon"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">MON</button>
+        <button type="button" onclick="wpToggleRecurringDay('tue')" id="wp-rec-day-tue"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">TUE</button>
+        <button type="button" onclick="wpToggleRecurringDay('wed')" id="wp-rec-day-wed"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">WED</button>
+        <button type="button" onclick="wpToggleRecurringDay('thu')" id="wp-rec-day-thu"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">THU</button>
+        <button type="button" onclick="wpToggleRecurringDay('fri')" id="wp-rec-day-fri"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">FRI</button>
+        <button type="button" onclick="wpToggleRecurringDay('sat')" id="wp-rec-day-sat"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">SAT</button>
+        <button type="button" onclick="wpToggleRecurringDay('sun')" id="wp-rec-day-sun"
+          style="padding:8px 10px;border-radius:4px;border:2px solid #5a1a8a;background:#fff;
+            color:#5a1a8a;font-size:12px;font-weight:900;cursor:pointer;min-width:42px;
+            touch-action:manipulation">SUN</button>
+      </div>
+      <div id="wp-recurring-info" style="font-size:11px;color:#999;font-style:italic;min-height:14px"></div>
     </div>
     <div style="padding:16px 28px;border-top:2px solid #eee;display:flex;
       justify-content:space-between;align-items:center;flex-shrink:0;
@@ -3018,7 +3074,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.2.2';
+const APP_VERSION      = '2.2.5';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17350,10 +17406,12 @@ const WP_CATEGORIES = [
 ];
 
 const WP_PHASES = [
-  { key:'dough', label:'Make Dough',  icon:'🫙', color:'#1a3a6a', bg:'#eaf0fb', sortOrder:0 },
-  { key:'shape', label:'Shape & Form',icon:'✂️', color:'#7a3a10', bg:'#fdf4ec', sortOrder:1 },
-  { key:'prep',  label:'Prep',        icon:'🥄', color:'#1a5a2a', bg:'#edf9f1', sortOrder:2 },
-  { key:'bake',  label:'Bake',        icon:'🔥', color:'#8a1a1a', bg:'#fdf0f0', sortOrder:3 },
+  { key:'orders',  label:'Orders',        icon:'📦', color:'#5a1a8a', bg:'#f5eeff', sortOrder:-2 },
+  { key:'special', label:'Special Order', icon:'⭐', color:'#cc0000', bg:'#fff0f0', sortOrder:-1 },
+  { key:'dough',   label:'Make Dough',    icon:'🫙', color:'#1a3a6a', bg:'#eaf0fb', sortOrder:0  },
+  { key:'shape',   label:'Shape & Form',  icon:'✂️', color:'#7a3a10', bg:'#fdf4ec', sortOrder:1  },
+  { key:'prep',    label:'Prep',          icon:'🥄', color:'#1a5a2a', bg:'#edf9f1', sortOrder:2  },
+  { key:'bake',    label:'Bake',          icon:'🔥', color:'#8a1a1a', bg:'#fdf0f0', sortOrder:3  },
 ];
 
 const WP_KEY       = 'bk_week_plan';
@@ -17362,13 +17420,16 @@ const WP_DAY_NAMES = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursd
 const WP_DAY_SHORT = { mon:'MON', tue:'TUE', wed:'WED', thu:'THU', fri:'FRI', sat:'SAT', sun:'SUN' };
 const WP_BAKER_COLORS = ['#1a2a6a','#1a5a2a','#7a2a00','#4a1a7a','#005a4a','#6a0020','#555500','#003a5a'];
 
-let _wpWeekMonday    = null;
-let _wpCopyItemId    = null;
-let _wpCopyFromDay   = null;
-let _wpEditDay       = null;
-let _wpEditItemId    = null;
-let _wpEditCategory  = null;
-let _wpEditPhase     = null;
+let _wpWeekMonday        = null;
+let _wpCopyItemId        = null;
+let _wpCopyFromDay       = null;
+let _wpEditDay           = null;
+let _wpEditItemId        = null;
+let _wpEditCategory      = null;
+let _wpEditPhase         = null;
+let _wpEditRecurringId   = null;   // null = new/regular item; rec_xxx = editing recurring template
+let _wpEditRecurringDays = [];     // day keys selected in recurring picker
+let _wpEditEstMins       = null;   // estimated minutes for item (null = unset)
 let _wpBakerDay      = null;
 let _wpGest          = null;  // active gesture state
 let _wpDragGhost     = null;  // floating ghost element during drag
@@ -17381,6 +17442,8 @@ function wpBakerColor(name) {
 
 function wpGetAllPlan()       { try { return JSON.parse(localStorage.getItem(WP_KEY) || '{}'); } catch(e) { return {}; } }
 function wpSaveAllPlan(data)  { localStorage.setItem(WP_KEY, JSON.stringify(data)); }
+function wpGetRecurring()     { return wpGetAllPlan()._recurring || []; }
+function wpSaveRecurring(list){ const all = wpGetAllPlan(); all._recurring = list; wpSaveAllPlan(all); }
 
 function wpMondayStr(date) {
   // Returns YYYY-MM-DD for the given Date object
@@ -17475,11 +17538,17 @@ function renderWeekPlan() {
         }).join('')
       : `<span style="font-size:11px;color:#bbb;font-style:italic">None assigned</span>`;
 
+    // Inject recurring templates for this day
+    const recurringItems = wpGetRecurring()
+      .filter(r => r.days && r.days.includes(day))
+      .map(r => ({ ...r, _isRecurring: true }));
+    const allDayItems = [...recurringItems, ...dayData.items];
+
     // Group items by production phase (sorted by phase sortOrder), unphased at end
     const phaseGroups = {};
     WP_PHASES.forEach(p => { phaseGroups[p.key] = []; });
     phaseGroups['__none__'] = [];
-    dayData.items.forEach(item => {
+    allDayItems.forEach(item => {
       const key = item.phase && phaseGroups[item.phase] ? item.phase : '__none__';
       phaseGroups[key].push(item);
     });
@@ -17489,20 +17558,33 @@ function renderWeekPlan() {
       const grpItems = phaseGroups[phaseKey];
       if (!grpItems.length) return '';
       const phase = WP_PHASES.find(p => p.key === phaseKey);
+      const isTopPhase = phase?.sortOrder < 0;
       const groupHeader = phase
-        ? `<div style="display:flex;align-items:center;gap:5px;padding:5px 4px 4px;
-            margin-top:${globalIdx===0?'0':'8'}px;margin-bottom:3px">
-            <span style="font-size:13px">${phase.icon}</span>
-            <span style="font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;
-              color:${phase.color}">${phase.label}</span>
-          </div>`
+        ? isTopPhase
+          ? `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px 5px;
+              margin-top:${globalIdx===0?'0':'8'}px;margin-bottom:3px;
+              background:${phase.color};border-radius:3px">
+              <span style="font-size:12px">${phase.icon}</span>
+              <span style="font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;
+                color:#fff">${phase.label}</span>
+            </div>`
+          : `<div style="display:flex;align-items:center;gap:5px;padding:5px 4px 4px;
+              margin-top:${globalIdx===0?'0':'8'}px;margin-bottom:3px">
+              <span style="font-size:13px">${phase.icon}</span>
+              <span style="font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;
+                color:${phase.color}">${phase.label}</span>
+            </div>`
         : '';
       const cards = grpItems.map(item => {
         const iIdx = globalIdx++;
         const isFirst = iIdx === 0;
+        const isOrderItem   = item.phase === 'orders';
+        const isSpecialItem = item.phase === 'special';
         const cat     = WP_CATEGORIES.find(c => c.key === item.category);
         const leftBdr = cat ? `border-left:5px solid ${cat.color};padding-left:5px;` : '';
-        return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"
+        const cardBorder = isOrderItem ? '3px solid #5a1a8a' : isSpecialItem ? '3px solid #cc0000' : `2px solid ${isFirst?'#111':'#e0e0e0'}`;
+        const cardBg     = isOrderItem ? '#f8f0ff' : isSpecialItem ? '#fff8f8' : '#fff';
+        return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"${item._isRecurring?' data-recurring="true"':''}
           style="position:relative;overflow:hidden;margin-bottom:5px;border-radius:4px;
             touch-action:none;user-select:none">
           <div class="wp-swipe-delete"
@@ -17514,8 +17596,8 @@ function renderWeekPlan() {
           </div>
           <div class="wp-item-card"
             style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
-              border:2px solid ${isFirst?'#111':'#e0e0e0'};border-radius:4px;
-              background:#fff;position:relative;z-index:1;cursor:grab;${leftBdr}">
+              border:${cardBorder};border-radius:4px;
+              background:${cardBg};position:relative;z-index:1;cursor:grab;${leftBdr}">
             <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
               background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
               font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
@@ -17523,8 +17605,8 @@ function renderWeekPlan() {
               ${cat ? `<div style="font-size:9px;font-weight:900;letter-spacing:1.5px;
                 text-transform:uppercase;color:${cat.color};margin-bottom:2px">${cat.label}</div>` : ''}
               <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
-                line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}</div>
-              ${item.qty  ? `<div style="font-size:12px;color:#777;margin-top:2px">${item.qty}</div>`  : ''}
+                line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}${item._isRecurring?'<span style="margin-left:5px;font-size:9px;font-weight:900;color:#5a1a8a;background:#ede0ff;border-radius:3px;padding:1px 4px;letter-spacing:0.3px;vertical-align:middle">↻</span>':''}</div>
+              ${(item.qty||item.estMins) ? `<div style="font-size:12px;color:#777;margin-top:2px">${[item.qty, item.estMins?'~'+wpFmtMins(item.estMins):null].filter(Boolean).join(' · ')}</div>` : ''}
               ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
               ${(()=>{
                 const badges = [];
@@ -17540,10 +17622,10 @@ function renderWeekPlan() {
               })()}
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
-              <button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+              ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
                 title="Copy to other days"
                 style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
-                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>
+                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
               <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
             </div>
           </div>
@@ -17568,13 +17650,14 @@ function renderWeekPlan() {
               border-radius:3px;padding:3px 7px;cursor:pointer;touch-action:manipulation">+ Assign</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:3px">${bakerChips}</div>
+        ${(()=>{const t=allDayItems.reduce((s,i)=>s+(i.estMins||0),0);return t?`<div style="margin-top:7px;padding-top:6px;border-top:1px solid #e0e0e0;display:flex;align-items:center;gap:5px"><span style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#999">Est.</span><span style="font-size:12px;font-weight:800;color:#444">~${wpFmtMins(t)}</span></div>`:'';})()}
       </div>
       <div style="flex:1;padding:9px 8px;background:#fafafa">
         ${itemCards}
         <button onclick="wpOpenItemModal('${day}',null)"
           style="width:100%;padding:9px;border:2px dashed #ccc;border-radius:4px;background:#fff;
             color:#aaa;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
-            margin-top:${dayData.items.length?'4':'0'}px">+ Add</button>
+            margin-top:${allDayItems.length?'4':'0'}px">+ Add</button>
       </div>
     </div>`;
   }).join('');
@@ -17582,11 +17665,22 @@ function renderWeekPlan() {
 
 // — Item modal —
 function wpOpenItemModal(day, itemId) {
-  _wpEditDay    = day;
-  _wpEditItemId = itemId;
-  const dayData = wpGetWeek(wpMondayStr(_wpWeekMonday))[day];
-  const item    = itemId ? dayData.items.find(i => i.id === itemId) : null;
-  document.getElementById('wp-item-modal-title').textContent = item ? 'Edit Item' : 'Add Item';
+  // Route recurring items to their own editor path
+  const isRecurring = itemId && itemId.startsWith('rec_');
+  _wpEditDay         = day;
+  _wpEditItemId      = isRecurring ? null : itemId;
+  _wpEditRecurringId = isRecurring ? itemId : null;
+
+  let item = null;
+  if (isRecurring) {
+    item = wpGetRecurring().find(r => r.id === itemId) || null;
+  } else {
+    const dayData = wpGetWeek(wpMondayStr(_wpWeekMonday))[day];
+    item = itemId ? dayData.items.find(i => i.id === itemId) : null;
+  }
+
+  document.getElementById('wp-item-modal-title').textContent =
+    isRecurring ? 'Edit Recurring Item' : (item ? 'Edit Item' : 'Add Item');
   document.getElementById('wp-item-name').value  = item?.name  || '';
   document.getElementById('wp-item-qty').value   = item?.qty   || '';
   document.getElementById('wp-item-note').value  = item?.note  || '';
@@ -17631,6 +17725,13 @@ function wpOpenItemModal(day, itemId) {
           touch-action:manipulation">${c.label}</button>`
     ).join('');
   }
+  // Populate est. time picker
+  _wpEditEstMins = item?.estMins || null;
+  wpRenderEstMinsPicker();
+  // Populate recurring day picker
+  _wpEditRecurringDays = isRecurring ? [...(item?.days || [])] : [];
+  wpRenderRecurringPicker();
+
   document.getElementById('wp-item-modal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('wp-item-name').focus(), 80);
@@ -17638,7 +17739,8 @@ function wpOpenItemModal(day, itemId) {
 function wpCloseItemModal() {
   document.getElementById('wp-item-modal').style.display = 'none';
   document.body.style.overflow = '';
-  _wpEditDay = _wpEditItemId = _wpEditCategory = _wpEditPhase = null;
+  _wpEditDay = _wpEditItemId = _wpEditCategory = _wpEditPhase = _wpEditRecurringId = _wpEditEstMins = null;
+  _wpEditRecurringDays = [];
 }
 function wpSelectCat(key) {
   _wpEditCategory = _wpEditCategory === key ? null : key;
@@ -17660,35 +17762,143 @@ function wpSelectPhase(key) {
     btn.style.color      = active ? '#fff'  : p.color;
   });
 }
+function wpToggleRecurringDay(day) {
+  const idx = _wpEditRecurringDays.indexOf(day);
+  if (idx >= 0) _wpEditRecurringDays.splice(idx, 1);
+  else _wpEditRecurringDays.push(day);
+  wpRenderRecurringPicker();
+}
+function wpSetRecurringPreset(preset) {
+  if      (preset === 'daily')    _wpEditRecurringDays = [...WP_DAYS];
+  else if (preset === 'weekdays') _wpEditRecurringDays = ['mon','tue','wed','thu','fri'];
+  else if (preset === 'weekends') _wpEditRecurringDays = ['sat','sun'];
+  else                            _wpEditRecurringDays = [];
+  wpRenderRecurringPicker();
+}
+function wpRenderRecurringPicker() {
+  const days = _wpEditRecurringDays;
+  const accent = '#5a1a8a';
+  WP_DAYS.forEach(d => {
+    const btn = document.getElementById('wp-rec-day-' + d);
+    if (!btn) return;
+    const on = days.includes(d);
+    btn.style.background = on ? accent : '#fff';
+    btn.style.color      = on ? '#fff' : accent;
+  });
+  const isDaily    = days.length === 7;
+  const isWeekdays = days.length === 5 && ['mon','tue','wed','thu','fri'].every(d => days.includes(d)) && !days.includes('sat') && !days.includes('sun');
+  const isWeekends = days.length === 2 && days.includes('sat') && days.includes('sun');
+  [['daily',isDaily],['weekdays',isWeekdays],['weekends',isWeekends]].forEach(([p,active]) => {
+    const btn = document.getElementById('wp-rec-pre-' + p);
+    if (!btn) return;
+    btn.style.background = active ? accent : '#fff';
+    btn.style.color      = active ? '#fff' : accent;
+  });
+  const info = document.getElementById('wp-recurring-info');
+  if (info) {
+    if (days.length === 0) { info.textContent = 'Not recurring — one-time item for this week'; }
+    else {
+      const shortNames = { mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',sat:'Sat',sun:'Sun' };
+      const ordered = WP_DAYS.filter(d => days.includes(d)).map(d => shortNames[d]);
+      info.textContent = '↻ Repeats every: ' + ordered.join(', ');
+    }
+  }
+}
+const WP_TIME_CHIPS = [
+  { mins:15,  label:'15m' },
+  { mins:30,  label:'30m' },
+  { mins:45,  label:'45m' },
+  { mins:60,  label:'1h'  },
+  { mins:90,  label:'1.5h'},
+  { mins:120, label:'2h'  },
+  { mins:180, label:'3h'  },
+  { mins:240, label:'4h'  },
+];
+function wpSelectEstMins(mins) {
+  _wpEditEstMins = _wpEditEstMins === mins ? null : mins;
+  wpRenderEstMinsPicker();
+}
+function wpRenderEstMinsPicker() {
+  const picker = document.getElementById('wp-estmins-picker');
+  if (!picker) return;
+  picker.innerHTML = WP_TIME_CHIPS.map(c =>
+    `<button type="button" onclick="wpSelectEstMins(${c.mins})"
+      style="padding:8px 13px;border-radius:4px;border:2px solid #777;
+        background:${_wpEditEstMins===c.mins?'#333':'#fff'};
+        color:${_wpEditEstMins===c.mins?'#fff':'#555'};
+        font-size:13px;font-weight:800;cursor:pointer;min-width:44px;
+        touch-action:manipulation">${c.label}</button>`
+  ).join('');
+}
+function wpFmtMins(totalMins) {
+  if (!totalMins) return '';
+  if (totalMins < 60) return totalMins + ' min';
+  const h = Math.floor(totalMins / 60), m = totalMins % 60;
+  return h + ' hr' + (m ? ' ' + m + ' min' : '');
+}
 function wpSaveItem() {
   const name = (document.getElementById('wp-item-name').value || '').trim();
   if (!name) { alert('Enter an item name.'); return; }
-  const qty        = (document.getElementById('wp-item-qty').value  || '').trim();
-  const note       = (document.getElementById('wp-item-note').value || '').trim();
-  const cat           = _wpEditCategory || null;
-  const phase         = _wpEditPhase    || null;
-  const dtRecipeId    = document.getElementById('wp-item-dt-recipe')?.value || null;
-  const primaryBaker  = document.getElementById('wp-item-primary-baker')?.value  || null;
-  const secondaryBaker= document.getElementById('wp-item-secondary-baker')?.value || null;
-  const mondayStr  = wpMondayStr(_wpWeekMonday);
-  const weekData   = wpGetWeek(mondayStr);
-  const dayItems   = weekData[_wpEditDay].items;
-  if (_wpEditItemId) {
-    const item = dayItems.find(i => i.id === _wpEditItemId);
-    if (item) { item.name = name; item.qty = qty; item.note = note; item.category = cat; item.phase = phase; item.primaryBaker = primaryBaker; item.secondaryBaker = secondaryBaker; item.dtRecipeId = dtRecipeId || null; }
+  const qty          = (document.getElementById('wp-item-qty').value  || '').trim();
+  const note         = (document.getElementById('wp-item-note').value || '').trim();
+  const cat          = _wpEditCategory || null;
+  const phase        = _wpEditPhase    || null;
+  const dtRecipeId   = document.getElementById('wp-item-dt-recipe')?.value || null;
+  const primaryBaker = document.getElementById('wp-item-primary-baker')?.value  || null;
+  const secondaryBaker = document.getElementById('wp-item-secondary-baker')?.value || null;
+  const estMins      = _wpEditEstMins || null;
+  const recurDays    = [..._wpEditRecurringDays];
+
+  if (_wpEditRecurringId || recurDays.length > 0) {
+    // Save/update as a recurring template
+    if (recurDays.length === 0) {
+      if (!confirm('No days selected — remove this recurring item?')) return;
+      wpSaveRecurring(wpGetRecurring().filter(r => r.id !== _wpEditRecurringId));
+    } else {
+      const list = wpGetRecurring();
+      const template = { id: _wpEditRecurringId || ('rec_' + Date.now()), name, qty, note, category: cat, phase, primaryBaker, secondaryBaker, dtRecipeId: dtRecipeId || null, estMins, days: recurDays };
+      if (_wpEditRecurringId) {
+        const idx = list.findIndex(r => r.id === _wpEditRecurringId);
+        if (idx >= 0) list[idx] = template; else list.push(template);
+      } else {
+        list.push(template);
+      }
+      wpSaveRecurring(list);
+      // If converting an existing day-specific item to recurring, remove it from the day
+      if (_wpEditItemId) {
+        const mondayStr = wpMondayStr(_wpWeekMonday);
+        const weekData  = wpGetWeek(mondayStr);
+        weekData[_wpEditDay].items = weekData[_wpEditDay].items.filter(i => i.id !== _wpEditItemId);
+        wpSaveWeek(mondayStr, weekData);
+      }
+    }
   } else {
-    dayItems.push({ id: 'wpi_' + Date.now(), name, qty, note, category: cat, phase, primaryBaker, secondaryBaker, dtRecipeId: dtRecipeId || null });
+    // Save as a regular day-specific item
+    const mondayStr = wpMondayStr(_wpWeekMonday);
+    const weekData  = wpGetWeek(mondayStr);
+    const dayItems  = weekData[_wpEditDay].items;
+    if (_wpEditItemId) {
+      const item = dayItems.find(i => i.id === _wpEditItemId);
+      if (item) { item.name = name; item.qty = qty; item.note = note; item.category = cat; item.phase = phase; item.primaryBaker = primaryBaker; item.secondaryBaker = secondaryBaker; item.dtRecipeId = dtRecipeId || null; item.estMins = estMins; }
+    } else {
+      dayItems.push({ id: 'wpi_' + Date.now(), name, qty, note, category: cat, phase, primaryBaker, secondaryBaker, dtRecipeId: dtRecipeId || null, estMins });
+    }
+    wpSaveWeek(mondayStr, weekData);
   }
-  wpSaveWeek(mondayStr, weekData);
   wpCloseItemModal();
   renderWeekPlan();
 }
 function wpDeleteItem() {
-  if (!_wpEditItemId || !confirm('Remove this item?')) return;
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const weekData  = wpGetWeek(mondayStr);
-  weekData[_wpEditDay].items = weekData[_wpEditDay].items.filter(i => i.id !== _wpEditItemId);
-  wpSaveWeek(mondayStr, weekData);
+  if (_wpEditRecurringId) {
+    if (!confirm('Remove this recurring item from all weeks?')) return;
+    wpSaveRecurring(wpGetRecurring().filter(r => r.id !== _wpEditRecurringId));
+  } else {
+    if (!_wpEditItemId || !confirm('Remove this item?')) return;
+    const mondayStr = wpMondayStr(_wpWeekMonday);
+    const weekData  = wpGetWeek(mondayStr);
+    weekData[_wpEditDay].items = weekData[_wpEditDay].items.filter(i => i.id !== _wpEditItemId);
+    wpSaveWeek(mondayStr, weekData);
+  }
   wpCloseItemModal();
   renderWeekPlan();
 }
@@ -17884,8 +18094,11 @@ function wpDeleteItemGesture(day, itemId) {
 function wpShowLongPressMenu(wrap, day, itemId) {
   document.getElementById('wp-lp-backdrop')?.remove();
   document.getElementById('wp-lp-menu')?.remove();
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const item = wpGetWeek(mondayStr)[day]?.items.find(i => i.id === itemId);
+  const mondayStr  = wpMondayStr(_wpWeekMonday);
+  const isRecurring = itemId && itemId.startsWith('rec_');
+  const item = isRecurring
+    ? wpGetRecurring().find(r => r.id === itemId)
+    : wpGetWeek(mondayStr)[day]?.items.find(i => i.id === itemId);
   if (!item) return;
   const rect     = wrap.getBoundingClientRect();
   const menuTop  = Math.min(rect.bottom + 6, window.innerHeight - 280);
@@ -17911,7 +18124,16 @@ function wpShowLongPressMenu(wrap, day, itemId) {
     border-radius:4px;min-width:220px;overflow:hidden;
     box-shadow:0 8px 32px rgba(0,0,0,0.22);
     top:${menuTop}px;left:${menuLeft}px`;
-  menu.innerHTML = `
+  menu.innerHTML = isRecurring ? `
+    <div style="padding:10px 16px;background:#ede0ff;font-size:11px;font-weight:800;
+      text-transform:uppercase;letter-spacing:1.5px;color:#5a1a8a;border-bottom:1px solid #d8c5f8;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap">↻ ${item.name}</div>
+    <button onclick="wpOpenItemModal('${day}','${itemId}');document.getElementById('wp-lp-backdrop')?.click()"
+      style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
+        font-size:15px;cursor:pointer;border-bottom:1px solid #eee;touch-action:manipulation">✏️&nbsp; Edit recurring item</button>
+    <button onclick="(function(){if(confirm('Remove this recurring item from all weeks?')){wpSaveRecurring(wpGetRecurring().filter(r=>r.id!=='${itemId}'));renderWeekPlan();}document.getElementById('wp-lp-backdrop')?.click();})()"
+      style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
+        font-size:15px;cursor:pointer;color:#cc3300;touch-action:manipulation">🗑&nbsp; Remove recurring item (all weeks)</button>` : `
     <div style="padding:10px 16px;background:#f2f2f2;font-size:11px;font-weight:800;
       text-transform:uppercase;letter-spacing:1.5px;color:#777;border-bottom:1px solid #ddd;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
@@ -17965,6 +18187,7 @@ function wpGestDown(e) {
   _wpGest = {
     state:   'pressing',
     wrap, day: wrap.dataset.day, itemId: wrap.dataset.itemId,
+    isRecurring: !!wrap.dataset.recurring,
     startX: e.clientX, startY: e.clientY, startT: Date.now(),
     swipeX: 0, targetIdx: null,
     lpTimer:   setTimeout(() => _wpGestLongPress(), WP_LP_DELAY),
@@ -17981,7 +18204,7 @@ function wpGestMove(e) {
 
   if (_wpGest.state === 'pressing') {
     if (ax > 8 || ay > 8) clearTimeout(_wpGest.lpTimer);
-    if (ax > 18 && ax > ay * 1.8 && dx < 0) {
+    if (ax > 18 && ax > ay * 1.8 && dx < 0 && !_wpGest.isRecurring) {
       clearTimeout(_wpGest.dragTimer); clearTimeout(_wpGest.lpTimer);
       _wpGest.state = 'swiping';
     } else if (ay > 18 && ay > ax) {
@@ -18052,6 +18275,7 @@ function _wpGestLongPress() {
 
 function _wpGestStartDrag() {
   if (!_wpGest || _wpGest.state !== 'pressing') return;
+  if (_wpGest.isRecurring) { clearTimeout(_wpGest.dragTimer); return; } // recurring items don't drag
   clearTimeout(_wpGest.lpTimer);
   _wpGest.state = 'dragging';
   const wrap = _wpGest.wrap;
@@ -19884,6 +20108,16 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.2.5': [
+    '⏱ Bake Board — Est. Time per item: quick-tap chips (15m → 4h) let you assign an estimated time to any item; each item shows its time alongside the quantity, and the top of each day column shows the cumulative total (e.g. ~3 hr 45 min) so you can gauge workload vs. available labor at a glance',
+  ],
+  '2.2.4': [
+    '📦 Bake Board — Orders phase added; order items sort to the very top of each day column with a purple border, above Special Orders',
+    '↻ Bake Board — Recurring items: any item can now repeat every week on chosen days (Every Day, Weekdays, Weekends, or custom day selection); recurring items appear automatically on matching days with a ↻ badge, and are managed as templates separate from one-time weekly items',
+  ],
+  '2.2.3': [
+    '⭐ Bake Board — Special Order phase added; items tagged Special Order show a red border and tinted background on the card, and the phase section header turns solid red — immediately distinguishable from regular production items',
+  ],
   '2.2.2': [
     '📱 Global modal tablet fix — all 15+ popups across the app (Recipes, Timeline, Dough Timer, Orders, Inventory, Deploy checklist, etc.) now scroll correctly on tablet; body scroll is locked behind any open modal via a single CSS rule',
   ],
