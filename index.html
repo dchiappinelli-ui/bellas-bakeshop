@@ -937,11 +937,6 @@
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('ordering')">🛒 Ordering</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('standing')">📋 Standing Tasks</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('weekly')">📅 Weekly Schedule</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('planner')">Daily Planner</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('timeline')">🗓 Timeline</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('schedule')">Schedule</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('inventory')">📦 Inventory</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('yield')">♻️ Yield Rules</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('prep')">🫙 Prep Items</button>
@@ -1122,102 +1117,6 @@
   </div>
 </div>
 
-<!-- ======== DAILY PLANNER ======== -->
-<div class="page" id="page-planner">
-  <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:4px">
-    <h2 style="margin-bottom:0">Daily Planner</h2>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button class="btn btn-ghost btn-sm" onclick="shiftPlannerDate(-1)" title="Previous day">&#8592;</button>
-      <input type="date" id="planner-date-input"
-        style="font-family:'DM Mono',monospace;font-size:13px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 7px;cursor:pointer"
-        onchange="onPlannerDateChange(this.value)">
-      <button class="btn btn-ghost btn-sm" onclick="shiftPlannerDate(1)" title="Next day">&#8594;</button>
-      <button class="btn btn-ghost btn-sm" onclick="onPlannerDateChange(dateKey(0))" id="planner-today-btn"
-        style="font-size:10px;padding:3px 8px">Today</button>
-      <span id="planner-date-label" style="font-size:11px;color:var(--muted)"></span>
-    </div>
-  </div>
-  <p class="subtitle">Set individual start/end times per person, select what to make, generate the schedule</p>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;align-items:start">
-
-    <!-- COL 1: Crew & Shifts -->
-    <div>
-      <div class="card" style="height:100%">
-        <div class="card-title" style="margin-bottom:14px">Today's Crew & Shifts</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Check who's in and set their individual hours</p>
-        <div id="crew-shift-list"></div>
-        <hr class="divider">
-        <div class="form-group">
-          <label>Special Notes for Today</label>
-          <textarea id="day-notes" placeholder="e.g. Large catering order, low on croissant butter..."></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- COL 2: What to Make -->
-    <div>
-      <div class="card" style="height:100%">
-        <div class="card-title" style="margin-bottom:14px">What to Make Today</div>
-        <div id="planner-recipe-list">
-          <div class="empty-state" style="padding:24px">Add recipes in the Recipe Library first</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- COL 3: Standing Tasks Summary -->
-    <div>
-      <div class="card" style="height:100%">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div class="card-title" style="margin-bottom:0">Standing Tasks</div>
-          <button class="btn btn-ghost btn-sm" onclick="showPage('standing')" style="font-size:10px">Manage →</button>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Active today — toggle or manage windows in the Standing Tasks tab</p>
-        <div id="standing-tasks-list" style="max-height:460px;overflow-y:auto"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <div style="text-align:center;margin-top:8px">
-    <button class="btn btn-success" style="padding:12px 32px;font-size:15px" onclick="generateSchedule()">
-      ⚡ Generate Schedule
-    </button>
-  </div>
-</div>
-
-<!-- ======== WEEKLY BAKING SCHEDULE ======== -->
-<div class="page" id="page-weekly">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
-    <div>
-      <h2 style="margin-bottom:2px">Weekly Baking Schedule</h2>
-      <p class="subtitle" style="margin:0">Next 7 days — triggered from orders + inventory buffers. Confirm each day then push to Daily Planner.</p>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn btn-ghost btn-sm" onclick="renderWeeklySchedule()">↺ Refresh</button>
-      <button class="btn btn-primary btn-sm" onclick="openBufferEditor()">⚙ Buffers</button>
-    </div>
-  </div>
-
-  <!-- Buffer editor modal -->
-  <div id="buffer-editor" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-weight:700;font-size:14px">Safety Buffers — units to keep in stock before triggering a new batch</div>
-      <button class="btn btn-ghost btn-sm" onclick="closeBufferEditor()">✕ Close</button>
-    </div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Suggested values are calculated from your order data (avg daily demand × 1.5). Adjust and save — these don't need frequent changes.</p>
-    <div id="buffer-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px"></div>
-    <button class="btn btn-success btn-sm" style="margin-top:12px" onclick="saveBuffers()">Save Buffers</button>
-  </div>
-
-  <!-- Levain pool tracker -->
-  <div id="levain-panel" style="margin-bottom:16px"></div>
-  <div id="dough-pool-panel" style="margin-bottom:16px"></div>
-
-  <!-- 7-day grid -->
-  <div id="weekly-grid"></div>
-</div>
-
 <!-- ======== ORDER CHECK SHEET ======== -->
 <div class="page" id="page-checksheet">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
@@ -1244,104 +1143,6 @@
     </div>
   </div>
   <div id="board-content" style="margin-top:14px"></div>
-</div>
-
-<!-- ======== STANDING TASKS ======== -->
-<div class="page" id="page-standing">
-  <h2>Standing Tasks</h2>
-  <p class="subtitle">Recurring non-recipe tasks with time windows — the scheduler places each within its window using priority and idle-gap logic</p>
-
-  <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
-
-    <!-- Task library -->
-    <div>
-      <div class="card">
-        <div class="card-title" style="margin-bottom:4px">Task Library</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-          <strong style="color:var(--danger)">P1 Critical / P2 High</strong> — scheduled as early as possible in window &nbsp;·&nbsp;
-          <strong style="color:var(--juan)">P3 Normal</strong> — fills idle gaps, first half of window &nbsp;·&nbsp;
-          <strong style="color:var(--muted)">P4 Fill-in</strong> — opportunistic, any idle gap in window
-        </p>
-        <div id="standing-library-list"></div>
-      </div>
-    </div>
-
-    <!-- Add task form -->
-    <div>
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">Add New Task</div>
-        <div class="form-group">
-          <label>Task Name</label>
-          <input type="text" id="new-task-name" placeholder="e.g. Pull levain from fridge">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Duration (mins)</label>
-            <input type="number" id="new-task-mins" value="10" min="1" style="width:70px">
-          </div>
-          <div class="form-group">
-            <label>Priority</label>
-            <select id="new-task-priority">
-              <option value="1">P1 Critical</option>
-              <option value="2">P2 High</option>
-              <option value="3" selected>P3 Normal</option>
-              <option value="4">P4 Fill-in</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Window Opens</label>
-            <input type="time" id="new-task-window-start" value="06:00">
-          </div>
-          <div class="form-group">
-            <label>Window Closes</label>
-            <input type="time" id="new-task-window-end" value="08:00">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Category</label>
-            <select id="new-task-cat">
-              <option>SETUP</option>
-              <option>BAKING</option>
-              <option>WHOLESALE</option>
-              <option>RETAIL</option>
-              <option>CLOSING</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Assign to</label>
-            <select id="new-task-person">
-              <option value="anyone">Anyone</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn btn-primary" style="width:100%" onclick="addPermanentTask()">+ Add to Library</button>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="card-title" style="margin-bottom:10px">How windows work</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.7">
-          <div style="margin-bottom:6px">⚡ <strong style="color:var(--danger)">P1–P2</strong> tasks are placed as early as possible within the window — don't wait for idle time.</div>
-          <div style="margin-bottom:6px">🔍 <strong style="color:var(--juan)">P3</strong> tasks hunt for idle gaps in the first half of the window, then earliest available after.</div>
-          <div style="margin-bottom:6px">💤 <strong style="color:var(--muted)">P4</strong> tasks fill any idle gap anywhere in the window.</div>
-          <div>⚠ If no slot is found before the window closes, the task is flagged on the schedule for manual reassignment.</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ======== SCHEDULE ======== -->
-<div class="page" id="page-schedule">
-  <h2>Today's Schedule</h2>
-  <p class="subtitle">Optimized task assignments — parallel work during wait times, right person for each task</p>
-
-  <div id="schedule-output">
-    <div class="empty-state">Generate a schedule from the Daily Planner to see it here</div>
-  </div>
 </div>
 
 <!-- ======== INVENTORY DASHBOARD ======== -->
@@ -1544,227 +1345,6 @@
 
   <!-- Weekly rollup -->
   <div id="orders-rollup-view" style="display:none"></div>
-</div>
-
-<!-- ======== TIMELINE BUILDER ======== -->
-<div class="page" id="page-timeline">
-
-  <!-- Top bar -->
-  <div class="tl-white-bar" style="justify-content:space-between">
-    <div>
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#2a2d35">Daily Timeline</div>
-      <div style="font-size:11px;color:#888;margin-top:2px">Click any cell to add a task · Click a block to edit</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:#666">From</label>
-      <select id="tl-start" onchange="renderTimeline()" style="font-size:12px;background:#f7f8fa;border:1px solid #dde0e6;color:#333;border-radius:4px;padding:4px 8px"></select>
-      <label style="font-size:11px;color:#666">To</label>
-      <select id="tl-end" onchange="renderTimeline()" style="font-size:12px;background:#f7f8fa;border:1px solid #dde0e6;color:#333;border-radius:4px;padding:4px 8px"></select>
-      <div style="display:flex;align-items:center;gap:8px;border:1px solid #dde0e6;border-radius:6px;padding:4px 10px;background:#f8f9fb">
-        <span style="font-size:10px;color:#888;white-space:nowrap">Zoom</span>
-        <input type="range" min="2" max="30" step="1" value="6" id="tl-zoom-slider"
-               oninput="tlSetZoom(this.value)"
-               style="width:80px;accent-color:#4a6fa5;cursor:pointer">
-        <span id="tl-zoom-label" style="font-size:10px;font-family:'DM Mono',monospace;color:#555;white-space:nowrap;min-width:28px">1×</span>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="tlSaveAs()" style="border-color:#4a6fa5;color:#4a6fa5">💾 Save As</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlOpenLoadModal()" style="border-color:#4a6fa5;color:#4a6fa5">📂 Load</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlOpenExportModal()" style="border-color:#444;color:#444">⬇ Export PDF</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlOpenRecipeModal()" style="border-color:#7a55b0;color:#7a55b0">🍞 Add Recipe</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlImportFromPlanner()" style="border-color:#7b9fc4;color:#7b9fc4">⬇ Import Schedule</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlLoadSample()" style="border-color:#9fc47b;color:#5a8a3a">📋 Load Tuesday</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlResetChecks()" style="border-color:#81b784;color:#4a8a4d" title="Uncheck all tasks">☐ Reset Checks</button>
-      <button class="btn btn-ghost btn-sm" onclick="tlClearDay()" style="border-color:#e57373;color:#e57373">✕ Clear</button>
-    </div>
-  </div>
-
-  <!-- Print-only header -->
-  <div id="tl-print-header" style="display:none;align-items:baseline;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #333">
-    <div>
-      <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#1a1a1a">Bella's Bakeshop</div>
-      <div style="font-size:13px;color:#555;margin-top:3px">Daily Production Timeline — <span id="tl-print-date"></span></div>
-    </div>
-    <div style="font-size:11px;color:#999;text-align:right">
-      <div id="tl-print-range"></div>
-      <div id="tl-print-staff"></div>
-    </div>
-  </div>
-
-  <!-- Category palette -->
-  <div class="tl-white-bar" style="padding:8px 16px">
-    <span style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-right:6px">Category:</span>
-    <div id="tl-palette" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-  </div>
-
-  <!-- Swim-lane grid -->
-  <div class="tl-wrap">
-    <div id="tl-grid"></div>
-  </div>
-
-  <!-- Print-only checklist (hidden on screen, generated by tlPrintTimeline()) -->
-  <div id="tl-print-checklist" style="display:none"></div>
-
-  <!-- Export PDF modal -->
-  <div id="tl-export-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center"
-       onclick="if(event.target===this)tlCloseExportModal()">
-    <div style="background:#fff;border-radius:4px;width:420px;max-width:94vw;
-                box-shadow:0 8px 40px rgba(0,0,0,0.22);overflow:hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid #eef0f4">
-        <div style="font-size:15px;font-weight:700;color:#1e2230">Export / Print</div>
-        <button onclick="tlCloseExportModal()" style="background:none;border:none;font-size:18px;color:#aaa;cursor:pointer">✕</button>
-      </div>
-      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
-
-        <!-- Overall manager schedule -->
-        <div style="border:1px solid #dde0e6;border-radius:4px;padding:14px 16px;cursor:pointer;transition:background 0.1s"
-             onmouseenter="this.style.background='#f4f6fb'" onmouseleave="this.style.background=''"
-             onclick="tlCloseExportModal();tlPrintSheet('manager')">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">📋</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#1e2230">Overall Schedule</div>
-              <div style="font-size:11px;color:#888;margin-top:2px">All roles · for the manager · full Gantt + task list</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.6px;padding:2px 0 0">Individual Employee Sheets</div>
-
-        <!-- Per-person sheets populated by JS -->
-        <div id="tl-export-people" style="display:flex;flex-direction:column;gap:8px"></div>
-
-        <!-- All individual sheets -->
-        <div style="border:1px solid #c4c9d4;border-radius:4px;padding:12px 16px;cursor:pointer;background:#f8f9fb;transition:background 0.1s"
-             onmouseenter="this.style.background='#eef0f6'" onmouseleave="this.style.background='#f8f9fb'"
-             onclick="tlCloseExportModal();tlPrintAllIndividual()">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px">📑</span>
-            <div>
-              <div style="font-size:12px;font-weight:700;color:#444">Print All Individual Sheets</div>
-              <div style="font-size:10px;color:#aaa;margin-top:1px">Opens one window per person in sequence</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-      <div style="padding:12px 20px;border-top:1px solid #eef0f4;text-align:right">
-        <button onclick="tlCloseExportModal()" style="background:none;border:1px solid #ccc;color:#555;border-radius:6px;padding:7px 18px;cursor:pointer;font-size:12px">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Load Template modal -->
-  <div id="tl-load-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center"
-       onclick="if(event.target===this)tlCloseLoadModal()">
-    <div style="background:#fff;border-radius:4px;width:560px;max-width:96vw;max-height:85vh;
-                display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.22);overflow:hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid #eef0f4">
-        <div>
-          <div style="font-size:16px;font-weight:700;color:#1e2230">Saved Schedules</div>
-          <div id="tl-tpl-count" style="font-size:11px;color:#aaa;margin-top:2px"></div>
-        </div>
-        <button onclick="tlCloseLoadModal()" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;line-height:1">✕</button>
-      </div>
-      <div id="tl-load-list" style="overflow-y:auto;flex:1;padding:10px 14px"></div>
-      <div style="padding:12px 18px;border-top:1px solid #eef0f4;display:flex;justify-content:space-between;align-items:center">
-        <button id="tl-tpl-delete-all" onclick="tlDeleteAllTemplates()"
-          style="background:none;border:1px solid #e57373;color:#e57373;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;display:none">
-          🗑 Delete All
-        </button>
-        <button onclick="tlCloseLoadModal()" style="background:none;border:1px solid #ccc;color:#555;border-radius:6px;padding:7px 18px;cursor:pointer;font-size:12px;margin-left:auto">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add / Edit modal -->
-  <div id="tl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center">
-    <div class="tl-modal-inner">
-      <div class="tl-modal-title" id="tl-modal-title">Add Task</div>
-
-      <div style="margin-bottom:10px">
-        <label style="font-size:11px;display:block;margin-bottom:4px">Task label</label>
-        <input id="tl-m-label" type="text" placeholder="e.g. Mix Brioche">
-      </div>
-
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <div style="flex:1">
-          <label style="font-size:11px;display:block;margin-bottom:4px">Start time</label>
-          <input id="tl-m-start" type="time">
-        </div>
-        <div style="flex:1">
-          <label style="font-size:11px;display:block;margin-bottom:4px">Duration (min)</label>
-          <input id="tl-m-dur" type="number" min="5" step="5" value="30">
-        </div>
-      </div>
-
-      <div style="margin-bottom:10px">
-        <label style="font-size:11px;display:block;margin-bottom:6px">Category</label>
-        <div id="tl-m-palette" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-      </div>
-
-      <div style="margin-bottom:12px">
-        <label style="font-size:11px;display:block;margin-bottom:4px">Notes (optional)</label>
-        <input id="tl-m-notes" type="text" placeholder="Optional detail">
-      </div>
-
-      <div id="tl-m-eq-row" style="margin-bottom:18px">
-        <label style="font-size:11px;display:block;margin-bottom:4px">Equipment used
-          <span style="font-size:9px;color:#aaa;margin-left:4px">— auto-mirrors into that lane</span>
-        </label>
-        <select id="tl-m-eq" style="width:100%;padding:7px 10px;border:1px solid #dde0e6;border-radius:6px;font-size:12px;background:#fff;color:#1e2230">
-          <option value="">None</option>
-        </select>
-      </div>
-
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button id="tl-m-delete" style="display:none;background:none;border:1px solid #e57373;color:#e57373;border-radius:5px;padding:6px 14px;cursor:pointer;font-size:12px" onclick="tlDeleteBlock()">Delete</button>
-        <button style="background:none;border:1px solid #ccc;color:#555;border-radius:5px;padding:6px 14px;cursor:pointer;font-size:12px" onclick="tlCloseModal()">Cancel</button>
-        <button style="background:#7b9fc4;border:none;color:#fff;border-radius:5px;padding:6px 16px;cursor:pointer;font-size:12px;font-weight:600" onclick="tlSaveBlock()">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recipe sequence modal -->
-  <div id="tl-recipe-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center">
-    <div class="tl-modal-inner" style="max-width:500px;max-height:90vh;overflow-y:auto">
-      <div class="tl-modal-title">Add Recipe Sequence</div>
-
-      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-        <div style="flex:2;min-width:160px">
-          <label style="font-size:11px;display:block;margin-bottom:4px">Recipe</label>
-          <select id="tl-r-recipe" onchange="tlRecipeModalChange()" style="width:100%;background:#f7f8fa;border:1px solid #dde0e6;color:#222;border-radius:5px;padding:6px 9px;font-size:13px;box-sizing:border-box"></select>
-        </div>
-        <div id="tl-r-day-wrap" style="flex:1;min-width:100px;display:none">
-          <label style="font-size:11px;display:block;margin-bottom:4px">Stage day</label>
-          <select id="tl-r-day" onchange="tlUpdateRecipePreview()" style="width:100%;background:#f7f8fa;border:1px solid #dde0e6;color:#222;border-radius:5px;padding:6px 9px;font-size:13px;box-sizing:border-box"></select>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-bottom:14px">
-        <div style="flex:1">
-          <label style="font-size:11px;display:block;margin-bottom:4px">Start time</label>
-          <input id="tl-r-start" type="time" value="07:00" onchange="tlUpdateRecipePreview()" style="width:100%;background:#f7f8fa;border:1px solid #dde0e6;color:#222;border-radius:5px;padding:6px 9px;font-size:13px;box-sizing:border-box">
-        </div>
-        <div style="flex:1">
-          <label style="font-size:11px;display:block;margin-bottom:4px">Assign to lane</label>
-          <select id="tl-r-lane" style="width:100%;background:#f7f8fa;border:1px solid #dde0e6;color:#222;border-radius:5px;padding:6px 9px;font-size:13px;box-sizing:border-box"></select>
-        </div>
-      </div>
-
-      <!-- Stage preview -->
-      <div style="margin-bottom:18px">
-        <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-weight:700">Stages</div>
-        <div id="tl-r-preview" style="border:1px solid #eee;border-radius:6px;max-height:220px;overflow-y:auto;font-size:12px"></div>
-        <div id="tl-r-total" style="font-size:11px;color:#888;margin-top:5px;text-align:right"></div>
-      </div>
-
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button style="background:none;border:1px solid #ccc;color:#555;border-radius:5px;padding:6px 14px;cursor:pointer;font-size:12px" onclick="tlCloseRecipeModal()">Cancel</button>
-        <button style="background:#7a55b0;border:none;color:#fff;border-radius:5px;padding:6px 16px;cursor:pointer;font-size:12px;font-weight:600" onclick="tlInsertRecipe()">Add to Timeline</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- ======== END OF DAY PAGE ======== -->
@@ -3074,7 +2654,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.2.5';
+const APP_VERSION      = '2.2.7';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3961,7 +3541,9 @@ function addStage(recipeId) {
     activeMins: parseInt(document.getElementById(`stage-active-${recipeId}`).value) || 0,
     waitMins: parseInt(document.getElementById(`stage-wait-${recipeId}`).value) || 0,
     skill: document.getElementById(`stage-skill-${recipeId}`).value,
-    notes: document.getElementById(`stage-notes-${recipeId}`).value
+    notes: document.getElementById(`stage-notes-${recipeId}`).value,
+    baker: document.getElementById(`stage-baker-${recipeId}`)?.value || null,
+    valuePct: parseInt(document.getElementById(`stage-valuepct-${recipeId}`)?.value) || 0,
   };
   r.stages.push(stage);
   save();
@@ -4005,7 +3587,11 @@ function updateStage(recipeId, stageId, field, val) {
   if (!r) return;
   const s = r.stages.find(s => s.id === stageId);
   if (!s) return;
-  s[field] = (field === 'activeMins' || field === 'waitMins' || field === 'day') ? (parseInt(val) || (field === 'day' ? 1 : 0)) : val;
+  if (field === 'activeMins' || field === 'waitMins' || field === 'day' || field === 'valuePct') {
+    s[field] = parseInt(val) || (field === 'day' ? 1 : 0);
+  } else {
+    s[field] = val;
+  }
   save();
   if (field === 'day') {
     // Day changes affect grouping — full re-render, keep this recipe expanded
@@ -4262,6 +3848,16 @@ function renderRecipes() {
               <input type="number" min="0" step="1" value="${r.batchCapacity || 0}" placeholder="0 = unlimited"
                 onchange="updateRecipe(${r.id},'batchCapacity',parseInt(this.value)||0)" style="width:80px">
             </div>
+            <div class="form-group">
+              <label title="Retail sale price per unit (e.g. per loaf, per dozen)">Retail price / unit ($)</label>
+              <input type="number" min="0" step="0.25" value="${r.retailPrice || ''}" placeholder="0.00"
+                onchange="updateRecipe(${r.id},'retailPrice',parseFloat(this.value)||0)" style="width:80px">
+            </div>
+            <div class="form-group">
+              <label title="How many sellable units does one batch produce?">Units per batch</label>
+              <input type="number" min="0" step="1" value="${r.yieldQty || ''}" placeholder="e.g. 12"
+                onchange="updateRecipe(${r.id},'yieldQty',parseInt(this.value)||0)" style="width:70px">
+            </div>
             <div class="form-group" style="flex:2">
               <label>Notes</label>
               <input type="text" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Any notes..."
@@ -4345,11 +3941,16 @@ function renderRecipes() {
     const laborRate = r.laborRatePerHour || 18;
     const laborCost = (totalActiveMins / 60) * laborRate;
     const totalCost = ingCost + laborCost;
-    if (ingCost === 0 && laborCost === 0) return '';
+    const retailPrice = parseFloat(r.retailPrice) || 0;
+    const yieldQty    = parseInt(r.yieldQty) || 0;
+    const batchValue  = retailPrice * yieldQty;
+    const margin      = batchValue - totalCost;
+    const hasRetail   = retailPrice > 0 && yieldQty > 0;
+    if (ingCost === 0 && laborCost === 0 && !hasRetail) return '';
     return `
       <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div class="section-label">Cost per Batch</div>
+          <div class="section-label">Cost &amp; Value per Batch</div>
           <div style="font-size:13px;color:var(--muted)">Labor rate:
             <input type="number" min="0" step="1" value="${laborRate}"
               style="width:50px;background:transparent;border:none;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);text-align:right"
@@ -4357,19 +3958,28 @@ function renderRecipes() {
             > $/hr
           </div>
         </div>
-        <div style="display:flex;gap:24px;flex-wrap:wrap">
-          <div style="flex:1;min-width:120px">
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:110px">
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ingredients</div>
             <div style="font-size:20px;font-weight:700;color:var(--text)">$${ingCost.toFixed(2)}</div>
           </div>
-          <div style="flex:1;min-width:120px">
+          <div style="flex:1;min-width:110px">
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Labor (${totalActiveMins}m active)</div>
             <div style="font-size:20px;font-weight:700;color:var(--text)">$${laborCost.toFixed(2)}</div>
           </div>
-          <div style="flex:1;min-width:120px;background:var(--accent);border-radius:6px;padding:8px 14px">
-            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Total / Batch</div>
-            <div style="font-size:22px;font-weight:700;color:#fff">$${totalCost.toFixed(2)}</div>
+          <div style="flex:1;min-width:110px;background:var(--accent);border-radius:6px;padding:8px 14px">
+            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Total Cost / Batch</div>
+            <div style="font-size:20px;font-weight:700;color:#fff">$${totalCost.toFixed(2)}</div>
           </div>
+          ${hasRetail ? `
+          <div style="flex:1;min-width:110px;background:#1a5a2a;border-radius:6px;padding:8px 14px">
+            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Retail Value (${yieldQty} × $${retailPrice.toFixed(2)})</div>
+            <div style="font-size:20px;font-weight:700;color:#fff">$${batchValue.toFixed(2)}</div>
+          </div>
+          <div style="flex:1;min-width:110px;background:${margin>=0?'#1a3a2a':'#5a1a1a'};border-radius:6px;padding:8px 14px">
+            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Margin / Batch</div>
+            <div style="font-size:20px;font-weight:700;color:#fff">${margin>=0?'+':''}$${margin.toFixed(2)}</div>
+          </div>` : ''}
         </div>
       </div>`;
   }
@@ -4399,7 +4009,7 @@ function renderRecipes() {
                     style="flex:1;font-weight:600;font-size:13px">
                   <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
                 </div>
-                <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 1fr;gap:8px;align-items:end">
+                <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 70px 1fr 1fr;gap:8px;align-items:end;flex-wrap:wrap">
                   <div class="form-group" style="margin:0">
                     <label>Day</label>
                     <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
@@ -4417,6 +4027,18 @@ function renderRecipes() {
                       onchange="updateStage(${r.id},${s.id},'waitMins',this.value)" style="text-align:center">
                   </div>
                   <div class="form-group" style="margin:0">
+                    <label title="Specific person assigned to this stage">Assigned Baker</label>
+                    <select onchange="updateStage(${r.id},${s.id},'baker',this.value)">
+                      <option value="">— Unassigned —</option>
+                      ${staff.filter(m => m.name).map(m => `<option value="${m.id}" ${s.baker===m.id?'selected':''}>${m.name}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin:0">
+                    <label title="This stage's share of the batch retail value (all stages should sum to 100%)">Value %</label>
+                    <input type="number" min="0" max="100" step="5" value="${s.valuePct||0}"
+                      onchange="updateStage(${r.id},${s.id},'valuePct',this.value)" style="text-align:center">
+                  </div>
+                  <div class="form-group" style="margin:0">
                     <label>Who Can Do This</label>
                     <select onchange="updateStage(${r.id},${s.id},'skill',this.value)">
                       ${SKILLS.map(sk => `<option ${sk===s.skill?'selected':''}>${sk}</option>`).join('')}
@@ -4428,6 +4050,7 @@ function renderRecipes() {
                       onchange="updateStage(${r.id},${s.id},'notes',this.value)">
                   </div>
                 </div>
+                ${(()=>{ const pctSum = r.stages.reduce((s,x)=>s+(x.valuePct||0),0); return pctSum>0&&pctSum!==100?`<div style="margin-top:5px;font-size:11px;color:#cc6600;font-weight:700">⚠ Value % sum = ${pctSum}% (should be 100%)</div>`:''; })()}
               </div>
             `).join('')}
           `).join('')}
@@ -4460,6 +4083,17 @@ function renderRecipes() {
               <select id="stage-skill-${r.id}">
                 ${SKILLS.map(sk => `<option>${sk}</option>`).join('')}
               </select>
+            </div>
+            <div class="form-group">
+              <label title="Specific baker assigned to this stage">Assigned Baker</label>
+              <select id="stage-baker-${r.id}">
+                <option value="">— Unassigned —</option>
+                ${staff.filter(m => m.name).map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group" style="min-width:80px">
+              <label title="% of batch retail value for this stage">Value %</label>
+              <input type="number" id="stage-valuepct-${r.id}" placeholder="0" min="0" max="100" step="5" style="width:65px">
             </div>
             <div class="form-group" style="flex:2">
               <label>Stage Notes</label>
@@ -17651,6 +17285,59 @@ function renderWeekPlan() {
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:3px">${bakerChips}</div>
         ${(()=>{const t=allDayItems.reduce((s,i)=>s+(i.estMins||0),0);return t?`<div style="margin-top:7px;padding-top:6px;border-top:1px solid #e0e0e0;display:flex;align-items:center;gap:5px"><span style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#999">Est.</span><span style="font-size:12px;font-weight:800;color:#444">~${wpFmtMins(t)}</span></div>`:'';})()}
+        ${(()=>{
+          // Per-baker attribution from linked recipes
+          const bakerMap = {};
+          let unattributed = { active:0, wait:0, value:0, hasAny:false };
+          allDayItems.forEach(item => {
+            if (!item.dtRecipeId) return;
+            const rec = recipes.find(r => r.id == item.dtRecipeId);
+            if (!rec || !rec.stages || !rec.stages.length) return;
+            const batchValue = (parseFloat(rec.retailPrice)||0) * (parseInt(rec.yieldQty)||0);
+            rec.stages.forEach(stage => {
+              const active = stage.activeMins || 0;
+              const wait   = stage.waitMins   || 0;
+              const val    = ((stage.valuePct||0) / 100) * batchValue;
+              if (stage.baker) {
+                if (!bakerMap[stage.baker]) bakerMap[stage.baker] = { active:0, wait:0, value:0 };
+                bakerMap[stage.baker].active += active;
+                bakerMap[stage.baker].wait   += wait;
+                bakerMap[stage.baker].value  += val;
+              } else {
+                unattributed.active += active;
+                unattributed.wait   += wait;
+                unattributed.value  += val;
+                unattributed.hasAny = true;
+              }
+            });
+          });
+          const rows = Object.keys(bakerMap);
+          if (!rows.length && !unattributed.hasAny) return '';
+          const fmtV = v => v > 0 ? '$' + v.toFixed(0) : '';
+          const staffRows = rows.map(sid => {
+            const m = staff.find(s => s.id == sid);
+            const name = m ? m.name.split(' ')[0] : '?';
+            const d = bakerMap[sid];
+            const color = m ? wpBakerColor(m.name) : '#888';
+            return `<div style="display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid #eee">
+              <span style="width:5px;height:5px;border-radius:50%;background:${color};flex-shrink:0"></span>
+              <span style="font-size:10px;font-weight:800;color:#444;min-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+              <span style="font-size:9px;color:#1a5a2a;font-weight:700;flex:1">${wpFmtMins(d.active)} active</span>
+              ${d.wait ? `<span style="font-size:9px;color:#aaa">${wpFmtMins(d.wait)} wait</span>` : ''}
+              ${d.value > 0 ? `<span style="font-size:9px;font-weight:900;color:#1a3a8a">${fmtV(d.value)}</span>` : ''}
+            </div>`;
+          }).join('');
+          const unattRow = unattributed.hasAny ? `<div style="display:flex;align-items:center;gap:5px;padding:3px 0">
+            <span style="width:5px;height:5px;border-radius:50%;background:#ccc;flex-shrink:0"></span>
+            <span style="font-size:10px;color:#bbb;min-width:44px">—</span>
+            <span style="font-size:9px;color:#bbb;flex:1">${wpFmtMins(unattributed.active)} unattributed</span>
+            ${unattributed.wait ? `<span style="font-size:9px;color:#ddd">${wpFmtMins(unattributed.wait)} wait</span>` : ''}
+          </div>` : '';
+          return `<div style="margin-top:7px;padding-top:6px;border-top:1px solid #e0e0e0">
+            <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#999;margin-bottom:4px">Attribution</div>
+            ${staffRows}${unattRow}
+          </div>`;
+        })()}
       </div>
       <div style="flex:1;padding:9px 8px;background:#fafafa">
         ${itemCards}
@@ -20108,6 +19795,14 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.2.7': [
+    '🧹 Navigation cleanup — removed 5 tabs superseded by the Bake Board: Daily Planner, Weekly Schedule, Schedule, Timeline, and Standing Tasks; all remaining tabs are active and in use',
+  ],
+  '2.2.6': [
+    '📊 Recipes — Each recipe now supports a retail price per unit and units per batch; the cost summary shows Retail Value and Margin tiles',
+    '🏷 Recipes — Stages now support an Assigned Baker (staff dropdown) and a Value % field; value percentages should sum to 100% per recipe (a warning shows when they don\'t)',
+    '👩‍🍳 Bake Board — Per-baker attribution panel added to each day column: shows each assigned baker\'s active time, wait time, and retail value contribution from linked recipe stages; unattributed stages shown separately',
+  ],
   '2.2.5': [
     '⏱ Bake Board — Est. Time per item: quick-tap chips (15m → 4h) let you assign an estimated time to any item; each item shows its time alongside the quantity, and the top of each day column shows the cumulative total (e.g. ~3 hr 45 min) so you can gauge workload vs. available labor at a glance',
   ],
