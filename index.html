@@ -2656,7 +2656,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.2.8';
+const APP_VERSION      = '2.2.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4029,10 +4029,15 @@ function renderRecipes() {
                       onchange="updateStage(${r.id},${s.id},'waitMins',this.value)" style="text-align:center">
                   </div>
                   <div class="form-group" style="margin:0">
-                    <label title="Specific person assigned to this stage">Assigned Baker</label>
+                    <label title="Who does this stage — role or specific person">Baker Role</label>
                     <select onchange="updateStage(${r.id},${s.id},'baker',this.value)">
                       <option value="">— Unassigned —</option>
-                      ${staff.filter(m => m.name).map(m => `<option value="${m.id}" ${s.baker===m.id?'selected':''}>${m.name}</option>`).join('')}
+                      <option value="_primary"   ${s.baker==='_primary'   ?'selected':''}>Primary (item)</option>
+                      <option value="_secondary" ${s.baker==='_secondary' ?'selected':''}>Secondary (item)</option>
+                      <option value="_day"       ${s.baker==='_day'       ?'selected':''}>Baker on Day</option>
+                      <optgroup label="Specific Person">
+                        ${staff.filter(m => m.name).map(m => `<option value="${m.id}" ${s.baker==m.id?'selected':''}>${m.name}</option>`).join('')}
+                      </optgroup>
                     </select>
                   </div>
                   <div class="form-group" style="margin:0">
@@ -4087,10 +4092,15 @@ function renderRecipes() {
               </select>
             </div>
             <div class="form-group">
-              <label title="Specific baker assigned to this stage">Assigned Baker</label>
+              <label title="Who does this stage — role or specific person">Baker Role</label>
               <select id="stage-baker-${r.id}">
                 <option value="">— Unassigned —</option>
-                ${staff.filter(m => m.name).map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+                <option value="_primary">Primary (item)</option>
+                <option value="_secondary">Secondary (item)</option>
+                <option value="_day">Baker on Day</option>
+                <optgroup label="Specific Person">
+                  ${staff.filter(m => m.name).map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+                </optgroup>
               </select>
             </div>
             <div class="form-group" style="min-width:80px">
@@ -17306,14 +17316,15 @@ function renderWeekPlan() {
             if (!rec || !rec.stages || !rec.stages.length) return;
             const batchValue = (parseFloat(rec.retailPrice)||0) * (parseInt(rec.yieldQty)||0);
             rec.stages.forEach(stage => {
-              const active = stage.activeMins || 0;
-              const wait   = stage.waitMins   || 0;
-              const val    = ((stage.valuePct||0) / 100) * batchValue;
-              if (stage.baker) {
-                if (!bakerMap[stage.baker]) bakerMap[stage.baker] = { active:0, wait:0, value:0 };
-                bakerMap[stage.baker].active += active;
-                bakerMap[stage.baker].wait   += wait;
-                bakerMap[stage.baker].value  += val;
+              const active   = stage.activeMins || 0;
+              const wait     = stage.waitMins   || 0;
+              const val      = ((stage.valuePct||0) / 100) * batchValue;
+              const resolved = wpResolveBaker(stage.baker, item, dayData.bakers);
+              if (resolved) {
+                if (!bakerMap[resolved]) bakerMap[resolved] = { active:0, wait:0, value:0 };
+                bakerMap[resolved].active += active;
+                bakerMap[resolved].wait   += wait;
+                bakerMap[resolved].value  += val;
               } else {
                 unattributed.active += active;
                 unattributed.wait   += wait;
@@ -17361,6 +17372,18 @@ function renderWeekPlan() {
   }).join('');
 }
 
+// Resolve a stage baker value to a staff ID given the item and day context
+function wpResolveBaker(bakerVal, item, dayBakerNames) {
+  if (!bakerVal) return null;
+  if (bakerVal === '_primary')   return item?.primaryBaker   || null;
+  if (bakerVal === '_secondary') return item?.secondaryBaker || null;
+  if (bakerVal === '_day') {
+    const found = staff.find(s => dayBakerNames && dayBakerNames.includes(s.name));
+    return found?.id || null;
+  }
+  return bakerVal; // specific staff ID
+}
+
 // — Baker Timeline —
 function wpShowTimeline(day) {
   const panel = document.getElementById('wp-timeline-panel');
@@ -17400,7 +17423,7 @@ function wpShowTimeline(day) {
       const rec = recipes.find(r => r.id == item.dtRecipeId);
       if (rec && rec.stages && rec.stages.length) {
         rec.stages.forEach(stage => {
-          const bid  = stage.baker || '_none';
+          const bid  = wpResolveBaker(stage.baker, item, dayData.bakers) || '_none';
           const lane = getLane(bid);
           const activeMins = stage.activeMins || 0;
           const waitMins   = stage.waitMins   || 0;
@@ -19980,6 +20003,9 @@ function dsPrintChecklist() {
 // ============ END DISPLAY STOCK ============
 
 const VERSION_NOTES = {
+  '2.2.9': [
+    '👤 Recipes — Stage baker assignment now supports four modes: "Primary (item)" and "Secondary (item)" resolve to whoever is set as primary/secondary baker on the Bake Board item; "Baker on Day" resolves to the first baker assigned to that day column; "Specific Person" locks to a named staff member for skill-gated stages. Attribution panel and timeline both resolve these dynamically.',
+  ],
   '2.2.8': [
     '📊 Bake Board — Baker Timeline: click the 📊 button on any day column to see a full-width Gantt chart for that day; each baker gets a swim lane with solid blocks for active time and hatched blocks for wait/proof time, sequenced from 5 AM; print-ready via "Print Schedule"',
   ],
