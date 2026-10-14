@@ -17,6 +17,25 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bella's Bake Shop</title>
+<script>
+// SAFETY NET — runs before everything else, in its own <script> block.
+// If the main app script has any error, this still shows the sign-in screen.
+window._authBootDone = false;
+window.authShowModal = function() {
+  var m = document.getElementById('auth-modal');
+  if (m) m.style.display = 'flex';
+};
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    if (window._authBootDone) return;
+    try { window.authShowModal(); } catch(e) {}
+    var gs = document.getElementById('gate-status');
+    var gb = document.getElementById('gate-signin-btn');
+    if (gs) gs.textContent = 'Please sign in to continue';
+    if (gb) gb.style.display = '';
+  }, 3000);
+});
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Great+Vibes&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap');
 
@@ -2492,6 +2511,17 @@
 // Existing browser data remains untouched until staff explicitly choose to save it.
 window.bakerySession = null;
 window.bakeryAccess = {};
+
+// Early fallback — registered at the very top so any error later can't prevent it.
+// The <head> safety-net also runs; this is a second layer inside the main script.
+setTimeout(function authMainScriptFallback() {
+  if (window._authBootDone) return;
+  try { (window.authShowModal || function(){})(); } catch(e) {}
+  var gs = document.getElementById('gate-status');
+  var gb = document.getElementById('gate-signin-btn');
+  if (gs) gs.textContent = 'Please sign in to continue';
+  if (gb) gb.style.display = '';
+}, 4000);
 if (!localStorage.getItem('bk_pre_secure_backup')) {
   const snapshot = {};
   for (let i = 0; i < localStorage.length; i++) {
@@ -2625,7 +2655,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.3.7';
+const APP_VERSION      = '2.3.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20352,11 +20382,11 @@ function mpsPush() {
 // ============================================================
 // PRICE LIBRARY  (bk_price_lib)
 // ============================================================
-const PL_KEY = 'bk_price_lib';
+var PL_KEY = 'bk_price_lib';
 function plLoad() { return JSON.parse(localStorage.getItem(PL_KEY) || 'null'); }
 function plSave(data) { localStorage.setItem(PL_KEY, JSON.stringify(data)); }
 
-const PL_DEFAULTS = [
+var PL_DEFAULTS = [
   { name:'WATER',                        cat:'Other',     pricePerGram:0,        caseCost:0,      caseWeightGrams:0      },
   { name:'YEAST',                        cat:'Leavening', pricePerGram:0.00634,  caseCost:0,      caseWeightGrams:0      },
   { name:'EGG',                          cat:'Dairy',     pricePerGram:0.00198,  caseCost:0.111,  caseWeightGrams:56     },
@@ -20428,7 +20458,7 @@ function plLookupByName(name) {
   return (plLoad() || []).find(e => e.name.toUpperCase() === q) || null;
 }
 
-const PL_CAT_COLORS = {
+var PL_CAT_COLORS = {
   'Flour':'#c8a87a','Dairy':'#7ab8c8','Fat':'#c8b87a','Sugar':'#c87a9e',
   'Leavening':'#a8c87a','Chocolate':'#8b6249','Fruit':'#c87a7a',
   'Nut/Seed':'#9e8b6a','Savory':'#7ac87a','Spice':'#b87ac8','Other':'#8a8a8a'
@@ -20556,6 +20586,12 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.3.9': [
+    '🐛 Fix — Price Library constants (PL_KEY, PL_DEFAULTS, PL_CAT_COLORS) changed from const to var so they hoist correctly; this was crashing the entire app on startup and preventing the sign-in screen from appearing',
+  ],
+  '2.3.8': [
+    '🔒 Auth — triple-layer fallback: (1) separate <head> safety-net script runs before everything; (2) timer registered at the very top of the main script before any init code; (3) secureBootstrap catch; Sign In button guaranteed within 3-4 seconds regardless of any error',
+  ],
   '2.3.7': [
     '🔒 Auth — Firebase scripts now load dynamically (non-blocking) so the main app and all fallback timers always run immediately; "Sign In →" button guaranteed to appear within 5 seconds regardless of Firebase / network status',
   ],
@@ -20965,18 +21001,8 @@ async function _loadFirebase() {
   await _loadScript(base + 'firebase-auth-compat.js');
 }
 
-// Absolute auth fallback — fires 5 s after page load regardless of async state.
-// Because Firebase now loads dynamically the main script is no longer blocked,
-// so this timer always fires.
-let _authBootDone = false;
-setTimeout(function authAbsoluteFallback() {
-  if (_authBootDone) return;
-  try { authShowModal(); } catch(e) {}
-  const gs = document.getElementById('gate-status');
-  const gb = document.getElementById('gate-signin-btn');
-  if (gs) gs.textContent = 'Please sign in to continue';
-  if (gb) gb.style.display = '';
-}, 5000);
+// _authBootDone and fallback timers are registered earlier (head script + prelude top).
+// secureBootstrap below sets window._authBootDone = true when auth is resolved.
 
 (async function secureBootstrap() {
   const loading = document.getElementById('fb-loading');
@@ -21009,11 +21035,11 @@ setTimeout(function authAbsoluteFallback() {
     ]);
     window.bakeryAccess = Object.fromEntries(directory.staff.map(s => [s.id, s.hasPin === true]));
     staff = directory.staff;
-    _authBootDone = true;
+    window._authBootDone = true;
     try { authBoot(); } catch(e2) { showGateSignIn('Please sign in to continue'); console.warn('authBoot error:', e2); }
     fbSetSyncStatus('connecting');
   } catch(e) {
-    _authBootDone = true;
+    window._authBootDone = true;
     try { authBoot(); } catch(e2) { showGateSignIn('Please sign in to continue'); console.warn('authBoot error:', e2); }
     fbSetSyncStatus('offline');
     console.warn('Secure startup unavailable:', e.code || e.message);
