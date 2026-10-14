@@ -2655,7 +2655,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.2';
+const APP_VERSION      = '2.4.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4032,23 +4032,11 @@ function renderRecipes() {
     if (ingCost === 0 && laborCost === 0 && !hasRetail) return '';
     return `
       <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div class="section-label">Cost &amp; Value per Batch</div>
-          <div style="font-size:13px;color:var(--muted)">Labor rate:
-            <input type="number" min="0" step="1" value="${laborRate}"
-              style="width:50px;background:transparent;border:none;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);text-align:right"
-              onchange="updateRecipe(${r.id},'laborRatePerHour',parseFloat(this.value)||18);renderRecipes();setTimeout(()=>toggleRecipe(${r.id}),30)"
-            > $/hr
-          </div>
-        </div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="margin-bottom:8px"><div class="section-label">Cost &amp; Value per Batch</div></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
           <div style="flex:1;min-width:110px">
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ingredients</div>
             <div style="font-size:20px;font-weight:700;color:var(--text)">$${ingCost.toFixed(2)}</div>
-          </div>
-          <div style="flex:1;min-width:110px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Labor (${totalActiveMins}m active)</div>
-            <div style="font-size:20px;font-weight:700;color:var(--text)">$${laborCost.toFixed(2)}</div>
           </div>
           <div style="flex:1;min-width:110px;background:var(--accent);border-radius:6px;padding:8px 14px">
             <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Total Cost / Batch</div>
@@ -4064,6 +4052,14 @@ function renderRecipes() {
             <div style="font-size:20px;font-weight:700;color:#fff">${margin>=0?'+':''}$${margin.toFixed(2)}</div>
           </div>` : ''}
         </div>
+        ${laborCost > 0 ? `<div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px">
+          Labor: <span style="color:var(--text);font-weight:600">$${laborCost.toFixed(2)}</span>
+          · ${totalActiveMins}m active
+          · <label style="cursor:pointer">$<input type="number" min="0" step="1" value="${laborRate}"
+            style="width:38px;background:transparent;border:none;border-bottom:1px solid var(--border);font-size:11px;color:var(--text);text-align:right;padding:0"
+            onchange="updateRecipe(${r.id},'laborRatePerHour',parseFloat(this.value)||18);renderRecipes();setTimeout(()=>toggleRecipe(${r.id}),30)"
+          >/hr</label>
+        </div>` : ''}
       </div>`;
   }
 
@@ -17345,94 +17341,66 @@ function renderWeekPlan() {
       .map(r => ({ ...r, _isRecurring: true }));
     const allDayItems = [...recurringItems, ...dayData.items];
 
-    // Group items by production phase (sorted by phase sortOrder), unphased at end
-    const phaseGroups = {};
-    WP_PHASES.forEach(p => { phaseGroups[p.key] = []; });
-    phaseGroups['__none__'] = [];
-    allDayItems.forEach(item => {
-      const key = item.phase && phaseGroups[item.phase] ? item.phase : '__none__';
-      phaseGroups[key].push(item);
-    });
-    const phaseOrder = [...WP_PHASES.map(p => p.key), '__none__'];
+    // Render items in user-controlled order (drag-to-reorder). Phase shown as card badge.
     let globalIdx = 0;
-    const itemCards = phaseOrder.map(phaseKey => {
-      const grpItems = phaseGroups[phaseKey];
-      if (!grpItems.length) return '';
-      const phase = WP_PHASES.find(p => p.key === phaseKey);
-      const isTopPhase = phase?.sortOrder < 0;
-      const groupHeader = phase
-        ? isTopPhase
-          ? `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px 5px;
-              margin-top:${globalIdx===0?'0':'8'}px;margin-bottom:3px;
-              background:${phase.color};border-radius:3px">
-              <span style="font-size:12px">${phase.icon}</span>
-              <span style="font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;
-                color:#fff">${phase.label}</span>
-            </div>`
-          : `<div style="display:flex;align-items:center;gap:5px;padding:5px 4px 4px;
-              margin-top:${globalIdx===0?'0':'8'}px;margin-bottom:3px">
-              <span style="font-size:13px">${phase.icon}</span>
-              <span style="font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;
-                color:${phase.color}">${phase.label}</span>
-            </div>`
-        : '';
-      const cards = grpItems.map(item => {
-        const iIdx = globalIdx++;
-        const isFirst = iIdx === 0;
-        const isOrderItem   = item.phase === 'orders';
-        const isSpecialItem = item.phase === 'special';
-        const cat     = WP_CATEGORIES.find(c => c.key === item.category);
-        const leftBdr = cat ? `border-left:5px solid ${cat.color};padding-left:5px;` : '';
-        const cardBorder = isOrderItem ? '3px solid #5a1a8a' : isSpecialItem ? '3px solid #cc0000' : `2px solid ${isFirst?'#111':'#e0e0e0'}`;
-        const cardBg     = isOrderItem ? '#f8f0ff' : isSpecialItem ? '#fff8f8' : '#fff';
-        return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"${item._isRecurring?' data-recurring="true"':''}
-          style="position:relative;overflow:hidden;margin-bottom:5px;border-radius:4px;
-            touch-action:none;user-select:none">
-          <div class="wp-swipe-delete"
-            style="position:absolute;right:0;top:0;bottom:0;width:72px;background:#cc3300;
-              display:flex;align-items:center;justify-content:center;flex-direction:column;
-              gap:2px;opacity:0.25;transition:opacity 0.15s;pointer-events:none">
-            <span style="font-size:20px">🗑</span>
-            <span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:1px">DELETE</span>
-          </div>
-          <div class="wp-item-card"
-            style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
-              border:${cardBorder};border-radius:4px;
-              background:${cardBg};position:relative;z-index:1;cursor:grab;${leftBdr}">
-            <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
-              background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
-              font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
-            <div style="flex:1;min-width:0">
-              ${cat ? `<div style="font-size:9px;font-weight:900;letter-spacing:1.5px;
-                text-transform:uppercase;color:${cat.color};margin-bottom:2px">${cat.label}</div>` : ''}
-              <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
-                line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}${item._isRecurring?'<span style="margin-left:5px;font-size:9px;font-weight:900;color:#5a1a8a;background:#ede0ff;border-radius:3px;padding:1px 4px;letter-spacing:0.3px;vertical-align:middle">↻</span>':''}</div>
-              ${(item.qty||item.estMins) ? `<div style="font-size:12px;color:#777;margin-top:2px">${[item.qty, item.estMins?'~'+wpFmtMins(item.estMins):null].filter(Boolean).join(' · ')}</div>` : ''}
-              ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
-              ${(()=>{
-                const badges = [];
-                if (item.primaryBaker) {
-                  const s = staff.find(x => x.id === item.primaryBaker);
-                  if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Primary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};flex-shrink:0">${ini}</span>`); }
-                }
-                if (item.secondaryBaker) {
-                  const s = staff.find(x => x.id === item.secondaryBaker);
-                  if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Secondary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};opacity:0.65;flex-shrink:0">${ini}</span>`); }
-                }
-                return badges.length ? `<div style="display:flex;gap:3px;margin-top:4px">${badges.join('')}</div>` : '';
-              })()}
+    const itemCards = allDayItems.map(item => {
+      const iIdx = globalIdx++;
+      const isFirst = iIdx === 0;
+      const isOrderItem   = item.phase === 'orders';
+      const isSpecialItem = item.phase === 'special';
+      const phase   = WP_PHASES.find(p => p.key === item.phase);
+      const cat     = WP_CATEGORIES.find(c => c.key === item.category);
+      const leftBdr = phase ? `border-left:5px solid ${phase.color};padding-left:5px;` : '';
+      const cardBorder = isOrderItem ? '3px solid #5a1a8a' : isSpecialItem ? '3px solid #cc0000' : `2px solid ${isFirst?'#111':'#e0e0e0'}`;
+      const cardBg     = isOrderItem ? '#f8f0ff' : isSpecialItem ? '#fff8f8' : '#fff';
+      return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"${item._isRecurring?' data-recurring="true"':''}
+        style="position:relative;overflow:hidden;margin-bottom:5px;border-radius:4px;
+          touch-action:none;user-select:none">
+        <div class="wp-swipe-delete"
+          style="position:absolute;right:0;top:0;bottom:0;width:72px;background:#cc3300;
+            display:flex;align-items:center;justify-content:center;flex-direction:column;
+            gap:2px;opacity:0.25;transition:opacity 0.15s;pointer-events:none">
+          <span style="font-size:20px">🗑</span>
+          <span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:1px">DELETE</span>
+        </div>
+        <div class="wp-item-card"
+          style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
+            border:${cardBorder};border-radius:4px;
+            background:${cardBg};position:relative;z-index:1;cursor:grab;${leftBdr}">
+          <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
+            background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
+            font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;flex-wrap:wrap">
+              ${phase ? `<span style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:${phase.color}">${phase.icon} ${phase.label}</span>` : ''}
+              ${cat ? `<span style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:${cat.color}${phase?' · opacity:0.8':''}">${cat.label}</span>` : ''}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
-              ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
-                title="Copy to other days"
-                style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
-                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
-              <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
-            </div>
+            <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
+              line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}${item._isRecurring?'<span style="margin-left:5px;font-size:9px;font-weight:900;color:#5a1a8a;background:#ede0ff;border-radius:3px;padding:1px 4px;letter-spacing:0.3px;vertical-align:middle">↻</span>':''}</div>
+            ${(item.qty||item.estMins) ? `<div style="font-size:12px;color:#777;margin-top:2px">${[item.qty, item.estMins?'~'+wpFmtMins(item.estMins):null].filter(Boolean).join(' · ')}</div>` : ''}
+            ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
+            ${(()=>{
+              const badges = [];
+              if (item.primaryBaker) {
+                const s = staff.find(x => x.id === item.primaryBaker);
+                if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Primary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};flex-shrink:0">${ini}</span>`); }
+              }
+              if (item.secondaryBaker) {
+                const s = staff.find(x => x.id === item.secondaryBaker);
+                if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Secondary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};opacity:0.65;flex-shrink:0">${ini}</span>`); }
+              }
+              return badges.length ? `<div style="display:flex;gap:3px;margin-top:4px">${badges.join('')}</div>` : '';
+            })()}
           </div>
-        </div>`;
-      }).join('');
-      return groupHeader + cards;
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
+            ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+              title="Copy to other days"
+              style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
+                     padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
+            <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
+          </div>
+        </div>
+      </div>`;
     }).join('');
 
     return `<div style="flex:0 0 max(170px,calc(100%/7));min-width:170px;display:flex;
@@ -20597,6 +20565,12 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.4.4': [
+    '💰 Recipes — labor cost demoted from a prominent tile to a discreet footnote line below the cost tiles; labor rate input stays inline but small; main tiles are now Ingredients · Total Cost · Retail Value · Margin',
+  ],
+  '2.4.3': [
+    '📋 Bake Board — items now render in user-controlled order instead of being locked into phase groups; drag-to-reorder now sticks across re-renders; phase shown as colored left border + inline tag on each card instead of section header',
+  ],
   '2.4.2': [
     '🐛 Fix — secureFlush race condition: if the 400ms auto-save timer fired while a flush was already running, it silently dropped and items could get stuck; now reschedules instead; also auto-retries after any flush if items remain pending',
   ],
