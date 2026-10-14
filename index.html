@@ -17,10 +17,6 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bella's Bake Shop</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Great+Vibes&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap');
 
@@ -2629,7 +2625,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.3.6';
+const APP_VERSION      = '2.3.7';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20560,6 +20556,9 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.3.7': [
+    '🔒 Auth — Firebase scripts now load dynamically (non-blocking) so the main app and all fallback timers always run immediately; "Sign In →" button guaranteed to appear within 5 seconds regardless of Firebase / network status',
+  ],
   '2.3.6': [
     '🔒 Auth — absolute 4-second fallback timer now guarantees the "Sign In" button always appears even if Firebase hangs completely; individual timeouts added to every Firebase await (setPersistence, signOut, staffDirectory) so no single step can block forever',
   ],
@@ -20943,8 +20942,32 @@ function secureRecoverDrafts(staffId) {
   };
   banner.append(b); document.body.append(banner);
 }
-// Absolute auth fallback — fires 4 s after page load regardless of async state.
-// Ensures the sign-in button/modal always appear even if Firebase hangs entirely.
+// Load a <script> tag dynamically and return a promise, with timeout.
+function _loadScript(src, timeoutMs = 8000) {
+  return Promise.race([
+    new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Failed to load ' + src));
+      document.head.appendChild(s);
+    }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout loading ' + src)), timeoutMs))
+  ]);
+}
+
+// Loads Firebase compat SDK scripts in sequence.
+async function _loadFirebase() {
+  const base = 'https://www.gstatic.com/firebasejs/9.23.0/';
+  await _loadScript(base + 'firebase-app-compat.js');
+  await _loadScript(base + 'firebase-firestore-compat.js');
+  await _loadScript(base + 'firebase-functions-compat.js');
+  await _loadScript(base + 'firebase-auth-compat.js');
+}
+
+// Absolute auth fallback — fires 5 s after page load regardless of async state.
+// Because Firebase now loads dynamically the main script is no longer blocked,
+// so this timer always fires.
 let _authBootDone = false;
 setTimeout(function authAbsoluteFallback() {
   if (_authBootDone) return;
@@ -20953,7 +20976,7 @@ setTimeout(function authAbsoluteFallback() {
   const gb = document.getElementById('gate-signin-btn');
   if (gs) gs.textContent = 'Please sign in to continue';
   if (gb) gb.style.display = '';
-}, 4000);
+}, 5000);
 
 (async function secureBootstrap() {
   const loading = document.getElementById('fb-loading');
@@ -20964,6 +20987,7 @@ setTimeout(function authAbsoluteFallback() {
     if (gateBtn) gateBtn.style.display = '';
   }
   try {
+    await _loadFirebase();
     firebase.initializeApp(FB_CONFIG);
     _fbDb = firebase.firestore(); _fbFunctions = firebase.functions();
     if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).get('emulator') === '1') {
