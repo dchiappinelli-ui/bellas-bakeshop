@@ -2629,7 +2629,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.3.5';
+const APP_VERSION      = '2.3.6';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20560,6 +20560,9 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.3.6': [
+    '🔒 Auth — absolute 4-second fallback timer now guarantees the "Sign In" button always appears even if Firebase hangs completely; individual timeouts added to every Firebase await (setPersistence, signOut, staffDirectory) so no single step can block forever',
+  ],
   '2.3.5': [
     '🔒 Auth — sign-in gate now shows a "Sign In →" button as a direct fallback; server timeout reduced to 5 seconds; modal opening is now fully error-safe so a glitch in the staff list can never block the login screen',
   ],
@@ -20940,6 +20943,18 @@ function secureRecoverDrafts(staffId) {
   };
   banner.append(b); document.body.append(banner);
 }
+// Absolute auth fallback — fires 4 s after page load regardless of async state.
+// Ensures the sign-in button/modal always appear even if Firebase hangs entirely.
+let _authBootDone = false;
+setTimeout(function authAbsoluteFallback() {
+  if (_authBootDone) return;
+  try { authShowModal(); } catch(e) {}
+  const gs = document.getElementById('gate-status');
+  const gb = document.getElementById('gate-signin-btn');
+  if (gs) gs.textContent = 'Please sign in to continue';
+  if (gb) gb.style.display = '';
+}, 4000);
+
 (async function secureBootstrap() {
   const loading = document.getElementById('fb-loading');
   const gateStatus = document.getElementById('gate-status');
@@ -20956,17 +20971,25 @@ function secureRecoverDrafts(staffId) {
       _fbFunctions.useEmulator('127.0.0.1', 5001);
       firebase.auth().useEmulator('http://127.0.0.1:9099');
     }
-    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
-    await firebase.auth().signOut(); // Never trust the old browser-only session.
+    await Promise.race([
+      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('setPersistence timed out')), 3000))
+    ]);
+    await Promise.race([
+      firebase.auth().signOut(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timed out')), 3000))
+    ]);
     const directory = await Promise.race([
       secureCall('staffDirectory'),
       new Promise((_, reject) => setTimeout(() => reject(new Error('staffDirectory timed out')), 5000))
     ]);
     window.bakeryAccess = Object.fromEntries(directory.staff.map(s => [s.id, s.hasPin === true]));
     staff = directory.staff;
+    _authBootDone = true;
     try { authBoot(); } catch(e2) { showGateSignIn('Please sign in to continue'); console.warn('authBoot error:', e2); }
     fbSetSyncStatus('connecting');
   } catch(e) {
+    _authBootDone = true;
     try { authBoot(); } catch(e2) { showGateSignIn('Please sign in to continue'); console.warn('authBoot error:', e2); }
     fbSetSyncStatus('offline');
     console.warn('Secure startup unavailable:', e.code || e.message);
