@@ -826,7 +826,7 @@
 
 <!-- ══════════════ AUTH GATE ══════════════ -->
 <!-- Covers the entire app when no one is logged in. z-index below the login modal (99999) but above all pages. -->
-<div id="app-gate" style="display:none;position:fixed;inset:0;z-index:9998;
+<div id="app-gate" style="display:flex;position:fixed;inset:0;z-index:9998;
   background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px">
   <div style="display:flex;align-items:center;gap:0;line-height:1;margin-bottom:8px">
     <span style="font-family:'Great Vibes',cursive;font-size:64px;color:var(--accent);line-height:1">Bella's</span>
@@ -2626,7 +2626,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.3.3';
+const APP_VERSION      = '2.3.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20555,6 +20555,9 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.3.4': [
+    '🔒 Auth — fixed "Connecting…" stuck screen after GitHub deploy: sign-in gate now shows immediately on page load (before Firebase finishes connecting) and a 10-second timeout ensures the login prompt always appears even if the server call hangs',
+  ],
   '2.3.3': [
     '📊 Bake Board — "Plan from Sheet" button: paste your MAIN sheet (columns A–I, all rows) and the app parses Mon–Sun quantities, auto-matches products to recipes, calculates batch counts (units ÷ recipe yield), shows a grouped preview, then pushes the week\'s items to the Bake Board in one click; "Clear day items first" option lets you replace an existing week',
   ],
@@ -20941,7 +20944,10 @@ function secureRecoverDrafts(staffId) {
     }
     await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
     await firebase.auth().signOut(); // Never trust the old browser-only session.
-    const directory = await secureCall('staffDirectory');
+    const directory = await Promise.race([
+      secureCall('staffDirectory'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('staffDirectory timed out')), 10000))
+    ]);
     window.bakeryAccess = Object.fromEntries(directory.staff.map(s => [s.id, s.hasPin === true]));
     staff = directory.staff;
     authBoot();
