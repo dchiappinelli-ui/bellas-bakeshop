@@ -836,7 +836,10 @@
       <span style="font-family:'Playfair Display',serif;font-weight:900;font-size:16px;letter-spacing:6px;color:var(--text);text-transform:uppercase;line-height:1">SHOP</span>
     </div>
   </div>
-  <div style="font-size:13px;color:var(--muted)">Please sign in to continue</div>
+  <div style="font-size:13px;color:var(--muted)" id="gate-status">Loading…</div>
+  <button id="gate-signin-btn" onclick="authShowModal()" style="display:none;margin-top:8px;padding:12px 32px;
+    background:var(--accent);color:#1a1209;border:none;border-radius:4px;font-size:15px;font-weight:700;
+    cursor:pointer;letter-spacing:0.3px">Sign In →</button>
 </div>
 
 <!-- ══════════════ LOGIN MODAL ══════════════ -->
@@ -2626,7 +2629,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.3.4';
+const APP_VERSION      = '2.3.5';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -12519,11 +12522,13 @@ let _authPinEntry = '';
 function authShowModal() {
   _authPickedStaffId = null;
   _authPinEntry = '';
-  authBuildPickList();
-  document.getElementById('auth-step-pick').style.display = '';
-  document.getElementById('auth-step-pin').style.display = 'none';
+  try { authBuildPickList(); } catch(e) { console.warn('authBuildPickList error:', e); }
+  const stepPick = document.getElementById('auth-step-pick');
+  const stepPin  = document.getElementById('auth-step-pin');
+  if (stepPick) stepPick.style.display = '';
+  if (stepPin)  stepPin.style.display  = 'none';
   const modal = document.getElementById('auth-modal');
-  modal.style.display = 'flex';
+  if (modal) modal.style.display = 'flex';
 }
 
 function authHideModal() {
@@ -20555,6 +20560,9 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.3.5': [
+    '🔒 Auth — sign-in gate now shows a "Sign In →" button as a direct fallback; server timeout reduced to 5 seconds; modal opening is now fully error-safe so a glitch in the staff list can never block the login screen',
+  ],
   '2.3.4': [
     '🔒 Auth — fixed "Connecting…" stuck screen after GitHub deploy: sign-in gate now shows immediately on page load (before Firebase finishes connecting) and a 10-second timeout ensures the login prompt always appears even if the server call hangs',
   ],
@@ -20934,6 +20942,12 @@ function secureRecoverDrafts(staffId) {
 }
 (async function secureBootstrap() {
   const loading = document.getElementById('fb-loading');
+  const gateStatus = document.getElementById('gate-status');
+  const gateBtn = document.getElementById('gate-signin-btn');
+  function showGateSignIn(msg) {
+    if (gateStatus) gateStatus.textContent = msg;
+    if (gateBtn) gateBtn.style.display = '';
+  }
   try {
     firebase.initializeApp(FB_CONFIG);
     _fbDb = firebase.firestore(); _fbFunctions = firebase.functions();
@@ -20946,14 +20960,14 @@ function secureRecoverDrafts(staffId) {
     await firebase.auth().signOut(); // Never trust the old browser-only session.
     const directory = await Promise.race([
       secureCall('staffDirectory'),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('staffDirectory timed out')), 10000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('staffDirectory timed out')), 5000))
     ]);
     window.bakeryAccess = Object.fromEntries(directory.staff.map(s => [s.id, s.hasPin === true]));
     staff = directory.staff;
-    authBoot();
+    try { authBoot(); } catch(e2) { showGateSignIn('Please sign in to continue'); console.warn('authBoot error:', e2); }
     fbSetSyncStatus('connecting');
   } catch(e) {
-    authBoot();
+    try { authBoot(); } catch(e2) { showGateSignIn('Please sign in to continue'); console.warn('authBoot error:', e2); }
     fbSetSyncStatus('offline');
     console.warn('Secure startup unavailable:', e.code || e.message);
   } finally {
