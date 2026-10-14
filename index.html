@@ -2655,7 +2655,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.0';
+const APP_VERSION      = '2.4.1';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -18773,7 +18773,7 @@ function wpPrintBakerChecklists(dayData, dateStr) {
 }
 
 // SOURCE: sync.js
-const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_price_lib"]);
+const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
 const secureBases = {}, secureStops = [];
@@ -20586,9 +20586,11 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.4.1': [
+    '🐛 Fix — removed bk_price_lib from FB_SYNC_KEYS; adding it in 2.4.0 blocked all Firestore writes because the Firebase Function rejects unknown keys and secureFlush exits on any error before reaching bk_week_plan',
+  ],
   '2.4.0': [
-    '☁ Sync — Price Library (bk_price_lib) added to Firestore sync set; price changes now sync cross-device like all other data',
-    '🔄 Sync — Price Library page added to live-refresh map; when a cloud update arrives the page re-renders immediately if you\'re on it',
+    '☁ Sync — Price Library page added to live-refresh map; when a cloud update arrives the page re-renders immediately if you\'re on it',
     '💬 UX — Save button now says "All changes saved to cloud ☁" instead of "No pending edits" when everything is already synced, so it\'s clear auto-save worked',
   ],
   '2.3.9': [
