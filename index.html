@@ -2655,7 +2655,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.1';
+const APP_VERSION      = '2.4.2';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -18867,7 +18867,13 @@ localStorage.setItem = function(key, value) {
   window.secureSaveTimer = setTimeout(secureFlush, 400);
 };
 async function secureFlush() {
-  if (secureBusy || !secureReady || !authGetSession()) return;
+  if (secureBusy) {
+    // Another flush is in progress; reschedule so this call's items are not silently dropped.
+    clearTimeout(window.secureSaveTimer);
+    window.secureSaveTimer = setTimeout(secureFlush, 500);
+    return;
+  }
+  if (!secureReady || !authGetSession()) return;
   secureBusy = true;
   const queue = secureQueue;
   try {
@@ -18899,6 +18905,11 @@ async function secureFlush() {
     fbSetSyncStatus(Object.values(queue).some(j => j.blocked) ? 'error' : Object.keys(queue).length ? 'syncing' : 'online');
   } finally {
     secureBusy = false;
+    // If items were updated while this flush was in-flight, schedule a follow-up flush.
+    if (Object.keys(secureQueue).some(k => !secureQueue[k].blocked)) {
+      clearTimeout(window.secureSaveTimer);
+      window.secureSaveTimer = setTimeout(secureFlush, 500);
+    }
   }
 }
 function secureDraftNotice() { toastSaved('Draft kept. Use Review / save drafts to resolve this save.'); }
@@ -20586,6 +20597,9 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 const VERSION_NOTES = {
+  '2.4.2': [
+    '🐛 Fix — secureFlush race condition: if the 400ms auto-save timer fired while a flush was already running, it silently dropped and items could get stuck; now reschedules instead; also auto-retries after any flush if items remain pending',
+  ],
   '2.4.1': [
     '🐛 Fix — removed bk_price_lib from FB_SYNC_KEYS; adding it in 2.4.0 blocked all Firestore writes because the Firebase Function rejects unknown keys and secureFlush exits on any error before reaching bk_week_plan',
   ],
