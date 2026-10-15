@@ -955,7 +955,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('ordering')">🛒 Ordering</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">💰 Price Library</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">📦 Supply Board<span id="sb-nav-badge" style="display:none;margin-left:5px;background:#cc3333;color:#fff;border-radius:8px;padding:1px 5px;font-size:10px;font-weight:900;vertical-align:middle"></span></button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('prep')">🫙 Prep Items</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
@@ -1135,64 +1135,135 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- ======== PRICE LIBRARY PAGE ======== -->
 <div class="page" id="page-pricelib">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+  <!-- Supply Board header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
     <div>
-      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">💰 Raw Material Prices</h2>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">Shared price library — ingredient costs auto-fill in recipes when the name matches · edit any cell to update across all recipes</div>
+      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">📦 Supply Board</h2>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">Daily stock check — drag items to flag for ordering · generate an end-of-day report</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input id="pl-search" type="text" placeholder="Search…" oninput="renderPriceLib()"
-        style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;width:160px">
-      <select id="pl-cat-filter" onchange="renderPriceLib()"
-        style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
-        <option value="">All Categories</option>
-        <option>Flour</option><option>Dairy</option><option>Fat</option>
-        <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
-        <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
-        <option>Spice</option><option>Other</option>
-      </select>
-      <button onclick="plShowAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+      <button onclick="sbPrintReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨 Report</button>
+      <button onclick="sbResetBoard()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
+      <button onclick="sbTogglePriceManager()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">💰 Manage Prices ▸</button>
     </div>
   </div>
-  <div id="pl-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:16px">
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">New Ingredient</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-      <div style="flex:2;min-width:140px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Name</div>
-        <input id="pl-add-name" type="text" placeholder="e.g. Bread Flour"
-          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+
+  <!-- Toolbar: search + filter chips + sort + select mode -->
+  <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <input id="sb-search" type="text" placeholder="🔍 Find ingredient…" oninput="renderSupplyBoard()"
+      style="flex:1;min-width:160px;max-width:240px;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+    <button class="sb-chip" data-filter="FOH" onclick="sbToggleFilter('FOH')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">FOH</button>
+    <button class="sb-chip" data-filter="BOH" onclick="sbToggleFilter('BOH')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">BOH</button>
+    <button class="sb-chip" data-filter="LIQUID" onclick="sbToggleFilter('LIQUID')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">Liquid</button>
+    <button class="sb-chip" data-filter="SOLID" onclick="sbToggleFilter('SOLID')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">Solid</button>
+    <button class="sb-chip" data-filter="SANDWICH" onclick="sbToggleFilter('SANDWICH')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">Sandwich</button>
+    <button class="sb-chip" data-filter="KITCHEN" onclick="sbToggleFilter('KITCHEN')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">Kitchen</button>
+    <button class="sb-chip" data-filter="COMMON" onclick="sbToggleFilter('COMMON')" style="padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer">Most Common</button>
+    <select id="sb-sort" onchange="renderSupplyBoard()" style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+      <option value="cat">Category</option>
+      <option value="alpha">A–Z</option>
+      <option value="common">Most Common</option>
+    </select>
+    <button id="sb-select-btn" onclick="sbToggleSelectMode()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;font-size:13px;cursor:pointer">☐ Select</button>
+  </div>
+
+  <!-- 3-column Kanban board -->
+  <div id="sb-board" style="display:flex;gap:0;border:2px solid var(--border);border-radius:8px;overflow:hidden;height:calc(100vh - 260px);min-height:380px">
+    <div class="sb-col" data-col="in_stock" style="flex:1 1 48%;min-width:190px;display:flex;flex-direction:column;border-right:2px solid var(--border)">
+      <div style="padding:10px 14px;background:var(--surface2);border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-size:12px;font-weight:900;letter-spacing:.06em;color:var(--text)">📦 IN STOCK</span>
+        <span id="sb-cnt-in_stock" style="font-size:11px;color:var(--muted)">—</span>
       </div>
-      <div style="flex:1;min-width:110px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Category</div>
-        <select id="pl-add-cat" style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
-          <option>Flour</option><option>Dairy</option><option>Fat</option>
-          <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
-          <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
-          <option>Spice</option><option>Other</option>
-        </select>
+      <div id="sb-body-in_stock" style="overflow-y:auto;flex:1;padding:6px 6px 60px"></div>
+    </div>
+    <div class="sb-col" data-col="order_soon" style="flex:0 0 26%;min-width:160px;display:flex;flex-direction:column;border-right:2px solid var(--border)">
+      <div style="padding:10px 14px;background:rgba(232,160,69,0.12);border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-size:12px;font-weight:900;letter-spacing:.06em;color:#d4890a">⏰ ORDER SOON</span>
+        <span id="sb-cnt-order_soon" style="font-size:11px;color:#d4890a">—</span>
       </div>
-      <div style="width:100px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">$/gram</div>
-        <input id="pl-add-ppg" type="number" step="0.00001" min="0" placeholder="0.00000"
-          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+      <div id="sb-body-order_soon" style="overflow-y:auto;flex:1;padding:6px 6px 60px"></div>
+    </div>
+    <div class="sb-col" data-col="order_now" style="flex:0 0 26%;min-width:160px;display:flex;flex-direction:column">
+      <div style="padding:10px 14px;background:rgba(200,50,50,0.12);border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-size:12px;font-weight:900;letter-spacing:.06em;color:#cc4444">🚨 ORDER NOW</span>
+        <span id="sb-cnt-order_now" style="font-size:11px;color:#cc4444">—</span>
       </div>
-      <div style="width:90px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case $</div>
-        <input id="pl-add-case" type="number" step="0.01" min="0" placeholder="—"
-          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+      <div id="sb-body-order_now" style="overflow-y:auto;flex:1;padding:6px 6px 60px"></div>
+    </div>
+  </div>
+
+  <!-- Group-select action bar -->
+  <div id="sb-select-bar" style="display:none;position:sticky;bottom:0;z-index:100;background:var(--accent);color:#1a1209;padding:10px 16px;margin-top:6px;border-radius:6px;align-items:center;gap:10px;flex-wrap:wrap">
+    <span id="sb-select-count" style="font-size:13px;font-weight:700">0 selected</span>
+    <button onclick="sbMoveSelected('order_soon')" style="background:rgba(0,0,0,0.2);color:#1a1209;border:none;border-radius:4px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer">⏰ Order Soon</button>
+    <button onclick="sbMoveSelected('order_now')" style="background:#880000;color:#fff;border:none;border-radius:4px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer">🚨 Order Now</button>
+    <button onclick="sbMoveSelected('in_stock')" style="background:none;border:1px solid rgba(0,0,0,0.3);color:#1a1209;border-radius:4px;padding:7px 10px;font-size:13px;cursor:pointer">↩ Back to Stock</button>
+    <button onclick="sbClearSelection()" style="background:none;border:none;color:#1a120980;font-size:18px;cursor:pointer;margin-left:auto">✕</button>
+  </div>
+
+  <!-- Manage Prices slide-in panel (contains existing price editor) -->
+  <div id="sb-price-panel" style="display:none;position:fixed;inset:0;z-index:99980;background:rgba(0,0,0,0.55)" onclick="if(event.target===this)sbClosePriceManager()">
+    <div style="position:absolute;right:0;top:0;bottom:0;width:min(760px,100vw);background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;box-shadow:-6px 0 30px rgba(0,0,0,0.4)">
+      <div style="padding:16px 20px;border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);flex-shrink:0">
+        <h3 style="margin:0;font-family:'Playfair Display',serif;font-size:18px">💰 Raw Material Prices</h3>
+        <button onclick="sbClosePriceManager()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
       </div>
-      <div style="width:100px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case wt (g)</div>
-        <input id="pl-add-casewt" type="number" step="1" min="0" placeholder="—"
-          style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="plConfirmAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
-        <button onclick="plHideAdd()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:9px 12px;font-size:13px;cursor:pointer">✕</button>
+      <div style="padding:16px 20px;flex:1">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <input id="pl-search" type="text" placeholder="Search…" oninput="renderPriceLib()"
+            style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;width:160px">
+          <select id="pl-cat-filter" onchange="renderPriceLib()"
+            style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+            <option value="">All Categories</option>
+            <option>Flour</option><option>Dairy</option><option>Fat</option>
+            <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
+            <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
+            <option>Spice</option><option>Other</option>
+          </select>
+          <button onclick="plShowAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+        </div>
+        <div id="pl-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">New Ingredient</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:2;min-width:140px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Name</div>
+              <input id="pl-add-name" type="text" placeholder="e.g. Bread Flour"
+                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+            </div>
+            <div style="flex:1;min-width:110px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Category</div>
+              <select id="pl-add-cat" style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+                <option>Flour</option><option>Dairy</option><option>Fat</option>
+                <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
+                <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
+                <option>Spice</option><option>Other</option>
+              </select>
+            </div>
+            <div style="width:100px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">$/gram</div>
+              <input id="pl-add-ppg" type="number" step="0.00001" min="0" placeholder="0.00000"
+                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+            </div>
+            <div style="width:90px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case $</div>
+              <input id="pl-add-case" type="number" step="0.01" min="0" placeholder="—"
+                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+            </div>
+            <div style="width:100px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case wt (g)</div>
+              <input id="pl-add-casewt" type="number" step="1" min="0" placeholder="—"
+                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="plConfirmAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+              <button onclick="plHideAdd()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:9px 12px;font-size:13px;cursor:pointer">✕</button>
+            </div>
+          </div>
+        </div>
+        <div id="pl-table-wrap"></div>
       </div>
     </div>
   </div>
-  <div id="pl-table-wrap"></div>
 </div>
 
 <!-- ======== ORDER CHECK SHEET ======== -->
@@ -2655,7 +2726,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.4';
+const APP_VERSION      = '2.4.7';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3411,7 +3482,7 @@ function showPageDirect(page) {
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
   if (page === 'stationguide') renderStationGuide();
   if (page === 'displaystock') renderDisplayStock();
-  if (page === 'pricelib') renderPriceLib();
+  if (page === 'pricelib') renderSupplyBoard();
 }
 
 function showPage(page) {
@@ -3437,7 +3508,7 @@ function showPage(page) {
   if (page === 'freezer') renderFreezerPage();
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
-  if (page === 'pricelib') renderPriceLib();
+  if (page === 'pricelib') renderSupplyBoard();
   if (page === 'staffboard') renderStaffBoard();
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
@@ -3694,6 +3765,100 @@ function plSyncIngredient(recipeId, ingId) {
   setTimeout(() => toggleRecipe(recipeId), 30);
 }
 
+function plAutoFillIng(recipeId) {
+  const nameEl = document.getElementById('ing-name-' + recipeId);
+  const costEl = document.getElementById('ing-cost-' + recipeId);
+  const unitEl = document.getElementById('ing-unit-' + recipeId);
+  const hintEl = document.getElementById('ing-lib-hint-' + recipeId);
+  if (!nameEl) return;
+  const match = plLookupByName(nameEl.value);
+  if (match && match.pricePerGram) {
+    if (hintEl) hintEl.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:1px 5px;font-size:10px">📚 ' + match.cat + ' · $' + match.pricePerGram.toFixed(5) + '/g</span>';
+    if (costEl && !costEl.value) costEl.value = match.pricePerGram;
+    if (unitEl && !unitEl.value) unitEl.value = 'g';
+  } else {
+    if (hintEl) hintEl.innerHTML = '';
+  }
+}
+
+function plSyncAllIngredients(recipeId) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r || !r.ingredients) return;
+  let synced = 0;
+  r.ingredients.forEach(ing => {
+    const lib = plLookupByName(ing.name);
+    if (lib && lib.pricePerGram) { ing.costPerUnit = lib.pricePerGram; if (!ing.unit) ing.unit = 'g'; synced++; }
+  });
+  if (synced > 0) { save(); renderRecipes(); setTimeout(() => toggleRecipe(recipeId), 30); }
+}
+
+function plOpenIngPicker(recipeId) {
+  const lib = plLoad() || [];
+  if (!lib.length) { toastSaved('Price Library is empty — add items in the Price Library tab first.'); return; }
+  const existing = document.getElementById('pl-ing-picker');
+  if (existing) { existing.remove(); return; }
+  const sorted = [...lib].sort((a, b) => (a.cat||'').localeCompare(b.cat||'') || a.name.localeCompare(b.name));
+  const cats = {};
+  sorted.forEach(e => { if (!cats[e.cat]) cats[e.cat] = []; cats[e.cat].push(e); });
+  const listHtml = Object.entries(cats).map(([cat, items]) => `
+    <div class="pl-cat-hdr" data-cat="${cat.toLowerCase()}"
+      style="padding:5px 14px 3px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;
+        color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border)">${cat}</div>
+    ${items.map(e => `<div class="pl-ing-row"
+        data-name="${(e.name||'').toLowerCase()}" data-cat="${(e.cat||'').toLowerCase()}"
+        onclick="plSelectIng(${recipeId},'${(e.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',${e.pricePerGram})"
+        style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;
+          border-bottom:1px solid var(--border);transition:background 0.1s"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <div style="flex:1;font-size:13px;color:var(--text)">${e.name}</div>
+        <div style="font-size:11px;color:#4a9c6e;font-weight:600;font-family:'DM Mono',monospace">$${e.pricePerGram.toFixed(5)}/g</div>
+      </div>`).join('')}`).join('');
+  const backdrop = document.createElement('div');
+  backdrop.id = 'pl-ing-picker';
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)';
+  backdrop.innerHTML = `
+    <div style="background:var(--bg);border-radius:10px;width:min(480px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);border:1px solid var(--border)">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div style="font-weight:700;font-size:14px;flex:1">📚 Pick from Price Library</div>
+        <button onclick="document.getElementById('pl-ing-picker').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1">✕</button>
+      </div>
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+        <input id="pl-ing-search" type="text" placeholder="Search by name or category…" autocomplete="off"
+          style="width:100%;font-size:13px;padding:7px 10px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--text);box-sizing:border-box"
+          oninput="plFilterIngPicker(this.value)">
+      </div>
+      <div id="pl-ing-list" style="overflow-y:auto;flex:1">${listHtml}</div>
+    </div>`;
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+  document.body.appendChild(backdrop);
+  setTimeout(() => document.getElementById('pl-ing-search')?.focus(), 50);
+}
+
+function plFilterIngPicker(q) {
+  const lq = q.trim().toLowerCase();
+  document.querySelectorAll('#pl-ing-list .pl-ing-row').forEach(row => {
+    row.style.display = (!lq || row.dataset.name.includes(lq) || row.dataset.cat.includes(lq)) ? '' : 'none';
+  });
+  document.querySelectorAll('#pl-ing-list .pl-cat-hdr').forEach(hdr => {
+    const cat = hdr.dataset.cat;
+    const anyVisible = [...document.querySelectorAll(`#pl-ing-list .pl-ing-row[data-cat="${cat}"]`)].some(r => r.style.display !== 'none');
+    hdr.style.display = anyVisible ? '' : 'none';
+  });
+}
+
+function plSelectIng(recipeId, name, pricePerGram) {
+  const nameEl = document.getElementById('ing-name-' + recipeId);
+  const costEl = document.getElementById('ing-cost-' + recipeId);
+  const unitEl = document.getElementById('ing-unit-' + recipeId);
+  const hintEl = document.getElementById('ing-lib-hint-' + recipeId);
+  if (nameEl) nameEl.value = name;
+  if (costEl) costEl.value = pricePerGram;
+  if (unitEl && !unitEl.value) unitEl.value = 'g';
+  if (hintEl) hintEl.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:1px 5px;font-size:10px">📚 $' + pricePerGram.toFixed(5) + '/g</span>';
+  document.getElementById('pl-ing-picker')?.remove();
+  setTimeout(() => document.getElementById('ing-qty-' + recipeId)?.focus(), 50);
+}
+
 function deleteIngredient(recipeId, ingId) {
   const r = recipes.find(r => r.id === recipeId);
   if (!r || !r.ingredients) return;
@@ -3947,9 +4112,16 @@ function renderRecipes() {
     const ings = r.ingredients || [];
     const rows = ings.map(ing => {
       const lib = plLookupByName(ing.name);
-      const badge = lib ? `<span title="Price from library: $${lib.pricePerGram}/g" style="font-size:10px;color:#4a9c6e;cursor:pointer" onclick="plSyncIngredient(${r.id},${ing.id})">📚</span>` : '';
+      const hasLib = !!lib;
+      const priceDiffers = hasLib && ing.costPerUnit > 0 && Math.abs(ing.costPerUnit - lib.pricePerGram) > 0.000001;
+      const rowBg = hasLib ? 'background:rgba(74,156,110,0.05)' : '';
+      const badge = hasLib ? `<span
+          title="${priceDiffers ? 'Price differs from library ($'+lib.pricePerGram.toFixed(5)+'/g) — click to sync' : 'Linked to price library — click to re-sync'}"
+          style="font-size:10px;${priceDiffers ? 'color:#e8a045;border-color:#e8a045' : 'color:#4a9c6e;border-color:#4a9c6e'};
+            cursor:pointer;border:1px solid;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap"
+          onclick="plSyncIngredient(${r.id},${ing.id})">📚${priceDiffers ? ' ≠' : ''}</span>` : '';
       return `
-      <tr style="border-bottom:1px solid var(--border)">
+      <tr style="border-bottom:1px solid var(--border);${rowBg}">
         <td style="padding:5px 6px">
           <input type="text" value="${(ing.name||'').replace(/"/g,'&quot;')}"
             style="width:100%;background:transparent;border:none;font-size:13px;color:var(--text)"
@@ -3981,11 +4153,17 @@ function renderRecipes() {
         </td>
       </tr>`;
     }).join('');
+    const libCount = ings.filter(i => plLookupByName(i.name)).length;
+    const unlibCount = ings.length - libCount;
     return `
       <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">
           <div class="section-label">Ingredients</div>
-          <span style="font-size:11px;color:var(--muted)">${ings.length} ingredient${ings.length!==1?'s':''} · 📚 = price in library (click to sync)</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${libCount > 0 ? `<button class="btn btn-ghost btn-sm" onclick="plSyncAllIngredients(${r.id})"
+              style="font-size:11px;color:#4a9c6e;border-color:#4a9c6e">📚 Sync All (${libCount})</button>` : ''}
+            <span style="font-size:11px;color:var(--muted)">${ings.length} ingredient${ings.length!==1?'s':''}${unlibCount > 0 && libCount > 0 ? ' · '+unlibCount+' unlinked' : ''}</span>
+          </div>
         </div>
         ${ings.length > 0 ? `
         <div style="overflow-x:auto">
@@ -3997,7 +4175,7 @@ function renderRecipes() {
               <th style="text-align:left;padding:4px 6px;width:60px">Unit</th>
               <th style="text-align:right;padding:4px 6px;width:80px">$/Unit</th>
               <th style="text-align:right;padding:4px 6px;width:80px">Cost</th>
-              <th style="width:22px"></th>
+              <th style="width:36px"></th>
               <th style="width:22px"></th>
             </tr>
           </thead>
@@ -4007,12 +4185,14 @@ function renderRecipes() {
           <datalist id="pl-names-${r.id}">${(plLoad()||[]).map(e=>`<option value="${e.name}">`).join('')}</datalist>
           <input type="text" id="ing-name-${r.id}" placeholder="Ingredient name" list="pl-names-${r.id}"
             style="flex:2;min-width:120px;font-size:12px"
-            oninput="(function(el){const m=plLookupByName(el.value);const h=document.getElementById('ing-lib-hint-${r.id}');if(h)h.textContent=m&&m.pricePerGram?'📚 $'+m.pricePerGram.toFixed(5)+'/g':'';})(this)">
-          <span id="ing-lib-hint-${r.id}" style="font-size:11px;color:var(--muted)"></span>
+            oninput="plAutoFillIng(${r.id})"
+            onchange="plAutoFillIng(${r.id})">
           <input type="text" id="ing-qty-${r.id}" placeholder="Qty" style="width:60px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
           <input type="text" id="ing-unit-${r.id}" placeholder="Unit" style="width:55px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
-          <input type="number" id="ing-cost-${r.id}" placeholder="$/g (auto)" min="0" step="0.00001" style="width:80px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
+          <input type="number" id="ing-cost-${r.id}" placeholder="$/g" min="0" step="0.00001" style="width:80px;font-size:12px" onkeydown="if(event.key==='Enter')addIngredient(${r.id})">
+          <span id="ing-lib-hint-${r.id}" style="font-size:11px;color:#4a9c6e"></span>
           <button class="btn btn-ghost btn-sm" onclick="addIngredient(${r.id})">+ Add</button>
+          <button class="btn btn-ghost btn-sm" style="color:#4a9c6e;border-color:#4a9c6e" onclick="plOpenIngPicker(${r.id})">📚 Library</button>
         </div>
       </div>`;
   }
@@ -17341,66 +17521,82 @@ function renderWeekPlan() {
       .map(r => ({ ...r, _isRecurring: true }));
     const allDayItems = [...recurringItems, ...dayData.items];
 
-    // Render items in user-controlled order (drag-to-reorder). Phase shown as card badge.
+    // Render items in user-controlled order. Items with .parallel=true are shown
+    // side-by-side with the item before them (consecutive parallel flags form one row).
+    const _wpGroups = [];
+    let _wpCg = null;
+    allDayItems.forEach(item => {
+      if (item.parallel && _wpCg) { _wpCg.push(item); }
+      else { _wpCg = [item]; _wpGroups.push(_wpCg); }
+    });
     let globalIdx = 0;
-    const itemCards = allDayItems.map(item => {
-      const iIdx = globalIdx++;
-      const isFirst = iIdx === 0;
-      const isOrderItem   = item.phase === 'orders';
-      const isSpecialItem = item.phase === 'special';
-      const phase   = WP_PHASES.find(p => p.key === item.phase);
-      const cat     = WP_CATEGORIES.find(c => c.key === item.category);
-      const leftBdr = phase ? `border-left:5px solid ${phase.color};padding-left:5px;` : '';
-      const cardBorder = isOrderItem ? '3px solid #5a1a8a' : isSpecialItem ? '3px solid #cc0000' : `2px solid ${isFirst?'#111':'#e0e0e0'}`;
-      const cardBg     = isOrderItem ? '#f8f0ff' : isSpecialItem ? '#fff8f8' : '#fff';
-      return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"${item._isRecurring?' data-recurring="true"':''}
-        style="position:relative;overflow:hidden;margin-bottom:5px;border-radius:4px;
-          touch-action:none;user-select:none">
-        <div class="wp-swipe-delete"
-          style="position:absolute;right:0;top:0;bottom:0;width:72px;background:#cc3300;
-            display:flex;align-items:center;justify-content:center;flex-direction:column;
-            gap:2px;opacity:0.25;transition:opacity 0.15s;pointer-events:none">
-          <span style="font-size:20px">🗑</span>
-          <span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:1px">DELETE</span>
-        </div>
-        <div class="wp-item-card"
-          style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
-            border:${cardBorder};border-radius:4px;
-            background:${cardBg};position:relative;z-index:1;cursor:grab;${leftBdr}">
-          <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
-            background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
-            font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;flex-wrap:wrap">
-              ${phase ? `<span style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:${phase.color}">${phase.icon} ${phase.label}</span>` : ''}
-              ${cat ? `<span style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:${cat.color}${phase?' · opacity:0.8':''}">${cat.label}</span>` : ''}
+    const itemCards = _wpGroups.map(group => {
+      const isMulti = group.length > 1;
+      const cardsHtml = group.map(item => {
+        const iIdx = globalIdx++;
+        const isFirst = iIdx === 0;
+        const isParallelMember = item.parallel && isMulti;
+        const isOrderItem   = item.phase === 'orders';
+        const isSpecialItem = item.phase === 'special';
+        const phase   = WP_PHASES.find(p => p.key === item.phase);
+        const cat     = WP_CATEGORIES.find(c => c.key === item.category);
+        const leftBdr = phase ? `border-left:5px solid ${phase.color};padding-left:5px;` : '';
+        const cardBorder = isOrderItem ? '3px solid #5a1a8a' : isSpecialItem ? '3px solid #cc0000' : `2px solid ${isFirst?'#111':'#e0e0e0'}`;
+        const cardBg     = isOrderItem ? '#f8f0ff' : isSpecialItem ? '#fff8f8' : '#fff';
+        const topAccent  = isParallelMember ? 'border-top:2px solid #4a9c6e;' : '';
+        return `<div class="wp-item-wrap" data-item-id="${item.id}" data-day="${day}"${item._isRecurring?' data-recurring="true"':''}
+          style="position:relative;overflow:hidden;${isMulti?'flex:1;min-width:0;':'margin-bottom:5px;'}border-radius:4px;
+            touch-action:none;user-select:none">
+          <div class="wp-swipe-delete"
+            style="position:absolute;right:0;top:0;bottom:0;width:72px;background:#cc3300;
+              display:flex;align-items:center;justify-content:center;flex-direction:column;
+              gap:2px;opacity:0.25;transition:opacity 0.15s;pointer-events:none">
+            <span style="font-size:20px">🗑</span>
+            <span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:1px">DELETE</span>
+          </div>
+          <div class="wp-item-card"
+            style="display:flex;align-items:flex-start;gap:7px;padding:10px 6px 10px 8px;
+              border:${cardBorder};border-radius:4px;${topAccent}
+              background:${cardBg};position:relative;z-index:1;cursor:grab;${leftBdr}">
+            <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
+              background:${isFirst?'#111':'#ddd'};color:${isFirst?'#fff':'#999'};
+              font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center">${iIdx+1}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;flex-wrap:wrap">
+                ${isParallelMember ? `<span style="font-size:9px;font-weight:900;letter-spacing:.5px;color:#4a9c6e">∥</span>` : ''}
+                ${phase ? `<span style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:${phase.color}">${phase.icon} ${phase.label}</span>` : ''}
+                ${cat ? `<span style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:${cat.color}${phase?' · opacity:0.8':''}">${cat.label}</span>` : ''}
+              </div>
+              <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
+                line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}${item._isRecurring?'<span style="margin-left:5px;font-size:9px;font-weight:900;color:#5a1a8a;background:#ede0ff;border-radius:3px;padding:1px 4px;letter-spacing:0.3px;vertical-align:middle">↻</span>':''}</div>
+              ${(item.qty||item.estMins) ? `<div style="font-size:12px;color:#777;margin-top:2px">${[item.qty, item.estMins?'~'+wpFmtMins(item.estMins):null].filter(Boolean).join(' · ')}</div>` : ''}
+              ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
+              ${(()=>{
+                const badges = [];
+                if (item.primaryBaker) {
+                  const s = staff.find(x => x.id === item.primaryBaker);
+                  if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Primary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};flex-shrink:0">${ini}</span>`); }
+                }
+                if (item.secondaryBaker) {
+                  const s = staff.find(x => x.id === item.secondaryBaker);
+                  if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Secondary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};opacity:0.65;flex-shrink:0">${ini}</span>`); }
+                }
+                return badges.length ? `<div style="display:flex;gap:3px;margin-top:4px">${badges.join('')}</div>` : '';
+              })()}
             </div>
-            <div style="font-size:12px;font-weight:${isFirst?900:700};color:#111;
-              line-height:1.3;word-break:normal;overflow-wrap:break-word">${item.name}${item._isRecurring?'<span style="margin-left:5px;font-size:9px;font-weight:900;color:#5a1a8a;background:#ede0ff;border-radius:3px;padding:1px 4px;letter-spacing:0.3px;vertical-align:middle">↻</span>':''}</div>
-            ${(item.qty||item.estMins) ? `<div style="font-size:12px;color:#777;margin-top:2px">${[item.qty, item.estMins?'~'+wpFmtMins(item.estMins):null].filter(Boolean).join(' · ')}</div>` : ''}
-            ${item.note ? `<div style="font-size:11px;color:#aaa;font-style:italic;margin-top:2px">${item.note}</div>` : ''}
-            ${(()=>{
-              const badges = [];
-              if (item.primaryBaker) {
-                const s = staff.find(x => x.id === item.primaryBaker);
-                if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Primary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};flex-shrink:0">${ini}</span>`); }
-              }
-              if (item.secondaryBaker) {
-                const s = staff.find(x => x.id === item.secondaryBaker);
-                if (s) { const ini = s.name.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase(); badges.push(`<span title="${s.name} (Secondary)" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:900;color:#fff;background:${wpBakerColor(s.name)};opacity:0.65;flex-shrink:0">${ini}</span>`); }
-              }
-              return badges.length ? `<div style="display:flex;gap:3px;margin-top:4px">${badges.join('')}</div>` : '';
-            })()}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
+              ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+                title="Copy to other days"
+                style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
+                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
+              <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
+            </div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
-            ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
-              title="Copy to other days"
-              style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
-                     padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
-            <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
-          </div>
-        </div>
-      </div>`;
+        </div>`;
+      }).join('');
+      return isMulti
+        ? `<div class="wp-parallel-row" style="display:flex;gap:3px;margin-bottom:5px;align-items:flex-start">${cardsHtml}</div>`
+        : cardsHtml;
     }).join('');
 
     return `<div style="flex:0 0 max(170px,calc(100%/7));min-width:170px;display:flex;
@@ -17511,7 +17707,7 @@ function renderWeekPlan() {
           </div>`;
         })()}
       </div>
-      <div style="flex:1;padding:9px 8px;background:#fafafa">
+      <div style="flex:1;padding:9px 8px;background:#fafafa" data-wp-col="${day}">
         ${itemCards}
         <button onclick="wpOpenItemModal('${day}',null)"
           style="width:100%;padding:9px;border:2px dashed #ccc;border-radius:4px;background:#fff;
@@ -18193,12 +18389,25 @@ function wpShowLongPressMenu(wrap, day, itemId) {
       style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
         font-size:15px;cursor:pointer;border-bottom:1px solid #eee;touch-action:manipulation">📋&nbsp; Copy to day…</button>
     <div id="wp-lp-copy" style="display:none;background:#f9f9f9;border-bottom:1px solid #eee;max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch">${dayOpts('Copy')}</div>
+    ${item.parallel ? `<button onclick="wpBreakParallel('${day}','${itemId}');document.getElementById('wp-lp-backdrop')?.click()"
+      style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
+        font-size:15px;cursor:pointer;border-bottom:1px solid #eee;touch-action:manipulation">∥&nbsp; Break parallel</button>` : ''}
     <button onclick="wpDeleteItemGesture('${day}','${itemId}');document.getElementById('wp-lp-backdrop')?.click()"
       style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
         font-size:15px;cursor:pointer;color:#cc3300;touch-action:manipulation">🗑&nbsp; Delete</button>`;
 
   document.body.appendChild(backdrop);
   document.body.appendChild(menu);
+}
+
+function wpBreakParallel(day, itemId) {
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const item = weekData[day]?.items.find(i => i.id === itemId);
+  if (!item) return;
+  item.parallel = false;
+  wpSaveWeek(mondayStr, weekData);
+  renderWeekPlan();
 }
 
 // ── Gesture engine ────────────────────────────────────────────────────────────
@@ -18338,36 +18547,83 @@ function _wpGestStartDrag() {
   _wpDragGhost = ghost;
 }
 
+function _wpDragRowOf(wrap) {
+  const p = wrap.parentElement;
+  return (p && p.classList.contains('wp-parallel-row')) ? p : wrap;
+}
+
 function _wpGestDragMove(cx, cy) {
   if (!_wpDragGhost || !_wpGest) return;
-  const rect = _wpGest.wrap.getBoundingClientRect();
+  const srcRect = _wpGest.wrap.getBoundingClientRect();
   _wpDragGhost.style.top  = `${cy - _wpGest.ghostOffsetY}px`;
-  _wpDragGhost.style.left = `${rect.left}px`;
-  const col = _wpGest.wrap.parentElement;
+  _wpDragGhost.style.left = `${srcRect.left}px`;
+  const col = _wpGest.wrap.closest('[data-wp-col]') || _wpGest.wrap.parentElement;
   if (!col) return;
   const wraps = [...col.querySelectorAll('.wp-item-wrap')].filter(w => w !== _wpGest.wrap);
-  let ti = wraps.length;
+
+  // Check if cursor is in the parallel drop zone: right 40% of a card, within its height
+  let parallelTarget = null;
   for (let i = 0; i < wraps.length; i++) {
     const r = wraps[i].getBoundingClientRect();
-    if (cy < r.top + r.height / 2) { ti = i; break; }
+    if (cy >= r.top && cy <= r.bottom && cx > r.left + r.width * 0.6) {
+      parallelTarget = wraps[i];
+      break;
+    }
   }
-  _wpGest.targetIdx = ti;
-  wraps.forEach((w, i) => { w.style.marginTop = i === ti ? '28px' : ''; });
+
+  if (parallelTarget) {
+    // Parallel drop mode — highlight target, tint ghost green
+    _wpGest.targetIdx = null;
+    _wpGest.targetParallelId = parallelTarget.dataset.itemId;
+    wraps.forEach(w => {
+      _wpDragRowOf(w).style.marginTop = '';
+      const card = w.querySelector('.wp-item-card');
+      if (card) card.style.outline = w === parallelTarget ? '2px solid #4a9c6e' : '';
+    });
+    _wpDragGhost.style.borderLeft  = '3px solid #4a9c6e';
+    _wpDragGhost.style.boxShadow   = '0 8px 28px rgba(74,156,110,0.35)';
+  } else {
+    // Sequential drop mode
+    _wpGest.targetParallelId = null;
+    let ti = wraps.length;
+    for (let i = 0; i < wraps.length; i++) {
+      const r = wraps[i].getBoundingClientRect();
+      if (cy < r.top + r.height / 2) { ti = i; break; }
+    }
+    _wpGest.targetIdx = ti;
+    wraps.forEach(w => { w.querySelector('.wp-item-card').style.outline = ''; });
+    wraps.forEach((w, i) => { _wpDragRowOf(w).style.marginTop = i === ti ? '28px' : ''; });
+    _wpDragGhost.style.borderLeft  = '';
+    _wpDragGhost.style.boxShadow   = '0 8px 28px rgba(0,0,0,0.28)';
+  }
 }
 
 function _wpGestDragEnd() {
-  const ti = _wpGest?.targetIdx;
+  const parallelId = _wpGest?.targetParallelId;
+  const ti         = _wpGest?.targetIdx;
   const { day, itemId } = _wpGest;
   _wpGestDragCleanup();
-  if (ti === null || ti === undefined) return;
   const mondayStr = wpMondayStr(_wpWeekMonday);
   const weekData  = wpGetWeek(mondayStr);
   const items     = weekData[day].items;
   const fi        = items.findIndex(i => i.id === itemId);
   if (fi < 0) return;
-  const [item]  = items.splice(fi, 1);
-  let ins = ti > fi ? ti - 1 : ti;
-  items.splice(Math.max(0, Math.min(ins, items.length)), 0, item);
+  const [item] = items.splice(fi, 1);
+
+  if (parallelId) {
+    // Drop as parallel: place after target, mark parallel
+    item.parallel = true;
+    const targetIdx = items.findIndex(i => i.id === parallelId);
+    items.splice(targetIdx >= 0 ? targetIdx + 1 : items.length, 0, item);
+  } else if (ti !== null && ti !== undefined) {
+    // Sequential drop: clear parallel flag, reorder
+    item.parallel = false;
+    let ins = ti > fi ? ti - 1 : ti;
+    items.splice(Math.max(0, Math.min(ins, items.length)), 0, item);
+  } else {
+    items.splice(fi, 0, item); // no valid target, restore
+    return;
+  }
   wpSaveWeek(mondayStr, weekData);
   renderWeekPlan();
 }
@@ -18377,8 +18633,13 @@ function _wpGestDragCleanup() {
   if (_wpGest?.wrap) {
     _wpGest.wrap.style.opacity = '';
     _wpGest.wrap.style.outline = '';
-    const col = _wpGest.wrap.parentElement;
-    if (col) col.querySelectorAll('.wp-item-wrap').forEach(w => w.style.marginTop = '');
+    const col = _wpGest.wrap.closest('[data-wp-col]') || _wpGest.wrap.parentElement;
+    if (col) col.querySelectorAll('.wp-item-wrap').forEach(w => {
+      w.style.marginTop = '';
+      _wpDragRowOf(w).style.marginTop = '';
+      const card = w.querySelector('.wp-item-card');
+      if (card) card.style.outline = '';
+    });
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18796,7 +19057,7 @@ function secureRefresh(key) {
   }
   // Do not rebuild a form while somebody is typing. Models are already current.
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
-  const renderers = { freezer: () => renderFreezerPage(), ingredients: () => renderIngredientsPage(), opening: () => renderOpeningPage(), staffboard: () => renderStaffBoard(), doughtimer: () => renderDoughTimer(), weekplan: () => renderWeekPlan(), dayview: () => renderDayView(), staff: () => renderStaffPage(), eod: () => renderEodPage(), displaystock: () => renderDisplayStock(), inventory: () => runInventoryCalc(), orders: () => renderOrdersPage(), pricelib: () => renderPriceLib() };
+  const renderers = { freezer: () => renderFreezerPage(), ingredients: () => renderIngredientsPage(), opening: () => renderOpeningPage(), staffboard: () => renderStaffBoard(), doughtimer: () => renderDoughTimer(), weekplan: () => renderWeekPlan(), dayview: () => renderDayView(), staff: () => renderStaffPage(), eod: () => renderEodPage(), displaystock: () => renderDisplayStock(), inventory: () => runInventoryCalc(), orders: () => renderOrdersPage(), pricelib: () => renderSupplyBoard() };
   try { renderers[activePage()]?.(); } catch(e) { console.warn('Page refresh deferred', e); }
 }
 function secureApply(key, value) {
@@ -20564,7 +20825,479 @@ function plConfirmAdd() {
 }
 // ============ END PRICE LIBRARY ============
 
+// ======== SUPPLY BOARD ========
+var SB_KEY = 'bk_supply_board';
+var _sbActiveFilters = new Set();
+var _sbSelectMode = false;
+var _sbSelected = new Set();
+var _sbUsageCache = null;
+var _sbDragGest = null;
+var _sbDragGhost = null;
+
+function sbLoad() {
+  try { return JSON.parse(localStorage.getItem(SB_KEY) || '{}'); } catch(e) { return {}; }
+}
+function sbSave(data) { try { localStorage.setItem(SB_KEY, JSON.stringify(data)); } catch(e) {} }
+
+function sbSetEntry(itemId, fields) {
+  const data = sbLoad();
+  const key = String(itemId);
+  if (fields.status === 'in_stock') {
+    delete data[key];
+  } else {
+    const existing = data[key] || {};
+    const wasInStock = !existing.status || existing.status === 'in_stock';
+    data[key] = {
+      status: fields.status !== undefined ? fields.status : (existing.status || 'in_stock'),
+      qty:    fields.qty    !== undefined ? fields.qty    : (existing.qty   || ''),
+      note:   fields.note   !== undefined ? fields.note   : (existing.note  || ''),
+      at:     (wasInStock || !existing.at) ? Date.now() : existing.at
+    };
+  }
+  sbSave(data);
+}
+
+var SB_CAT_TAGS = {
+  'Flour':     ['BOH', 'SOLID', 'KITCHEN'],
+  'Dairy':     ['FOH', 'BOH', 'KITCHEN'],
+  'Fat':       ['BOH', 'KITCHEN'],
+  'Sugar':     ['FOH', 'BOH', 'SOLID', 'KITCHEN'],
+  'Leavening': ['BOH', 'SOLID', 'KITCHEN'],
+  'Chocolate': ['BOH', 'SOLID'],
+  'Fruit':     ['BOH', 'SOLID'],
+  'Nut/Seed':  ['BOH', 'SOLID'],
+  'Savory':    ['BOH', 'SOLID', 'SANDWICH'],
+  'Spice':     ['BOH', 'SOLID', 'KITCHEN'],
+  'Other':     ['BOH', 'SOLID']
+};
+
+function sbGetTags(item) {
+  if (item.tags && Array.isArray(item.tags) && item.tags.length) return item.tags;
+  const auto = [...(SB_CAT_TAGS[item.cat] || ['BOH', 'SOLID'])];
+  const n = (item.name || '').toUpperCase();
+  const isLiquid = /CREAM|MILK|OIL|JUICE|WATER|BUTTERMILK/.test(n) || n === 'EGG' || n === 'EGGS' || n === 'LEVAIN';
+  if (isLiquid) {
+    const si = auto.indexOf('SOLID');
+    if (si >= 0) auto.splice(si, 1);
+    if (!auto.includes('LIQUID')) auto.push('LIQUID');
+  }
+  return auto;
+}
+
+function sbGetUsageCount(item) {
+  if (!_sbUsageCache) {
+    _sbUsageCache = {};
+    (recipes || []).forEach(function(r) {
+      (r.ingredients || []).forEach(function(ing) {
+        var lib = plLookupByName(ing.name);
+        if (lib) { var k = String(lib.id); _sbUsageCache[k] = (_sbUsageCache[k] || 0) + 1; }
+      });
+    });
+  }
+  return _sbUsageCache[String(item.id)] || 0;
+}
+
+function sbToggleFilter(f) {
+  if (_sbActiveFilters.has(f)) _sbActiveFilters.delete(f);
+  else _sbActiveFilters.add(f);
+  renderSupplyBoard();
+}
+
+function sbToggleSelectMode() {
+  _sbSelectMode = !_sbSelectMode;
+  _sbSelected.clear();
+  renderSupplyBoard();
+}
+
+function sbToggleSelect(itemId) {
+  var k = String(itemId);
+  if (_sbSelected.has(k)) _sbSelected.delete(k);
+  else _sbSelected.add(k);
+  var bar = document.getElementById('sb-select-bar');
+  if (bar) {
+    var n = _sbSelected.size;
+    bar.style.display = n > 0 ? 'flex' : 'none';
+    var cnt = document.getElementById('sb-select-count');
+    if (cnt) cnt.textContent = n + ' selected';
+  }
+  var card = document.querySelector('.sb-item[data-item-id="' + k + '"]');
+  if (card) {
+    card.style.outline = _sbSelected.has(k) ? '2px solid var(--accent)' : '';
+  }
+}
+
+function sbMoveSelected(status) {
+  _sbSelected.forEach(function(id) { sbSetEntry(id, { status: status }); });
+  _sbSelected.clear();
+  _sbSelectMode = false;
+  renderSupplyBoard();
+}
+
+function sbClearSelection() {
+  _sbSelected.clear();
+  _sbSelectMode = false;
+  renderSupplyBoard();
+}
+
+function sbQuickMove(itemId, status) {
+  event && event.stopPropagation && event.stopPropagation();
+  sbSetEntry(itemId, { status: status });
+  renderSupplyBoard();
+}
+
+function sbReturnToStock(itemId) {
+  sbSetEntry(itemId, { status: 'in_stock' });
+  renderSupplyBoard();
+}
+
+function sbUpdateOrderField(itemId, field, val) {
+  var data = sbLoad();
+  var key = String(itemId);
+  if (!data[key]) return;
+  data[key][field] = val;
+  sbSave(data);
+}
+
+function sbResetBoard() {
+  if (!confirm('Reset all items back to "In Stock"? This clears all order flags.')) return;
+  localStorage.removeItem(SB_KEY);
+  renderSupplyBoard();
+}
+
+function sbTogglePriceManager() {
+  var panel = document.getElementById('sb-price-panel');
+  if (!panel) return;
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.style.display = '';
+    renderPriceLib();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function sbClosePriceManager() {
+  var panel = document.getElementById('sb-price-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function sbFmtTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts), h = d.getHours(), m = d.getMinutes();
+  return (h > 12 ? h - 12 : h || 12) + ':' + String(m).padStart(2, '0') + (h >= 12 ? 'pm' : 'am');
+}
+
+function renderSupplyBoard() {
+  _sbUsageCache = null;
+  var inStockBody = document.getElementById('sb-body-in_stock');
+  var soonBody    = document.getElementById('sb-body-order_soon');
+  var nowBody     = document.getElementById('sb-body-order_now');
+  if (!inStockBody) return;
+
+  var allItems  = plGetAll();
+  var boardData = sbLoad();
+  var search    = ((document.getElementById('sb-search') || {}).value || '').toLowerCase();
+  var sortBy    = (document.getElementById('sb-sort') || {}).value || 'cat';
+
+  var inStock = [], orderSoon = [], orderNow = [];
+  allItems.forEach(function(item) {
+    var entry  = boardData[String(item.id)];
+    var status = entry && entry.status;
+    if (status === 'order_soon')     orderSoon.push(Object.assign({}, item, { _entry: entry }));
+    else if (status === 'order_now') orderNow.push(Object.assign({}, item, { _entry: entry }));
+    else                             inStock.push(item);
+  });
+
+  var filteredStock = inStock.filter(function(item) {
+    if (search && item.name.toLowerCase().indexOf(search) < 0) return false;
+    if (_sbActiveFilters.size > 0) {
+      var tags = sbGetTags(item);
+      var ok = false;
+      _sbActiveFilters.forEach(function(f) {
+        if (f === 'COMMON') { if (sbGetUsageCount(item) > 0) ok = true; }
+        else if (tags.indexOf(f) >= 0) ok = true;
+      });
+      if (!ok) return false;
+    }
+    return true;
+  });
+
+  if (sortBy === 'alpha') {
+    filteredStock.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  } else if (sortBy === 'common') {
+    filteredStock.sort(function(a, b) { return sbGetUsageCount(b) - sbGetUsageCount(a) || a.name.localeCompare(b.name); });
+  } else {
+    filteredStock.sort(function(a, b) { return a.cat !== b.cat ? a.cat.localeCompare(b.cat) : a.name.localeCompare(b.name); });
+  }
+
+  var cEl = function(id) { return document.getElementById(id); };
+  if (cEl('sb-cnt-in_stock'))    cEl('sb-cnt-in_stock').textContent    = filteredStock.length + (filteredStock.length !== inStock.length ? ' of ' + inStock.length : '');
+  if (cEl('sb-cnt-order_soon'))  cEl('sb-cnt-order_soon').textContent  = orderSoon.length  || '—';
+  if (cEl('sb-cnt-order_now'))   cEl('sb-cnt-order_now').textContent   = orderNow.length   || '—';
+
+  // Nav badge for Order Now count
+  var badge = document.getElementById('sb-nav-badge');
+  if (badge) { badge.style.display = orderNow.length ? '' : 'none'; badge.textContent = orderNow.length; }
+
+  // Filter chip active states
+  document.querySelectorAll('.sb-chip').forEach(function(btn) {
+    var active = _sbActiveFilters.has(btn.dataset.filter);
+    btn.style.background   = active ? 'var(--accent)' : 'var(--surface2)';
+    btn.style.color        = active ? '#1a1209'        : 'var(--muted)';
+    btn.style.borderColor  = active ? 'var(--accent)'  : 'var(--border)';
+  });
+
+  // Select button state
+  var selBtn = document.getElementById('sb-select-btn');
+  if (selBtn) {
+    selBtn.style.background = _sbSelectMode ? 'var(--accent)' : 'var(--surface2)';
+    selBtn.style.color      = _sbSelectMode ? '#1a1209'       : 'var(--muted)';
+    selBtn.textContent      = _sbSelectMode ? '✓ Selecting'   : '☐ Select';
+  }
+
+  // Render In Stock column
+  var stockHtml = '';
+  if (sortBy === 'cat') {
+    var catGroups = {};
+    filteredStock.forEach(function(item) { if (!catGroups[item.cat]) catGroups[item.cat] = []; catGroups[item.cat].push(item); });
+    Object.keys(catGroups).sort().forEach(function(cat) {
+      var cc = (PL_CAT_COLORS && PL_CAT_COLORS[cat]) || '#888';
+      stockHtml += '<div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:' + cc + ';padding:8px 4px 3px;margin-top:2px;border-bottom:1px solid var(--border)">' + cat + '</div>';
+      catGroups[cat].forEach(function(item) { stockHtml += sbRenderStockCard(item); });
+    });
+  } else {
+    filteredStock.forEach(function(item) { stockHtml += sbRenderStockCard(item); });
+  }
+  if (!filteredStock.length) {
+    stockHtml = '<div style="text-align:center;color:var(--muted);padding:40px 10px;font-size:13px">' + (search || _sbActiveFilters.size ? 'No items match filters' : '✓ All items flagged for ordering') + '</div>';
+  }
+  inStockBody.innerHTML = stockHtml;
+
+  // Render Order Soon column
+  soonBody.innerHTML = orderSoon.length
+    ? orderSoon.map(function(item) { return sbRenderOrderCard(item, 'order_soon'); }).join('')
+    : '<div style="text-align:center;color:var(--muted);padding:40px 10px;font-size:13px">Drag items here to flag</div>';
+
+  // Render Order Now column
+  nowBody.innerHTML = orderNow.length
+    ? orderNow.map(function(item) { return sbRenderOrderCard(item, 'order_now'); }).join('') +
+      '<button onclick="sbPrintReport()" style="width:100%;margin-top:8px;padding:9px;background:rgba(200,50,50,0.12);border:1px dashed #cc4444;border-radius:4px;color:#cc4444;font-size:12px;font-weight:700;cursor:pointer">🖨 Print Order Report</button>'
+    : '<div style="text-align:center;color:var(--muted);padding:40px 10px;font-size:13px">Drag urgent items here</div>';
+
+  sbInitDrag();
+}
+
+function sbRenderStockCard(item) {
+  var cc    = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
+  var tags  = sbGetTags(item);
+  var usage = sbGetUsageCount(item);
+  var isSel = _sbSelected.has(String(item.id));
+  var tagStr = tags.filter(function(t) { return t !== 'BOH' && t !== 'SOLID'; }).join(' · ');
+  return '<div class="sb-item" data-item-id="' + item.id + '" data-col="in_stock"' +
+    ' style="display:flex;align-items:center;gap:7px;padding:8px 7px;margin-bottom:3px;border-radius:5px;' +
+    'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:none;user-select:none;' +
+    (isSel ? 'outline:2px solid var(--accent);' : '') + '">' +
+    '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
+    (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--accent)">' : '') +
+    '<div style="flex:1;min-width:0">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + '</div>' +
+    '</div>' +
+    (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
+    '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' : '') +
+    '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>' +
+    '</div>';
+}
+
+function sbRenderOrderCard(item, col) {
+  var cc      = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
+  var entry   = item._entry || {};
+  var timeStr = entry.at ? sbFmtTime(entry.at) : '';
+  var bgTint  = col === 'order_now' ? 'rgba(200,50,50,0.08)' : 'rgba(232,160,69,0.08)';
+  var borderC = col === 'order_now' ? 'rgba(200,50,50,0.35)' : 'rgba(232,160,69,0.35)';
+  var qtyVal  = (entry.qty  || '').replace(/"/g, '&quot;');
+  var noteVal = (entry.note || '').replace(/"/g, '&quot;');
+  return '<div class="sb-item" data-item-id="' + item.id + '" data-col="' + col + '"' +
+    ' style="padding:8px 9px;margin-bottom:5px;border-radius:5px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:none;user-select:none">' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
+      '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + '</div>' +
+      '</div>' +
+      '<button onclick="sbReturnToStock(' + item.id + ')" title="Back to In Stock" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0;touch-action:manipulation;line-height:1">↩</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:5px">' +
+      '<input type="text" value="' + qtyVal + '" placeholder="Qty…" style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'qty\',this.value)" onclick="event.stopPropagation()">' +
+      '<input type="text" value="' + noteVal + '" placeholder="Note…" style="flex:2;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'note\',this.value)" onclick="event.stopPropagation()">' +
+    '</div>' +
+    '</div>';
+}
+
+// ─── Supply Board drag ────────────────────────────────────────────────────────
+function sbInitDrag() {
+  var board = document.getElementById('sb-board');
+  if (!board || board._sbDrag) return;
+  board._sbDrag = true;
+  board.addEventListener('pointerdown', sbDragDown, { passive: false });
+  board.addEventListener('pointermove', sbDragMove, { passive: false });
+  board.addEventListener('pointerup',   sbDragUp,   { passive: true });
+  board.addEventListener('pointercancel', sbDragCancel, { passive: true });
+}
+
+function sbDragDown(e) {
+  var item = e.target.closest && e.target.closest('.sb-item');
+  if (!item) return;
+  if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+  if (_sbSelectMode) { sbToggleSelect(item.dataset.itemId); return; }
+  e.preventDefault();
+  _sbDragGest = {
+    item: item, itemId: item.dataset.itemId, fromCol: item.dataset.col,
+    startX: e.clientX, startY: e.clientY, active: false, targetCol: null
+  };
+  item.setPointerCapture && item.setPointerCapture(e.pointerId);
+  _sbDragGest.timer = setTimeout(function() {
+    if (!_sbDragGest) return;
+    _sbDragGest.active = true;
+    item.style.opacity = '0.3';
+    var rect = item.getBoundingClientRect();
+    _sbDragGest.offX = _sbDragGest.startX - rect.left;
+    _sbDragGest.offY = _sbDragGest.startY - rect.top;
+    var ghost = item.cloneNode(true);
+    ghost.style.cssText = 'position:fixed;top:' + rect.top + 'px;left:' + rect.left + 'px;width:' + rect.width + 'px;pointer-events:none;z-index:99990;opacity:0.92;box-shadow:0 8px 24px rgba(0,0,0,0.35);transform:scale(1.04);transition:none;border-radius:5px';
+    document.body.appendChild(ghost);
+    _sbDragGhost = ghost;
+    try { navigator.vibrate && navigator.vibrate(25); } catch(e2) {}
+  }, 180);
+}
+
+function sbDragMove(e) {
+  if (!_sbDragGest) return;
+  var dx = e.clientX - _sbDragGest.startX;
+  var dy = e.clientY - _sbDragGest.startY;
+  if (!_sbDragGest.active) {
+    if (Math.abs(dy) > Math.abs(dx) * 1.4 && (Math.abs(dx) + Math.abs(dy)) > 8) {
+      clearTimeout(_sbDragGest.timer);
+      _sbDragGest = null;
+      return;
+    }
+    return;
+  }
+  e.preventDefault();
+  if (_sbDragGhost) {
+    _sbDragGhost.style.top  = (e.clientY - _sbDragGest.offY) + 'px';
+    _sbDragGhost.style.left = (e.clientX - _sbDragGest.offX) + 'px';
+  }
+  var targetCol = null;
+  ['in_stock', 'order_soon', 'order_now'].forEach(function(col) {
+    var body = document.getElementById('sb-body-' + col);
+    if (!body) return;
+    var hdr = body.parentElement && body.parentElement.querySelector('div:first-child');
+    var top = hdr ? hdr.getBoundingClientRect().top : body.getBoundingClientRect().top;
+    var r = body.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= top - 8 && e.clientY <= r.bottom + 60) targetCol = col;
+  });
+  ['in_stock', 'order_soon', 'order_now'].forEach(function(col) {
+    var body = document.getElementById('sb-body-' + col);
+    if (body) body.style.background = (col === targetCol && col !== _sbDragGest.fromCol) ? 'rgba(232,160,69,0.1)' : '';
+  });
+  _sbDragGest.targetCol = targetCol;
+}
+
+function sbDragUp() {
+  if (!_sbDragGest) return;
+  clearTimeout(_sbDragGest.timer);
+  var active    = _sbDragGest.active;
+  var itemId    = _sbDragGest.itemId;
+  var fromCol   = _sbDragGest.fromCol;
+  var targetCol = _sbDragGest.targetCol;
+  sbDragCleanup();
+  if (active && targetCol && targetCol !== fromCol) {
+    sbSetEntry(itemId, { status: targetCol });
+    renderSupplyBoard();
+  }
+}
+
+function sbDragCancel() {
+  clearTimeout(_sbDragGest && _sbDragGest.timer);
+  sbDragCleanup();
+}
+
+function sbDragCleanup() {
+  if (_sbDragGhost) { _sbDragGhost.remove(); _sbDragGhost = null; }
+  if (_sbDragGest && _sbDragGest.item) _sbDragGest.item.style.opacity = '';
+  ['in_stock', 'order_soon', 'order_now'].forEach(function(col) {
+    var body = document.getElementById('sb-body-' + col);
+    if (body) body.style.background = '';
+  });
+  _sbDragGest = null;
+}
+
+// ─── Print report ─────────────────────────────────────────────────────────────
+function sbPrintReport() {
+  var boardData = sbLoad();
+  var allItems  = plGetAll();
+  var now       = new Date();
+  var dateStr   = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  var timeStr   = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  var orderNow  = [], orderSoon = [];
+  allItems.forEach(function(item) {
+    var entry = boardData[String(item.id)];
+    if (!entry) return;
+    if (entry.status === 'order_now')  orderNow.push(Object.assign({}, item, { _entry: entry }));
+    else if (entry.status === 'order_soon') orderSoon.push(Object.assign({}, item, { _entry: entry }));
+  });
+  if (!orderNow.length && !orderSoon.length) { alert('No items flagged for ordering yet.\nDrag items to "Order Soon" or "Order Now" first.'); return; }
+
+  function section(title, items, color) {
+    if (!items.length) return '';
+    var catGroups = {};
+    items.forEach(function(item) { if (!catGroups[item.cat]) catGroups[item.cat] = []; catGroups[item.cat].push(item); });
+    var html = '<h3 style="font-size:15px;font-weight:900;color:' + color + ';margin:20px 0 8px">' + title + '</h3>';
+    Object.keys(catGroups).sort().forEach(function(cat) {
+      html += '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#888;margin:10px 0 4px;padding-bottom:3px;border-bottom:1px solid #ddd">' + cat + '</div>';
+      catGroups[cat].forEach(function(item) {
+        var entry = item._entry || {};
+        var t = entry.at ? sbFmtTime(entry.at) : '';
+        html += '<div style="display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid #f0f0f0">' +
+          '<span style="flex:1;font-size:13px;font-weight:700">' + item.name + '</span>' +
+          (entry.qty  ? '<span style="font-size:12px;color:#444;font-style:italic;white-space:nowrap">' + entry.qty  + '</span>' : '') +
+          (entry.note ? '<span style="font-size:12px;color:#666">' + entry.note + '</span>' : '') +
+          (t ? '<span style="font-size:10px;color:#aaa;white-space:nowrap">flagged ' + t + '</span>' : '') +
+          '</div>';
+      });
+    });
+    return html;
+  }
+
+  var html = '<!DOCTYPE html><html><head><title>Order Report — ' + dateStr + '</title>' +
+    '<style>*{box-sizing:border-box}body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:0 24px;color:#111}@media print{button{display:none}}</style>' +
+    '</head><body>' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111;padding-bottom:14px;margin-bottom:4px">' +
+      '<div><div style="font-size:26px;font-weight:900;letter-spacing:-.5px">Bella\'s Bakeshop</div>' +
+      '<div style="font-size:13px;color:#555;margin-top:3px">Supply Order — ' + dateStr + ' · ' + timeStr + '</div></div>' +
+      '<button onclick="window.print()" style="padding:9px 18px;background:#111;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">🖨 Print</button>' +
+    '</div>' +
+    section('🚨 ORDER NOW', orderNow, '#880000') +
+    section('⏰ ORDER SOON', orderSoon, '#995500') +
+    '<div style="margin-top:30px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px">Generated ' + dateStr + ' · ' + timeStr + ' · Bella\'s Bakeshop Supply Board</div>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else alert('Please allow pop-ups to open the print report.');
+}
+// ======== END SUPPLY BOARD ========
+
 const VERSION_NOTES = {
+  '2.4.7': [
+    '📦 Supply Board — replaces Price Library tab with a 3-column Kanban ordering board (In Stock / Order Soon / Order Now); drag items between columns or use quick-move ⏰🚨 buttons; filter by FOH, BOH, Liquid, Solid, Sandwich, Kitchen, Most Common; sort by Category, A–Z, or Most Common (recipe usage); group-select mode for bulk moves; qty + note fields on ordered items with timestamp; ↩ return to stock; nav badge shows Order Now count; 🖨 print end-of-day order report grouped by category; 💰 Manage Prices button slides in price editor; all price data unchanged',
+  ],
+  '2.4.6': [
+    '📋 Bake Board — parallel task indicator: drag an item onto the right side of another card to run them side-by-side (green ghost + outline shows parallel zone); the dropped item gets a ∥ badge and both cards share a row; dragging back to a gap between cards returns to sequential order; long-press → "Break parallel" removes the flag; groups of 3+ are supported by stacking consecutive parallel items in one row',
+  ],
+  '2.4.5': [
+    '🔗 Recipes — enhanced Price Library → ingredient linking: typing or picking an ingredient name that matches the library now auto-fills $/g and unit immediately; new "📚 Library" button opens a searchable modal to browse all library items by category and click-to-insert; "📚 Sync All" button on the ingredients section updates all matching ingredient prices in one click; library-linked rows get a subtle green tint and a cleaner badge (shows ≠ in amber when price differs from library)',
+  ],
   '2.4.4': [
     '💰 Recipes — labor cost demoted from a prominent tile to a discreet footnote line below the cost tiles; labor rate input stays inline but small; main tiles are now Ingredients · Total Cost · Retail Value · Margin',
   ],
