@@ -1221,48 +1221,84 @@ document.addEventListener('DOMContentLoaded', function() {
             <option value="">All Categories</option>
             <option>Flour</option><option>Dairy</option><option>Fat</option>
             <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
-            <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
-            <option>Spice</option><option>Other</option>
+            <option>Fruit</option><option>Nut/Seed</option><option>Protein</option>
+            <option>Savory</option><option>Spice</option><option>Other</option>
           </select>
           <button onclick="plShowAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
         </div>
         <div id="pl-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:16px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">New Ingredient</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-            <div style="flex:2;min-width:140px">
+          <!-- Row 1: Name + Category -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+            <div style="flex:2;min-width:160px">
               <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Name</div>
-              <input id="pl-add-name" type="text" placeholder="e.g. Bread Flour"
+              <input id="pl-add-name" type="text" placeholder="e.g. Turkey Breast"
                 style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
             </div>
-            <div style="flex:1;min-width:110px">
+            <div style="flex:1;min-width:120px">
               <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Category</div>
               <select id="pl-add-cat" style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
                 <option>Flour</option><option>Dairy</option><option>Fat</option>
                 <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
-                <option>Fruit</option><option>Nut/Seed</option><option>Savory</option>
-                <option>Spice</option><option>Other</option>
+                <option>Fruit</option><option>Nut/Seed</option><option>Protein</option>
+                <option>Savory</option><option>Spice</option><option>Other</option>
               </select>
             </div>
-            <div style="width:100px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">$/gram</div>
-              <input id="pl-add-ppg" type="number" step="0.00001" min="0" placeholder="0.00000"
-                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+          </div>
+          <!-- Row 2: Price entry — unit converter OR direct $/gram -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+            <div style="flex:0 0 auto">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Purchase price</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="font-size:12px;color:var(--muted)">$</span>
+                <input id="pl-add-unit-price" type="number" step="0.01" min="0" placeholder="0.00"
+                  style="width:72px;padding:8px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"
+                  oninput="plCalcFromUnit()">
+                <span style="font-size:12px;color:var(--muted)">per</span>
+                <select id="pl-add-unit" onchange="plCalcFromUnit()"
+                  style="padding:8px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+                  <option value="">— unit —</option>
+                  <option value="453.592">lb</option>
+                  <option value="28.3495">oz</option>
+                  <option value="1000">kg</option>
+                  <option value="100">100g</option>
+                  <option value="1">gram</option>
+                  <option value="each">each</option>
+                </select>
+              </div>
             </div>
-            <div style="width:90px">
+            <div style="flex:0 0 auto">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">= $/gram <span style="font-weight:400;font-style:italic">(auto-filled)</span></div>
+              <input id="pl-add-ppg" type="number" step="0.000001" min="0" placeholder="0.000000"
+                style="width:110px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace">
+            </div>
+            <div style="flex:0 0 auto">
               <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case $</div>
               <input id="pl-add-case" type="number" step="0.01" min="0" placeholder="—"
-                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+                style="width:80px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
             </div>
-            <div style="width:100px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case wt (g)</div>
-              <input id="pl-add-casewt" type="number" step="1" min="0" placeholder="—"
-                style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+            <div style="flex:0 0 auto">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case wt</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <input id="pl-add-casewt" type="number" step="0.1" min="0" placeholder="—"
+                  style="width:72px;padding:8px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"
+                  oninput="plCalcCaseWt()">
+                <select id="pl-add-casewt-unit" onchange="plCalcCaseWt()"
+                  style="padding:8px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+                  <option value="1">g</option>
+                  <option value="453.592">lb</option>
+                  <option value="28.3495">oz</option>
+                  <option value="1000">kg</option>
+                </select>
+                <input id="pl-add-casewt-g" type="hidden" value="">
+              </div>
             </div>
-            <div style="display:flex;gap:6px">
+            <div style="display:flex;gap:6px;align-items:flex-end">
               <button onclick="plConfirmAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
               <button onclick="plHideAdd()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:9px 12px;font-size:13px;cursor:pointer">✕</button>
             </div>
           </div>
+          <div id="pl-add-preview" style="display:none;font-size:11px;color:var(--muted);padding:4px 0"></div>
         </div>
         <div id="pl-table-wrap"></div>
       </div>
@@ -2737,7 +2773,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.12';
+const APP_VERSION      = '2.4.13';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20729,7 +20765,8 @@ function plLookupByName(name) {
 var PL_CAT_COLORS = {
   'Flour':'#c8a87a','Dairy':'#7ab8c8','Fat':'#c8b87a','Sugar':'#c87a9e',
   'Leavening':'#a8c87a','Chocolate':'#8b6249','Fruit':'#c87a7a',
-  'Nut/Seed':'#9e8b6a','Savory':'#7ac87a','Spice':'#b87ac8','Other':'#8a8a8a'
+  'Nut/Seed':'#9e8b6a','Savory':'#7ac87a','Spice':'#b87ac8',
+  'Protein':'#c8705a','Other':'#8a8a8a'
 };
 
 function renderPriceLib() {
@@ -20761,7 +20798,7 @@ function renderPriceLib() {
       <td style="padding:6px 8px">
         <select style="background:transparent;border:none;font-size:12px;color:${cc};font-weight:600;cursor:pointer"
           onchange="plUpdateField(${e.id},'cat',this.value)">
-          ${['Flour','Dairy','Fat','Sugar','Leavening','Chocolate','Fruit','Nut/Seed','Savory','Spice','Other'].map(c =>
+          ${['Flour','Dairy','Fat','Sugar','Leavening','Chocolate','Fruit','Nut/Seed','Protein','Savory','Spice','Other'].map(c =>
             `<option value="${c}"${e.cat===c?' selected':''}>${c}</option>`).join('')}
         </select>
       </td>
@@ -20771,6 +20808,7 @@ function renderPriceLib() {
           onchange="plUpdateField(${e.id},'pricePerGram',parseFloat(this.value)||0)">
       </td>
       <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:12px" id="pl-100g-${e.id}">$${per100}</td>
+      <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:12px" id="pl-lb-${e.id}">$${(ppg*453.592).toFixed(2)}</td>
       <td style="padding:6px 8px;text-align:right">
         <input type="number" step="0.01" min="0" value="${e.caseCost||''}" placeholder="—"
           style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:75px"
@@ -20798,6 +20836,7 @@ function renderPriceLib() {
           <th style="text-align:left;padding:6px 8px">Category</th>
           <th style="text-align:right;padding:6px 8px">$/gram</th>
           <th style="text-align:right;padding:6px 8px">$/100g</th>
+          <th style="text-align:right;padding:6px 8px">$/lb</th>
           <th style="text-align:right;padding:6px 8px">Case $</th>
           <th style="text-align:right;padding:6px 8px">Case wt (g)</th>
           <th style="width:28px"></th>
@@ -20815,8 +20854,11 @@ function plUpdateField(id, field, val) {
   item.updatedAt  = Date.now();
   plSave(all);
   if (field === 'pricePerGram') {
-    const cell = document.getElementById(`pl-100g-${id}`);
-    if (cell) cell.textContent = '$' + ((parseFloat(val)||0) * 100).toFixed(4);
+    const ppg = parseFloat(val) || 0;
+    const cell100g = document.getElementById(`pl-100g-${id}`);
+    if (cell100g) cell100g.textContent = '$' + (ppg * 100).toFixed(4);
+    const cellLb = document.getElementById(`pl-lb-${id}`);
+    if (cellLb) cellLb.textContent = '$' + (ppg * 453.592).toFixed(2);
   }
 }
 
@@ -20834,21 +20876,54 @@ function plShowAdd() {
 }
 function plHideAdd() { document.getElementById('pl-add-form').style.display = 'none'; }
 
+function plCalcFromUnit() {
+  const price = parseFloat(document.getElementById('pl-add-unit-price')?.value) || 0;
+  const unit  = document.getElementById('pl-add-unit')?.value || '';
+  const ppgEl = document.getElementById('pl-add-ppg');
+  const prev  = document.getElementById('pl-add-preview');
+  if (unit === 'each' || !unit || !price) {
+    if (prev) prev.style.display = 'none';
+    return;
+  }
+  const grams = parseFloat(unit);
+  const ppg   = price / grams;
+  if (ppgEl) ppgEl.value = ppg.toFixed(6);
+  if (prev) {
+    const unitLabel = { '453.592':'lb','28.3495':'oz','1000':'kg','100':'100g','1':'gram' }[unit] || unit;
+    prev.style.display = '';
+    prev.textContent = `$${price.toFixed(2)} / ${unitLabel} = $${ppg.toFixed(6)} /gram  ·  $${(ppg*100).toFixed(4)} /100g  ·  $${(ppg*453.592).toFixed(2)} /lb`;
+  }
+}
+
+function plCalcCaseWt() {
+  const qty  = parseFloat(document.getElementById('pl-add-casewt')?.value) || 0;
+  const unit = parseFloat(document.getElementById('pl-add-casewt-unit')?.value) || 1;
+  const hid  = document.getElementById('pl-add-casewt-g');
+  if (hid) hid.value = (qty * unit).toFixed(1);
+}
+
 function plConfirmAdd() {
   const name = (document.getElementById('pl-add-name')?.value || '').trim().toUpperCase();
   if (!name) { alert('Please enter a name'); return; }
   const ppg     = parseFloat(document.getElementById('pl-add-ppg')?.value)     || 0;
   const cat     = document.getElementById('pl-add-cat')?.value                 || 'Other';
   const caseCost= parseFloat(document.getElementById('pl-add-case')?.value)    || 0;
-  const caseWt  = parseFloat(document.getElementById('pl-add-casewt')?.value)  || 0;
+  const caseWtRaw = parseFloat(document.getElementById('pl-add-casewt-g')?.value) || 0;
+  const caseWt  = caseWtRaw || (parseFloat(document.getElementById('pl-add-casewt')?.value) || 0);
   const all = plGetAll();
   all.push({ id: Date.now(), name, cat, pricePerGram: ppg, caseCost, caseWeightGrams: caseWt, updatedAt: Date.now() });
   plSave(all);
   plHideAdd();
-  ['pl-add-name','pl-add-ppg','pl-add-case','pl-add-casewt'].forEach(id => {
+  ['pl-add-name','pl-add-ppg','pl-add-case','pl-add-casewt','pl-add-unit-price','pl-add-casewt-g'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  const unitEl = document.getElementById('pl-add-unit');
+  if (unitEl) unitEl.value = '';
+  const cwUnit = document.getElementById('pl-add-casewt-unit');
+  if (cwUnit) cwUnit.value = '1';
+  const prev = document.getElementById('pl-add-preview');
+  if (prev) prev.style.display = 'none';
   renderPriceLib();
 }
 // ============ END PRICE LIBRARY ============
@@ -20896,6 +20971,7 @@ var SB_CAT_TAGS = {
   'Nut/Seed':  ['BOH', 'SOLID'],
   'Savory':    ['BOH', 'SOLID', 'SANDWICH'],
   'Spice':     ['BOH', 'SOLID', 'KITCHEN'],
+  'Protein':   ['FOH', 'SOLID', 'SANDWICH'],
   'Other':     ['BOH', 'SOLID']
 };
 
@@ -21331,6 +21407,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.13': ['📦 Raw Material Prices — new "Protein" category (terracotta color, tagged FOH·Sandwich in Supply Board); unit converter in the Add form: enter price per lb/oz/kg/100g/gram and $/gram auto-fills with live preview showing all three unit values; case weight now also accepts lb/oz/kg input; $/lb display column added to the price table (updates live when $/gram changes)'],
   '2.4.12': ['☁ Cloud sync — bk_price_lib (raw material prices, Owner-only write) and bk_supply_board (order board state) are now in FB_SYNC_KEYS; both keys added to server-side KEYS whitelist in functions/access.js; ☁ Save buttons added to Supply Board header and Raw Material Prices panel header; requires Firebase Function re-deploy to take effect'],
   '2.4.11': ['🎨 Root fix — CSS variable --accent was incorrectly set to #111111 (black) instead of the intended #e8a045 (warm orange); this caused every action button, active chip, and accent element across the entire app to appear black; corrected at the source so Raw Materials + Add/Save, Supply Board chips, Bulletin Board, Opening/Closing, and all other var(--accent) elements now render with the correct bakery amber color'],
   '2.4.10': ['📦 Supply Board — on-hand quantity: each In Stock card now has a # input and free-text unit field (bags, lbs, cases, etc.) saved per item; 🐛 filter chips (FOH/BOH etc.) no longer go black when active — fixed by replacing var(--accent)=#111 with hardcoded #e8a045 orange'],
