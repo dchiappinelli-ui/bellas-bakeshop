@@ -2773,7 +2773,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.13';
+const APP_VERSION      = '2.4.14';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -19216,13 +19216,18 @@ function fbFlushNow() {
   const [key, job] = blocked[0];
   const box = document.createElement('dialog');
   box.style.cssText = 'max-width:700px;width:90%;max-height:85vh;overflow:auto;padding:24px';
-  const title = document.createElement('h2'); title.textContent = 'Review conflicting draft: ' + key.replace(/^bk_/, '').replaceAll('_',' '); box.append(title);
-  const msg = document.createElement('p'); msg.textContent = job.blocked.message + ' Your draft is preserved on this device. Compare the values before choosing.'; box.append(msg);
+  const isConflict = typeof job.blocked.remote === 'string';
+  const titleText = isConflict ? 'Review conflicting draft: ' : 'Blocked draft — retry when ready: ';
+  const title = document.createElement('h2'); title.textContent = titleText + key.replace(/^bk_/, '').replaceAll('_',' '); box.append(title);
+  const msgText = isConflict
+    ? job.blocked.message + ' Your draft is preserved on this device. Compare the values before choosing.'
+    : 'This draft could not be saved: ' + job.blocked.message + ' Your data is safe on this device. If this was caused by a system update (new data key not yet deployed to the server), use "Retry save" after the server is updated. Otherwise download the draft for safekeeping.';
+  const msg = document.createElement('p'); msg.textContent = msgText; box.append(msg);
   const pre = document.createElement('pre'); pre.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere';
-  pre.textContent = 'YOUR DRAFT\n' + job.value + '\n\nCLOUD VALUE\n' + (job.blocked.remote ?? '(not available)'); box.append(pre);
-  const button = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.style.margin = '8px'; b.onclick = fn; box.append(b); };
+  pre.textContent = 'YOUR DRAFT\n' + job.value + (isConflict ? '\n\nCLOUD VALUE\n' + job.blocked.remote : ''); box.append(pre);
+  const button = (label, fn, style) => { const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'margin:8px' + (style ? ';' + style : ''); b.onclick = fn; box.append(b); };
   button('Download draft', () => secureDownload('bakery-draft-' + key + '.json', job));
-  if (typeof job.blocked.remote === 'string') {
+  if (isConflict) {
     button('Use cloud value (save draft copy)', () => {
       _ls.set('bk_archived_draft_' + crypto.randomUUID(), JSON.stringify({ key, ...job }));
       delete secureQueue[key]; securePersist(); secureApply(key, job.blocked.remote); box.close(); box.remove(); secureFlush();
@@ -19231,15 +19236,20 @@ function fbFlushNow() {
       job.base = job.blocked.remote; job.operationId = crypto.randomUUID(); delete job.inflight; delete job.blocked;
       securePersist(); box.close(); box.remove(); secureFlush();
     });
+  } else {
+    button('✅ Retry save', () => {
+      job.operationId = crypto.randomUUID(); delete job.inflight; delete job.blocked;
+      securePersist(); box.close(); box.remove(); secureFlush();
+    }, 'background:#4caf50;color:#fff;font-weight:800;border:none;border-radius:4px;padding:5px 16px');
+    button('Archive draft and reload cloud value', async () => {
+      try {
+        const snap = await _fbDb.collection('bakery_data').doc(key).get();
+        const value = snap.data()?.value ?? null;
+        _ls.set('bk_archived_draft_' + crypto.randomUUID(), JSON.stringify({ key, ...job }));
+        delete secureQueue[key]; securePersist(); secureApply(key, value); box.close(); box.remove(); secureFlush();
+      } catch(e) { alert('Cloud value could not be read. Your draft is still saved. Sign in again or reconnect.'); }
+    });
   }
-  else button('Archive draft and reload cloud value', async () => {
-    try {
-      const snap = await _fbDb.collection('bakery_data').doc(key).get();
-      const value = snap.data()?.value ?? null;
-      _ls.set('bk_archived_draft_' + crypto.randomUUID(), JSON.stringify({ key, ...job }));
-      delete secureQueue[key]; securePersist(); secureApply(key, value); box.close(); box.remove(); secureFlush();
-    } catch(e) { alert('Cloud value could not be read. Your draft is still saved. Sign in again or reconnect.'); }
-  });
   button('Keep for later', () => { box.close(); box.remove(); });
   document.body.append(box); box.showModal();
 }
@@ -21407,6 +21417,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.14': ['☁ Draft recovery — "Review / save drafts" dialog now distinguishes data conflicts from server-side blocks (e.g. undeployed function rejecting a new key). Server-block dialogs show a green "Retry save" button so you can unblock a stuck draft after a system update without losing your data — no need to archive or discard.'],
   '2.4.13': ['📦 Raw Material Prices — new "Protein" category (terracotta color, tagged FOH·Sandwich in Supply Board); unit converter in the Add form: enter price per lb/oz/kg/100g/gram and $/gram auto-fills with live preview showing all three unit values; case weight now also accepts lb/oz/kg input; $/lb display column added to the price table (updates live when $/gram changes)'],
   '2.4.12': ['☁ Cloud sync — bk_price_lib (raw material prices, Owner-only write) and bk_supply_board (order board state) are now in FB_SYNC_KEYS; both keys added to server-side KEYS whitelist in functions/access.js; ☁ Save buttons added to Supply Board header and Raw Material Prices panel header; requires Firebase Function re-deploy to take effect'],
   '2.4.11': ['🎨 Root fix — CSS variable --accent was incorrectly set to #111111 (black) instead of the intended #e8a045 (warm orange); this caused every action button, active chip, and accent element across the entire app to appear black; corrected at the source so Raw Materials + Add/Save, Supply Board chips, Bulletin Board, Opening/Closing, and all other var(--accent) elements now render with the correct bakery amber color'],
