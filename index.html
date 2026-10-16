@@ -2773,7 +2773,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.15';
+const APP_VERSION      = '2.4.17';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4071,6 +4071,37 @@ function renderRecipes() {
       ? `${maxDay}-day · ${totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60||'')+(totalMins%60?'m':'') : totalMins+'m'} total`
       : (totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60 ? totalMins%60+'m' : '') + ' total' : totalMins+'m total');
     const isArchived  = r.active === false;
+    // Prep item section variables
+    const ps  = prepStatus[r.name.toUpperCase()];
+    const psm = ps ? PREP_STATUS_META[ps.status] : null;
+    const prepBatchBtn = r.isPrepItem ? `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(106,159,181,0.12);border-radius:6px;border:1px solid rgba(106,159,181,0.35);margin-bottom:12px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:#4a8fa8">🫙 Prep Item</span>
+        ${ps ? `<span style="font-size:20px">${psm?.emoji||'🟢'}</span><span style="font-size:12px;color:var(--muted)">${psm?.label||''} · last: ${ps.lastPreppedAt ? new Date(ps.lastPreppedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'never'}</span>` : ''}
+        <button onclick="logPrepBatchFromRecipe(${r.id})"
+          style="padding:6px 14px;background:#4caf50;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto">
+          ✅ Log Batch Made</button>
+      </div>` : '';
+    const prepToggleHtml = `
+      <div class="form-group" style="flex-basis:100%;border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" ${r.isPrepItem ? 'checked' : ''} style="cursor:pointer;width:15px;height:15px"
+            onchange="updateRecipe(${r.id},'isPrepItem',this.checked);renderRecipes();setTimeout(()=>toggleRecipe(${r.id}),50)">
+          <span style="font-weight:600;font-size:13px">🫙 Track as prep item</span>
+          <span style="color:var(--muted);font-size:11px">— appears in the Prep Items tracker; can be used as an ingredient in other recipes</span>
+        </label>
+      </div>
+      ${r.isPrepItem ? `
+      <div class="form-group">
+        <label>Shelf life (days)</label>
+        <input type="number" min="1" step="1" value="${r.prepShelfDays || 7}"
+          onchange="updateRecipe(${r.id},'prepShelfDays',parseInt(this.value)||7)" style="width:70px">
+      </div>
+      <div class="form-group">
+        <label>Yield amount</label>
+        <input type="text" value="${(r.prepYieldUnit||'').replace(/"/g,'&quot;')}" placeholder="e.g. 500g, 2 jars, 1 batch"
+          onchange="updateRecipe(${r.id},'prepYieldUnit',this.value)" style="width:160px">
+      </div>` : ''}`;
     const CATS        = ['Bread','Pastry','Cookie / Bar','Bagel','Croissant','Savory','Other'];
 
     return `
@@ -4147,8 +4178,10 @@ function renderRecipes() {
               <input type="text" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Any notes..."
                 onchange="updateRecipe(${r.id},'notes',this.value)">
             </div>
+            ${prepToggleHtml}
           </div>
         </div>
+        ${prepBatchBtn}
         ${recipeIngredientsHtml(r)}
         ${recipeCostSummaryHtml(r)}
         ${recipePrefermentHtml(r)}`
@@ -9166,7 +9199,26 @@ customPrepItems.forEach(name => {
 });
 
 function getAllPrepNames() {
-  return [...DEFAULT_PREP_ITEMS.map(i => i.name), ...customPrepItems].filter(n => !hiddenPrepItems.includes(n));
+  const recipePrepNames = (recipes || [])
+    .filter(r => r.isPrepItem && r.active !== false)
+    .map(r => r.name.toUpperCase());
+  const allNames = [...new Set([
+    ...DEFAULT_PREP_ITEMS.map(i => i.name),
+    ...customPrepItems,
+    ...recipePrepNames,
+  ])];
+  // Auto-init prepStatus for any recipe-backed item not yet tracked
+  allNames.forEach(name => {
+    if (!prepStatus[name]) {
+      const linkedR = (recipes || []).find(r => r.isPrepItem && r.name.toUpperCase() === name);
+      prepStatus[name] = { status: 'good', shelfDays: linkedR?.prepShelfDays || 7, notes: '', lastPreppedAt: null, lastPreppedBy: '', updatedAt: null };
+    } else {
+      // Keep shelf life in sync with recipe if it's been changed there
+      const linkedR = (recipes || []).find(r => r.isPrepItem && r.name.toUpperCase() === name);
+      if (linkedR?.prepShelfDays) prepStatus[name].shelfDays = linkedR.prepShelfDays;
+    }
+  });
+  return allNames.filter(n => !hiddenPrepItems.includes(n));
 }
 
 let prepFilter = 'all';
@@ -9192,6 +9244,19 @@ function setPrepPrepped(name) {
   prepStatus[name].updatedAt = Date.now();
   savePrepStatus();
   renderPrepPage();
+}
+function logPrepBatchFromRecipe(recipeId) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r) return;
+  const name = r.name.toUpperCase();
+  const session = authGetSession();
+  if (!prepStatus[name]) prepStatus[name] = { status: 'good', shelfDays: r.prepShelfDays || 7, notes: '', lastPreppedAt: null, lastPreppedBy: '', updatedAt: null };
+  prepStatus[name].lastPreppedAt = Date.now();
+  prepStatus[name].lastPreppedBy = session ? session.name : '';
+  prepStatus[name].status = 'good';
+  prepStatus[name].updatedAt = Date.now();
+  savePrepStatus();
+  toastSaved('Batch logged — ' + r.name + ' marked fresh 🟢');
 }
 function setPrepNotes(name, val) { prepStatus[name].notes = val; savePrepStatus(); }
 function setPrepShelfDays(name, val) {
@@ -9264,6 +9329,7 @@ function renderPrepPage() {
   el.innerHTML = names.map(name => {
     const s = prepStatus[name];
     const safeName = name.replace(/'/g, "\\'");
+    const linkedRecipe = (recipes || []).find(r => r.isPrepItem && r.name.toUpperCase() === name && r.active !== false);
 
     // Shelf life check: if last prepped date is known, calculate days since
     let shelfWarning = '';
@@ -9279,17 +9345,32 @@ function renderPrepPage() {
       ? `${new Date(s.lastPreppedAt).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}${s.lastPreppedBy ? ' by ' + s.lastPreppedBy : ''}`
       : 'never logged';
 
+    const recipeBadge = linkedRecipe
+      ? `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:rgba(106,159,181,0.2);color:#4a8fa8;border:1px solid rgba(106,159,181,0.4);margin-left:6px">📋 RECIPE</span>`
+      : '';
+    const yieldStr = linkedRecipe?.prepYieldUnit ? ` · ${linkedRecipe.prepYieldUnit}` : '';
+    const openRecipeBtn = linkedRecipe
+      ? `<button onclick="showPage('recipes');setTimeout(()=>toggleRecipe(${linkedRecipe.id}),120)"
+           class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;color:#4a8fa8" title="Open this recipe">→ Recipe</button>`
+      : '';
+    const logBtn = linkedRecipe
+      ? `<button onclick="logPrepBatchFromRecipe(${linkedRecipe.id})" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px" title="Log that a fresh batch was just made">✅ Just Prepped</button>`
+      : `<button onclick="setPrepPrepped('${safeName}')" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px" title="Log that a fresh batch was just made">✅ Just Prepped</button>`;
+    const removeBtn = linkedRecipe
+      ? '' // Recipe-backed: remove the stop-tracking button (manage via recipe toggle)
+      : `<button onclick="removePrepItem('${safeName}')" title="Stop tracking" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px">✕</button>`;
+
     return `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap">
       <div style="flex:1;min-width:150px">
-        <div style="font-weight:600;font-size:13px">${name}</div>
+        <div style="font-weight:600;font-size:13px">${name}${recipeBadge}${yieldStr ? `<span style="font-size:10px;color:var(--muted);font-weight:400">${yieldStr}</span>` : ''}</div>
         ${shelfWarning ? `<div style="margin-top:2px">${shelfWarning}</div>` : ''}
         <div style="font-size:10px;color:var(--muted);margin-top:2px">Last prepped: ${lastPrepped}</div>
       </div>
-      <input type="number" value="${s.shelfDays}" min="1" title="Shelf life (days)"
+      ${linkedRecipe ? '' : `<input type="number" value="${s.shelfDays}" min="1" title="Shelf life (days)"
         onchange="setPrepShelfDays('${safeName}', this.value)"
         style="width:50px;padding:5px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;text-align:center">
-      <span style="font-size:10px;color:var(--muted)">days</span>
+      <span style="font-size:10px;color:var(--muted)">days</span>`}
       <div style="display:flex;gap:4px">
         ${['good', 'low', 'make'].map(st => {
           const m = PREP_STATUS_META[st];
@@ -9298,8 +9379,9 @@ function renderPrepPage() {
             style="padding:5px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${active ? m.color : 'var(--border)'};background:${active ? m.color + '22' : 'transparent'};color:${active ? m.color : 'var(--muted)'}">${m.emoji} ${m.label}</button>`;
         }).join('')}
       </div>
-      <button onclick="setPrepPrepped('${safeName}')" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px" title="Log that a fresh batch was just made">✅ Just Prepped</button>
-      <button onclick="removePrepItem('${safeName}')" title="Stop tracking" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px">✕</button>
+      ${logBtn}
+      ${openRecipeBtn}
+      ${removeBtn}
     </div>`;
   }).join('');
 }
@@ -20789,13 +20871,31 @@ function plGetAll() {
 function plLookupByName(name) {
   if (!name) return null;
   const q = name.trim().toUpperCase();
-  return (plLoad() || []).find(e => e.name.toUpperCase() === q) || null;
+  const direct = (plLoad() || []).find(e => e.name.toUpperCase() === q);
+  if (direct) return direct;
+  // Fallback: recipe-backed prep item — compute virtual price entry from ingredients
+  const linkedRecipe = (recipes || []).find(r => r.isPrepItem && r.name.toUpperCase() === q && r.active !== false);
+  if (!linkedRecipe) return null;
+  const ings = linkedRecipe.ingredients || [];
+  if (!ings.length) return null;
+  let totalCostCents = 0;
+  let totalGrams = 0;
+  for (const ing of ings) {
+    const grams = parseFloat(ing.grams) || 0;
+    const srcEntry = (plLoad() || []).find(e => e.name.toUpperCase() === (ing.name || '').trim().toUpperCase());
+    const ppg = srcEntry ? (parseFloat(srcEntry.pricePerGram) || 0) : 0;
+    totalCostCents += ppg * grams;
+    totalGrams += grams;
+  }
+  const yieldGrams = parseFloat(linkedRecipe.prepYieldGrams) || totalGrams || 1;
+  const pricePerGram = yieldGrams > 0 ? totalCostCents / yieldGrams : 0;
+  return { id: 'recipe-' + linkedRecipe.id, name: linkedRecipe.name, cat: 'Prep', pricePerGram, tags: linkedRecipe.tags || [] };
 }
 
 var PL_CAT_COLORS = {
   'Flour':'#c8a87a','Dairy':'#7ab8c8','Fat':'#c8b87a','Sugar':'#c87a9e',
   'Leavening':'#a8c87a','Chocolate':'#8b6249','Fruit':'#c87a7a',
-  'Nut/Seed':'#9e8b6a','Savory':'#7ac87a','Spice':'#b87ac8',
+  'Nut/Seed':'#9e8b6a','Savory':'#7ac87a','Spice':'#b87ac8','Prep':'#6a9fb5',
   'Protein':'#c8705a','Other':'#8a8a8a'
 };
 
@@ -20815,10 +20915,25 @@ function renderPriceLib() {
     wrap.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No ingredients match</div>';
     return;
   }
+  const PL_ALL_TAGS = ['FOH','BOH','LIQUID','SOLID','SANDWICH','KITCHEN'];
+  const PL_TAG_ABBR = { FOH:'FOH', BOH:'BOH', LIQUID:'LIQ', SOLID:'SOL', SANDWICH:'SAND', KITCHEN:'KIT' };
   const rows = filtered.map(e => {
     const ppg    = parseFloat(e.pricePerGram) || 0;
     const per100 = (ppg * 100).toFixed(4);
     const cc     = PL_CAT_COLORS[e.cat] || '#8a8a8a';
+    const effTags  = sbGetTags(e);
+    const isCustom = e.tags && Array.isArray(e.tags) && e.tags.length > 0;
+    const tagChips = PL_ALL_TAGS.map(t => {
+      const on = effTags.includes(t);
+      return `<button onclick="plToggleTag(${e.id},'${t}')" title="${t}"
+        style="padding:1px 4px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;border:1px solid;line-height:1.4;
+               ${on ? 'background:#e8a045;color:#1a1209;border-color:#e8a045' : 'background:transparent;color:var(--muted);border-color:var(--border)'}"
+        >${PL_TAG_ABBR[t]}</button>`;
+    }).join('');
+    const resetBtn = isCustom
+      ? `<button onclick="plClearTags(${e.id})" title="Reset to category defaults"
+           style="padding:1px 4px;border-radius:6px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);line-height:1.4">↺</button>`
+      : '';
     return `<tr style="border-bottom:1px solid var(--border)" id="pl-row-${e.id}">
       <td style="padding:6px 10px">
         <input type="text" value="${(e.name||'').replace(/"/g,'&quot;')}"
@@ -20831,6 +20946,9 @@ function renderPriceLib() {
           ${['Flour','Dairy','Fat','Sugar','Leavening','Chocolate','Fruit','Nut/Seed','Protein','Savory','Spice','Other'].map(c =>
             `<option value="${c}"${e.cat===c?' selected':''}>${c}</option>`).join('')}
         </select>
+      </td>
+      <td style="padding:6px 8px">
+        <div style="display:flex;gap:2px;flex-wrap:wrap;min-width:110px">${tagChips}${resetBtn}</div>
       </td>
       <td style="padding:6px 8px;text-align:right">
         <input type="number" step="0.00001" min="0" value="${ppg||''}" placeholder="0.00000"
@@ -20857,13 +20975,14 @@ function renderPriceLib() {
   }).join('');
 
   wrap.innerHTML = `
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${all.length} ingredients total · ${filtered.length} shown · changes save automatically</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${all.length} ingredients total · ${filtered.length} shown · changes save automatically · orange tag = active · ↺ = reset to category default</div>
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead>
         <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)">
           <th style="text-align:left;padding:6px 10px">Name</th>
           <th style="text-align:left;padding:6px 8px">Category</th>
+          <th style="text-align:left;padding:6px 8px">Tags</th>
           <th style="text-align:right;padding:6px 8px">$/gram</th>
           <th style="text-align:right;padding:6px 8px">$/100g</th>
           <th style="text-align:right;padding:6px 8px">$/lb</th>
@@ -20892,6 +21011,28 @@ function plUpdateField(id, field, val) {
   }
 }
 
+function plToggleTag(id, tag) {
+  const all = plGetAll();
+  const item = all.find(e => e.id === id);
+  if (!item) return;
+  const current = sbGetTags(item);
+  const custom = (item.tags && Array.isArray(item.tags) && item.tags.length) ? [...item.tags] : [...current];
+  const idx = custom.indexOf(tag);
+  if (idx >= 0) custom.splice(idx, 1); else custom.push(tag);
+  item.tags = custom;
+  item.updatedAt = Date.now();
+  plSave(all);
+  renderPriceLib();
+}
+function plClearTags(id) {
+  const all = plGetAll();
+  const item = all.find(e => e.id === id);
+  if (!item) return;
+  delete item.tags;
+  item.updatedAt = Date.now();
+  plSave(all);
+  renderPriceLib();
+}
 function plDeleteItem(id) {
   const all  = plGetAll();
   const item = all.find(e => e.id === id);
@@ -21002,7 +21143,8 @@ var SB_CAT_TAGS = {
   'Savory':    ['BOH', 'SOLID', 'SANDWICH'],
   'Spice':     ['BOH', 'SOLID', 'KITCHEN'],
   'Protein':   ['FOH', 'SOLID', 'SANDWICH'],
-  'Other':     ['BOH', 'SOLID']
+  'Other':     ['BOH', 'SOLID'],
+  'Prep':      ['BOH', 'KITCHEN']
 };
 
 function sbGetTags(item) {
@@ -21437,6 +21579,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.17': ['🫙 Unified prep items + recipes — any recipe can now be tracked as a prep item: check "Track as prep item" inside a recipe card to set shelf life and yield, then log fresh batches with ✅ Log Batch Made; the Prep Items tab shows a 📋 RECIPE badge and "→ Recipe" button for recipe-backed items; recipe-backed items appear automatically in getAllPrepNames() and their shelf life stays in sync with the recipe; plLookupByName() now computes a virtual cost-per-gram for recipe-backed prep items from their ingredient costs and yield so they can be used in recipe cost calculations'],
+  '2.4.16': ['🏷 Per-item tag overrides — Raw Material Prices table now has a Tags column with six mini toggle chips (FOH · BOH · LIQ · SOL · SAND · KIT); clicking a chip toggles that tag on/off for the individual item, overriding the category default; ↺ button resets back to the category default; buttermilk example: Dairy gives FOH+BOH+KITCHEN by default, toggle off FOH to make it BOH-only'],
   '2.4.15': ['🐛 Fix — ☁ Save button now actually works: forceSaveKeys enqueues/unblocks the specified keys with the correct cloud base instead of just calling secureFlush(); Retry save button also sets job.base = secureBases[key] so the three-way merge succeeds on the first try instead of throwing aborted on arrays like bk_price_lib'],
   '2.4.14': ['☁ Draft recovery — "Review / save drafts" dialog now distinguishes data conflicts from server-side blocks (e.g. undeployed function rejecting a new key). Server-block dialogs show a green "Retry save" button so you can unblock a stuck draft after a system update without losing your data — no need to archive or discard.'],
   '2.4.13': ['📦 Raw Material Prices — new "Protein" category (terracotta color, tagged FOH·Sandwich in Supply Board); unit converter in the Add form: enter price per lb/oz/kg/100g/gram and $/gram auto-fills with live preview showing all three unit values; case weight now also accepts lb/oz/kg input; $/lb display column added to the price table (updates live when $/gram changes)'],
