@@ -2726,7 +2726,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.7';
+const APP_VERSION      = '2.4.8';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20826,7 +20826,7 @@ function plConfirmAdd() {
 // ============ END PRICE LIBRARY ============
 
 // ======== SUPPLY BOARD ========
-var SB_KEY = 'bk_supply_board';
+var _SB_SUPPLY_KEY = 'bk_supply_board';
 var _sbActiveFilters = new Set();
 var _sbSelectMode = false;
 var _sbSelected = new Set();
@@ -20835,9 +20835,9 @@ var _sbDragGest = null;
 var _sbDragGhost = null;
 
 function sbLoad() {
-  try { return JSON.parse(localStorage.getItem(SB_KEY) || '{}'); } catch(e) { return {}; }
+  try { return JSON.parse(localStorage.getItem(_SB_SUPPLY_KEY) || '{}'); } catch(e) { return {}; }
 }
-function sbSave(data) { try { localStorage.setItem(SB_KEY, JSON.stringify(data)); } catch(e) {} }
+function sbSave(data) { try { localStorage.setItem(_SB_SUPPLY_KEY, JSON.stringify(data)); } catch(e) {} }
 
 function sbSetEntry(itemId, fields) {
   const data = sbLoad();
@@ -20960,7 +20960,7 @@ function sbUpdateOrderField(itemId, field, val) {
 
 function sbResetBoard() {
   if (!confirm('Reset all items back to "In Stock"? This clears all order flags.')) return;
-  localStorage.removeItem(SB_KEY);
+  localStorage.removeItem(_SB_SUPPLY_KEY);
   renderSupplyBoard();
 }
 
@@ -21289,6 +21289,9 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.8': [
+    '🐛 Fix — Supply Board (v2.4.7) used `var SB_KEY` which conflicted with the Staff Board\'s existing `const SB_KEY`; this SyntaxError prevented the entire app script from loading, breaking the login screen; renamed to `_SB_SUPPLY_KEY` to resolve the conflict',
+  ],
   '2.4.7': [
     '📦 Supply Board — replaces Price Library tab with a 3-column Kanban ordering board (In Stock / Order Soon / Order Now); drag items between columns or use quick-move ⏰🚨 buttons; filter by FOH, BOH, Liquid, Solid, Sandwich, Kitchen, Most Common; sort by Category, A–Z, or Most Common (recipe usage); group-select mode for bulk moves; qty + note fields on ordered items with timestamp; ↩ return to stock; nav badge shows Order Now count; 🖨 print end-of-day order report grouped by category; 💰 Manage Prices button slides in price editor; all price data unchanged',
   ],
