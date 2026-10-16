@@ -2773,7 +2773,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.17';
+const APP_VERSION      = '2.4.18';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4072,8 +4072,8 @@ function renderRecipes() {
       : (totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60 ? totalMins%60+'m' : '') + ' total' : totalMins+'m total');
     const isArchived  = r.active === false;
     // Prep item section variables
-    const ps  = prepStatus[r.name.toUpperCase()];
-    const psm = ps ? PREP_STATUS_META[ps.status] : null;
+    const ps  = (prepStatus || {})[r.name.toUpperCase()];
+    const psm = ps ? (PREP_STATUS_META || {})[ps.status] : null;
     const prepBatchBtn = r.isPrepItem ? `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(106,159,181,0.12);border-radius:6px;border:1px solid rgba(106,159,181,0.35);margin-bottom:12px;flex-wrap:wrap">
         <span style="font-size:13px;font-weight:700;color:#4a8fa8">🫙 Prep Item</span>
@@ -9181,7 +9181,7 @@ const DEFAULT_PREP_ITEMS = [
   { name: 'COOKIE DOUGH (RASPBERRY WHITE CHOC)', shelfDays: 5, notes: '' },
 ];
 
-let prepStatus = JSON.parse(localStorage.getItem('bk_prep_status') || 'null') || {};
+var prepStatus = JSON.parse(localStorage.getItem('bk_prep_status') || 'null') || {};
 DEFAULT_PREP_ITEMS.forEach(item => {
   if (!prepStatus[item.name]) prepStatus[item.name] = {
     status: 'good', shelfDays: item.shelfDays, notes: item.notes,
@@ -21579,6 +21579,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.18': ['🐛 Fix — prepStatus declared with var instead of let so it hoists correctly when renderRecipes() is called during init before the declaration is reached; guards added in recipeCard so the prep-item banner renders safely even if prepStatus or PREP_STATUS_META is not yet initialized'],
   '2.4.17': ['🫙 Unified prep items + recipes — any recipe can now be tracked as a prep item: check "Track as prep item" inside a recipe card to set shelf life and yield, then log fresh batches with ✅ Log Batch Made; the Prep Items tab shows a 📋 RECIPE badge and "→ Recipe" button for recipe-backed items; recipe-backed items appear automatically in getAllPrepNames() and their shelf life stays in sync with the recipe; plLookupByName() now computes a virtual cost-per-gram for recipe-backed prep items from their ingredient costs and yield so they can be used in recipe cost calculations'],
   '2.4.16': ['🏷 Per-item tag overrides — Raw Material Prices table now has a Tags column with six mini toggle chips (FOH · BOH · LIQ · SOL · SAND · KIT); clicking a chip toggles that tag on/off for the individual item, overriding the category default; ↺ button resets back to the category default; buttermilk example: Dairy gives FOH+BOH+KITCHEN by default, toggle off FOH to make it BOH-only'],
   '2.4.15': ['🐛 Fix — ☁ Save button now actually works: forceSaveKeys enqueues/unblocks the specified keys with the correct cloud base instead of just calling secureFlush(); Retry save button also sets job.base = secureBases[key] so the three-way merge succeeds on the first try instead of throwing aborted on arrays like bk_price_lib'],
