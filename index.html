@@ -2733,7 +2733,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.9';
+const APP_VERSION      = '2.4.10';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -21028,7 +21028,7 @@ function renderSupplyBoard() {
     var status = entry && entry.status;
     if (status === 'order_soon')     orderSoon.push(Object.assign({}, item, { _entry: entry }));
     else if (status === 'order_now') orderNow.push(Object.assign({}, item, { _entry: entry }));
-    else                             inStock.push(item);
+    else                             inStock.push(Object.assign({}, item, { _entry: entry || {} }));
   });
 
   var filteredStock = inStock.filter(function(item) {
@@ -21065,15 +21065,15 @@ function renderSupplyBoard() {
   // Filter chip active states
   document.querySelectorAll('.sb-chip').forEach(function(btn) {
     var active = _sbActiveFilters.has(btn.dataset.filter);
-    btn.style.background   = active ? 'var(--accent)' : 'var(--surface2)';
+    btn.style.background   = active ? '#e8a045'       : 'var(--surface2)';
     btn.style.color        = active ? '#1a1209'        : 'var(--muted)';
-    btn.style.borderColor  = active ? 'var(--accent)'  : 'var(--border)';
+    btn.style.borderColor  = active ? '#e8a045'        : 'var(--border)';
   });
 
   // Select button state
   var selBtn = document.getElementById('sb-select-btn');
   if (selBtn) {
-    selBtn.style.background = _sbSelectMode ? 'var(--accent)' : 'var(--surface2)';
+    selBtn.style.background = _sbSelectMode ? '#e8a045'       : 'var(--surface2)';
     selBtn.style.color      = _sbSelectMode ? '#1a1209'       : 'var(--muted)';
     selBtn.textContent      = _sbSelectMode ? '✓ Selecting'   : '☐ Select';
   }
@@ -21111,24 +21111,38 @@ function renderSupplyBoard() {
 }
 
 function sbRenderStockCard(item) {
-  var cc    = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
-  var tags  = sbGetTags(item);
-  var usage = sbGetUsageCount(item);
-  var isSel = _sbSelected.has(String(item.id));
-  var tagStr = tags.filter(function(t) { return t !== 'BOH' && t !== 'SOLID'; }).join(' · ');
+  var cc      = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
+  var tags    = sbGetTags(item);
+  var usage   = sbGetUsageCount(item);
+  var isSel   = _sbSelected.has(String(item.id));
+  var entry   = item._entry || {};
+  var tagStr  = tags.filter(function(t) { return t !== 'BOH' && t !== 'SOLID'; }).join(' · ');
+  var qtyVal  = (entry.onHandQty  || '').toString().replace(/"/g, '&quot;');
+  var unitVal = (entry.onHandUnit || '').replace(/"/g, '&quot;');
+  var hasQty  = qtyVal !== '';
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="in_stock"' +
-    ' style="display:flex;align-items:center;gap:7px;padding:8px 7px;margin-bottom:3px;border-radius:5px;' +
+    ' style="padding:7px 7px;margin-bottom:3px;border-radius:5px;' +
     'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:none;user-select:none;' +
-    (isSel ? 'outline:2px solid var(--accent);' : '') + '">' +
-    '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
-    (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--accent)">' : '') +
-    '<div style="flex:1;min-width:0">' +
-      '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
-      '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + '</div>' +
+    (isSel ? 'outline:2px solid #e8a045;' : '') + '">' +
+    '<div style="display:flex;align-items:center;gap:7px">' +
+      '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
+      (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:#e8a045">' : '') +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + '</div>' +
+      '</div>' +
+      (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
+      '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' : '') +
+      '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>' +
     '</div>' +
-    (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
-    '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' : '') +
-    '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>' +
+    '<div style="display:flex;gap:4px;margin-top:5px;margin-left:10px" onclick="event.stopPropagation()">' +
+      '<input type="number" value="' + qtyVal + '" placeholder="On hand #" min="0" step="any"' +
+        ' style="width:70px;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-weight:700' + (hasQty ? ';border-color:#2a7d4f' : '') + '"' +
+        ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandQty\',this.value)" touch-action="manipulation">' +
+      '<input type="text" value="' + unitVal + '" placeholder="unit (bags, lbs…)"' +
+        ' style="flex:1;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (unitVal ? ';border-color:#2a7d4f' : '') + '"' +
+        ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandUnit\',this.value)" touch-action="manipulation">' +
+    '</div>' +
     '</div>';
 }
 
@@ -21313,6 +21327,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.10': ['📦 Supply Board — on-hand quantity: each In Stock card now has a # input and free-text unit field (bags, lbs, cases, etc.) saved per item; 🐛 filter chips (FOH/BOH etc.) no longer go black when active — fixed by replacing var(--accent)=#111 with hardcoded #e8a045 orange'],
   '2.4.9': ['📅 Bake Board view selector — dropdown (7 Days / 3 Days / 1 Day) in the board header; narrower views automatically start from today\'s column (or Monday if viewing another week) and columns expand to fill the space'],
   '2.4.8': [
     '🐛 Fix — Supply Board (v2.4.7) used `var SB_KEY` which conflicted with the Staff Board\'s existing `const SB_KEY`; this SyntaxError prevented the entire app script from loading, breaking the login screen; renamed to `_SB_SUPPLY_KEY` to resolve the conflict',
