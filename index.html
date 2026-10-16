@@ -1145,6 +1145,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <button onclick="sbPrintReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨 Report</button>
       <button onclick="sbResetBoard()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
       <button onclick="sbTogglePriceManager()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">💰 Manage Prices ▸</button>
+      <button onclick="forceSaveKeys(['bk_price_lib','bk_supply_board'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" title="Save prices and order board to cloud now">☁ Save</button>
     </div>
   </div>
 
@@ -1206,7 +1207,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="position:absolute;right:0;top:0;bottom:0;width:min(760px,100vw);background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;box-shadow:-6px 0 30px rgba(0,0,0,0.4)">
       <div style="padding:16px 20px;border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);flex-shrink:0">
         <h3 style="margin:0;font-family:'Playfair Display',serif;font-size:18px">💰 Raw Material Prices</h3>
-        <button onclick="sbClosePriceManager()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="forceSaveKeys(['bk_price_lib'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
+          <button onclick="sbClosePriceManager()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
+        </div>
       </div>
       <div style="padding:16px 20px;flex:1">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
@@ -2733,7 +2737,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.11';
+const APP_VERSION      = '2.4.12';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -19026,7 +19030,7 @@ function wpPrintBakerChecklists(dayData, dateStr) {
 }
 
 // SOURCE: sync.js
-const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates"]);
+const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
 const secureBases = {}, secureStops = [];
@@ -21327,6 +21331,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.12': ['☁ Cloud sync — bk_price_lib (raw material prices, Owner-only write) and bk_supply_board (order board state) are now in FB_SYNC_KEYS; both keys added to server-side KEYS whitelist in functions/access.js; ☁ Save buttons added to Supply Board header and Raw Material Prices panel header; requires Firebase Function re-deploy to take effect'],
   '2.4.11': ['🎨 Root fix — CSS variable --accent was incorrectly set to #111111 (black) instead of the intended #e8a045 (warm orange); this caused every action button, active chip, and accent element across the entire app to appear black; corrected at the source so Raw Materials + Add/Save, Supply Board chips, Bulletin Board, Opening/Closing, and all other var(--accent) elements now render with the correct bakery amber color'],
   '2.4.10': ['📦 Supply Board — on-hand quantity: each In Stock card now has a # input and free-text unit field (bags, lbs, cases, etc.) saved per item; 🐛 filter chips (FOH/BOH etc.) no longer go black when active — fixed by replacing var(--accent)=#111 with hardcoded #e8a045 orange'],
   '2.4.9': ['📅 Bake Board view selector — dropdown (7 Days / 3 Days / 1 Day) in the board header; narrower views automatically start from today\'s column (or Monday if viewing another week) and columns expand to fill the space'],
