@@ -1646,6 +1646,13 @@ document.addEventListener('DOMContentLoaded', function() {
       <button onclick="wpNextWeek()"
         style="padding:10px 16px;border:2px solid #ccc;border-radius:4px;background:#fff;
           font-size:18px;cursor:pointer;touch-action:manipulation">→</button>
+      <select id="wp-view-select" onchange="_wpViewDays=+this.value;renderWeekPlan()"
+        style="padding:10px 12px;border:2px solid #ccc;border-radius:4px;background:#fff;
+          font-size:13px;font-weight:700;color:#111;cursor:pointer;touch-action:manipulation">
+        <option value="7">7 Days</option>
+        <option value="3">3 Days</option>
+        <option value="1">1 Day</option>
+      </select>
       <button onclick="wpCopyToNext()"
         style="padding:10px 18px;border:2px solid #111;border-radius:4px;background:#fff;
           color:#111;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
@@ -2726,7 +2733,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.8';
+const APP_VERSION      = '2.4.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17398,6 +17405,7 @@ const WP_DAY_SHORT = { mon:'MON', tue:'TUE', wed:'WED', thu:'THU', fri:'FRI', sa
 const WP_BAKER_COLORS = ['#1a2a6a','#1a5a2a','#7a2a00','#4a1a7a','#005a4a','#6a0020','#555500','#003a5a'];
 
 let _wpWeekMonday        = null;
+let _wpViewDays          = 7;
 let _wpCopyItemId        = null;
 let _wpCopyFromDay       = null;
 let _wpEditDay           = null;
@@ -17491,19 +17499,35 @@ function renderWeekPlan() {
   const weekData  = wpGetWeek(mondayStr);
   const lbl = document.getElementById('wp-week-label');
   if (lbl) lbl.textContent = wpWeekLabel(_wpWeekMonday);
+  const selEl = document.getElementById('wp-view-select');
+  if (selEl) selEl.value = _wpViewDays;
 
   const today = new Date(); today.setHours(0,0,0,0);
+
+  // Compute which days to display based on _wpViewDays
+  const visibleDays = (() => {
+    if (_wpViewDays === 7) return WP_DAYS;
+    const weekEnd = new Date(_wpWeekMonday); weekEnd.setDate(weekEnd.getDate() + 6);
+    const inWeek = today >= _wpWeekMonday && today <= weekEnd;
+    const dayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
+    const todayKey = dayKeys[today.getDay()];
+    let startIdx = inWeek ? WP_DAYS.indexOf(todayKey) : 0;
+    if (startIdx < 0) startIdx = 0;
+    startIdx = Math.min(startIdx, WP_DAYS.length - _wpViewDays);
+    return WP_DAYS.slice(startIdx, startIdx + _wpViewDays);
+  })();
 
   const boardEl = document.getElementById('wp-board');
   if (!boardEl) return;
 
-  boardEl.innerHTML = WP_DAYS.map((day, idx) => {
+  boardEl.innerHTML = visibleDays.map((day, idx) => {
     const dayData = weekData[day];
+    const wpIdx = WP_DAYS.indexOf(day);
     const dayDate = new Date(_wpWeekMonday);
-    dayDate.setDate(dayDate.getDate() + idx);
+    dayDate.setDate(dayDate.getDate() + wpIdx);
     const isToday = dayDate.getTime() === today.getTime();
     const dateStr = dayDate.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const isLast  = idx === 6;
+    const isLast  = idx === visibleDays.length - 1;
 
     const bakerChips = dayData.bakers.length
       ? dayData.bakers.map(name => {
@@ -17599,7 +17623,7 @@ function renderWeekPlan() {
         : cardsHtml;
     }).join('');
 
-    return `<div style="flex:0 0 max(170px,calc(100%/7));min-width:170px;display:flex;
+    return `<div style="flex:0 0 max(170px,calc(100%/${visibleDays.length}));min-width:170px;display:flex;
       flex-direction:column;border-right:${isLast?'none':'2px solid #111'}">
       <div style="background:${isToday?'#1a3a8a':'#111'};color:#fff;padding:13px 12px;
         border-bottom:2px solid ${isToday?'#3a6acc':'#333'}">
@@ -21289,6 +21313,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.9': ['📅 Bake Board view selector — dropdown (7 Days / 3 Days / 1 Day) in the board header; narrower views automatically start from today\'s column (or Monday if viewing another week) and columns expand to fill the space'],
   '2.4.8': [
     '🐛 Fix — Supply Board (v2.4.7) used `var SB_KEY` which conflicted with the Staff Board\'s existing `const SB_KEY`; this SyntaxError prevented the entire app script from loading, breaking the login screen; renamed to `_SB_SUPPLY_KEY` to resolve the conflict',
   ],
