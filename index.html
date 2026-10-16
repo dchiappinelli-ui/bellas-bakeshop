@@ -1090,6 +1090,63 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 
+  <!-- Add Ingredient Modal -->
+  <div id="add-ingredient-modal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:16px"
+    onclick="if(event.target===this)closeAddIngModal()">
+    <div style="background:var(--surface);border-radius:10px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.4);overflow:hidden">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:3px">Add Ingredient</div>
+          <div id="add-ing-recipe-label" style="font-size:12px;color:var(--muted)"></div>
+        </div>
+        <button onclick="closeAddIngModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;flex-shrink:0;padding:2px">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:5px">Ingredient Name</label>
+          <input type="text" id="modal-ing-name" placeholder="e.g. Sir Galahad Flour, Butter…"
+            style="width:100%;font-size:14px;padding:9px 11px;box-sizing:border-box"
+            list="modal-pl-names"
+            oninput="modalIngAutoFill()" onchange="modalIngAutoFill()"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('modal-ing-qty')?.focus()}">
+          <datalist id="modal-pl-names"></datalist>
+          <div id="modal-ing-lib-hint" style="margin-top:6px;min-height:18px"></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:16px">
+          <div style="flex:2">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:5px">Amount</label>
+            <input type="number" id="modal-ing-qty" placeholder="e.g. 2870"
+              style="width:100%;font-size:14px;padding:9px 11px;box-sizing:border-box"
+              oninput="modalIngCostPreview()"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('modal-ing-unit')?.focus()}">
+          </div>
+          <div style="width:80px">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:5px">Unit</label>
+            <input type="text" id="modal-ing-unit" placeholder="g"
+              style="width:100%;font-size:14px;padding:9px 11px;box-sizing:border-box"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('modal-ing-cost')?.focus()}">
+          </div>
+        </div>
+        <div style="margin-bottom:6px">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:5px">Cost per Unit ($/unit)</label>
+          <input type="number" id="modal-ing-cost" placeholder="auto-fills from library" min="0" step="0.00001"
+            style="width:100%;font-size:14px;padding:9px 11px;box-sizing:border-box"
+            oninput="modalIngCostPreview()"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddIngredient()}">
+        </div>
+        <div id="modal-ing-cost-preview" style="min-height:22px;margin-bottom:16px"></div>
+        <div id="modal-ing-error" style="color:var(--danger);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+        <div id="modal-ing-success" style="color:#4a9c6e;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:10px">
+          <button onclick="confirmAddIngredient()" class="btn btn-primary"
+            style="flex:1;font-size:14px;padding:11px 16px;font-weight:700">+ Add Ingredient</button>
+          <button onclick="closeAddIngModal()" class="btn btn-ghost"
+            id="modal-ing-close-btn" style="font-size:14px;padding:11px 18px">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header">
       <span class="card-title">Add New Recipe</span>
@@ -2773,7 +2830,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.19';
+const APP_VERSION      = '2.4.20';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3964,6 +4021,126 @@ function recipeIngCostPreview(recipeId) {
   }
 }
 
+// ============ ADD INGREDIENT MODAL ============
+var _addIngModalRecipeId = null;
+var _addIngModalAdded    = 0;
+
+function openAddIngModal(recipeId) {
+  _addIngModalRecipeId = recipeId;
+  _addIngModalAdded    = 0;
+  const r   = recipes.find(r => r.id === recipeId);
+  const el  = document.getElementById('add-ingredient-modal');
+  el.style.display = 'flex';
+  document.getElementById('add-ing-recipe-label').textContent = r ? 'Adding to: ' + r.name : '';
+  document.getElementById('modal-ing-close-btn').textContent = 'Done';
+  // populate datalist
+  const dl = document.getElementById('modal-pl-names');
+  if (dl) dl.innerHTML = (plLoad()||[]).map(e=>`<option value="${e.name}">`).join('');
+  // clear all fields
+  ['modal-ing-name','modal-ing-qty','modal-ing-unit','modal-ing-cost'].forEach(id => {
+    const f = document.getElementById(id); if (f) f.value = '';
+  });
+  document.getElementById('modal-ing-lib-hint').innerHTML  = '';
+  document.getElementById('modal-ing-cost-preview').innerHTML = '';
+  document.getElementById('modal-ing-error').textContent   = '';
+  document.getElementById('modal-ing-success').textContent = '';
+  setTimeout(() => document.getElementById('modal-ing-name')?.focus(), 60);
+}
+
+function closeAddIngModal() {
+  document.getElementById('add-ingredient-modal').style.display = 'none';
+  const rid = _addIngModalRecipeId;
+  _addIngModalRecipeId = null;
+  if (_addIngModalAdded > 0 && rid != null) {
+    renderRecipes();
+    setTimeout(() => toggleRecipe(rid), 30);
+  }
+  _addIngModalAdded = 0;
+}
+
+function modalIngAutoFill() {
+  const name  = document.getElementById('modal-ing-name')?.value || '';
+  const match = plLookupByName(name);
+  const hint  = document.getElementById('modal-ing-lib-hint');
+  const cost  = document.getElementById('modal-ing-cost');
+  const unit  = document.getElementById('modal-ing-unit');
+  if (match && match.pricePerGram) {
+    if (hint) hint.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:600">📚 ' + match.cat + ' · $' + match.pricePerGram.toFixed(5) + '/g</span>';
+    if (cost && !cost.value) cost.value = match.pricePerGram;
+    if (unit && !unit.value) unit.value = 'g';
+  } else {
+    if (hint) hint.innerHTML = '';
+  }
+  modalIngCostPreview();
+}
+
+function modalIngCostPreview() {
+  const qty  = parseFloat(document.getElementById('modal-ing-qty')?.value)  || 0;
+  const cost = parseFloat(document.getElementById('modal-ing-cost')?.value) || 0;
+  const el   = document.getElementById('modal-ing-cost-preview');
+  if (!el) return;
+  if (qty && cost) {
+    el.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:2px 9px;font-size:12px">→ $' + (qty * cost).toFixed(3) + ' total for this ingredient</span>';
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+function confirmAddIngredient() {
+  const recipeId = _addIngModalRecipeId;
+  if (recipeId == null) return;
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r) return;
+
+  const errEl = document.getElementById('modal-ing-error');
+  const name  = (document.getElementById('modal-ing-name')?.value || '').trim();
+  if (!name) {
+    errEl.textContent = 'Please enter an ingredient name.';
+    document.getElementById('modal-ing-name')?.focus();
+    return;
+  }
+  errEl.textContent = '';
+
+  if (!r.ingredients) r.ingredients = [];
+  const costVal = document.getElementById('modal-ing-cost')?.value;
+  const unitVal = document.getElementById('modal-ing-unit')?.value;
+  let costPerUnit = parseFloat(costVal) || 0;
+  let unit        = (unitVal || '').trim();
+  if (!costPerUnit) {
+    const lib = plLookupByName(name);
+    if (lib && lib.pricePerGram > 0) { costPerUnit = lib.pricePerGram; if (!unit) unit = 'g'; }
+  }
+
+  r.ingredients.push({
+    id: Date.now() + Math.random(),
+    name,
+    quantity: (document.getElementById('modal-ing-qty')?.value || '').trim(),
+    unit,
+    costPerUnit
+  });
+  save();
+  recipeMarkSaved(recipeId);
+  _addIngModalAdded++;
+
+  // Clear for next ingredient
+  ['modal-ing-name','modal-ing-qty','modal-ing-unit','modal-ing-cost'].forEach(id => {
+    const f = document.getElementById(id); if (f) f.value = '';
+  });
+  document.getElementById('modal-ing-lib-hint').innerHTML  = '';
+  document.getElementById('modal-ing-cost-preview').innerHTML = '';
+
+  // Show success flash
+  const suc = document.getElementById('modal-ing-success');
+  suc.textContent = '✓ Added: ' + name;
+  clearTimeout(suc._t);
+  suc._t = setTimeout(() => { suc.textContent = ''; }, 2500);
+
+  // Update close button label
+  document.getElementById('modal-ing-close-btn').textContent = 'Done (' + _addIngModalAdded + ' added)';
+
+  setTimeout(() => document.getElementById('modal-ing-name')?.focus(), 30);
+}
+
 // ============ BULK IMPORT ============
 let _bulkImportData = null;
 
@@ -4323,47 +4500,11 @@ function renderRecipes() {
           <tbody>${rows}</tbody>
         </table></div>` : '<div style="color:var(--muted);font-size:12px;padding:4px 0 12px">No ingredients yet — add one below</div>'}
 
-        <!-- Add ingredient form -->
-        <div style="border:1px dashed var(--border);border-radius:6px;padding:12px;background:var(--surface)">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px">+ Add Ingredient</div>
-          <datalist id="pl-names-${r.id}">${(plLoad()||[]).map(e=>`<option value="${e.name}">`).join('')}</datalist>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-            <div style="flex:3;min-width:140px">
-              <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px">NAME</div>
-              <input type="text" id="ing-name-${r.id}" placeholder="e.g. Butter, Sir Galahad…" list="pl-names-${r.id}"
-                style="width:100%;font-size:13px"
-                oninput="plAutoFillIng(${r.id});recipeIngCostPreview(${r.id})"
-                onchange="plAutoFillIng(${r.id})"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ing-qty-${r.id}')?.focus()}">
-            </div>
-            <div style="width:80px">
-              <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px">AMOUNT</div>
-              <input type="number" id="ing-qty-${r.id}" placeholder="e.g. 2870" style="width:100%;font-size:13px"
-                oninput="recipeIngCostPreview(${r.id})"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ing-unit-${r.id}')?.focus()}">
-            </div>
-            <div style="width:52px">
-              <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px">UNIT</div>
-              <input type="text" id="ing-unit-${r.id}" placeholder="g" style="width:100%;font-size:13px"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ing-cost-${r.id}')?.focus()}">
-            </div>
-            <div style="width:95px">
-              <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px">$/UNIT</div>
-              <input type="number" id="ing-cost-${r.id}" placeholder="auto" min="0" step="0.00001" style="width:100%;font-size:13px"
-                oninput="recipeIngCostPreview(${r.id})"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();addIngredient(${r.id})}">
-            </div>
-            <div>
-              <button class="btn btn-primary" onclick="addIngredient(${r.id})"
-                style="font-size:13px;padding:8px 18px;white-space:nowrap;margin-top:0">+ Add</button>
-            </div>
-            <div>
-              <button class="btn btn-ghost btn-sm" onclick="plOpenIngPicker(${r.id})"
-                style="font-size:12px;color:#4a9c6e;border-color:#4a9c6e;white-space:nowrap;padding:7px 10px">📚 Library</button>
-            </div>
-          </div>
-          <div id="ing-lib-hint-${r.id}" style="margin-top:6px;min-height:18px"></div>
-          <div id="ing-cost-preview-${r.id}" style="min-height:18px"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="openAddIngModal(${r.id})"
+            style="font-size:13px;padding:9px 20px;font-weight:700">+ Add Ingredient</button>
+          <button class="btn btn-ghost btn-sm" onclick="plOpenIngPicker(${r.id})"
+            style="font-size:12px;color:#4a9c6e;border-color:#4a9c6e;padding:8px 12px">📚 Price Library</button>
         </div>
       </div>`;
   }
@@ -21670,6 +21811,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.20': ['🧩 Add Ingredient modal — replaced the broken inline add-form with a proper popup modal; click "+ Add Ingredient" on any recipe card to open it; modal has labeled fields (Name with library autocomplete, Amount, Unit, $/Unit), auto-fills $/unit and unit from the price library, shows live total cost preview, Enter key advances through fields, shows ✓ Added confirmation after each addition with the count updating on the Done button; the modal stays open for rapid multi-ingredient entry and re-renders the recipe card on close; "📚 Price Library" picker button also retained'],
   '2.4.19': ['✏️ Recipe editor overhaul — ingredient table now shows editable fields with a clear underline-on-focus affordance; amount + unit in one compact cell; live Total column updates in place without re-rendering; "Recipe Details" header shows a green ✓ saved badge after any field edit (auto-fades); redesigned "Add Ingredient" panel with labeled inputs (NAME / AMOUNT / UNIT / $/UNIT), live cost preview as you type, Tab-to-next-field and Enter-to-add keyboard flow, and auto-focus on the name field after adding so you can add multiple ingredients quickly; Firebase sync path unchanged — save() → localStorage monkey-patch → secureFlush()'],
   '2.4.18': ['🐛 Fix — prepStatus declared with var instead of let so it hoists correctly when renderRecipes() is called during init before the declaration is reached; guards added in recipeCard so the prep-item banner renders safely even if prepStatus or PREP_STATUS_META is not yet initialized'],
   '2.4.17': ['🫙 Unified prep items + recipes — any recipe can now be tracked as a prep item: check "Track as prep item" inside a recipe card to set shelf life and yield, then log fresh batches with ✅ Log Batch Made; the Prep Items tab shows a 📋 RECIPE badge and "→ Recipe" button for recipe-backed items; recipe-backed items appear automatically in getAllPrepNames() and their shelf life stays in sync with the recipe; plLookupByName() now computes a virtual cost-per-gram for recipe-backed prep items from their ingredient costs and yield so they can be used in recipe cost calculations'],
