@@ -2773,7 +2773,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.14';
+const APP_VERSION      = '2.4.15';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -19238,6 +19238,8 @@ function fbFlushNow() {
     });
   } else {
     button('✅ Retry save', () => {
+      // Use the current known cloud base so the three-way merge succeeds even for arrays.
+      job.base = secureBases[key] ?? job.base;
       job.operationId = crypto.randomUUID(); delete job.inflight; delete job.blocked;
       securePersist(); box.close(); box.remove(); secureFlush();
     }, 'background:#4caf50;color:#fff;font-weight:800;border:none;border-radius:4px;padding:5px 16px');
@@ -19254,9 +19256,27 @@ function fbFlushNow() {
   document.body.append(box); box.showModal();
 }
 function forceSaveKeys(keys) {
-  // Normal edits are already queued. Missing cloud records require explicit owner migration.
+  if (!secureReady || !authGetSession()) {
+    toastSaved('Not signed in — data is safe on this device and will sync after sign-in.'); return;
+  }
+  let acted = 0;
+  for (const key of (keys || [])) {
+    if (!FB_SYNC_KEYS.has(key)) continue;
+    const val = _ls.get(key);
+    if (val === null) continue;
+    if (!secureQueue[key]) {
+      secureQueue[key] = { base: secureBases[key] ?? null, value: val, operationId: crypto.randomUUID() };
+      securePersist(); acted++;
+    } else if (secureQueue[key].blocked) {
+      secureQueue[key].base = secureBases[key] ?? secureQueue[key].base;
+      secureQueue[key].value = val;
+      secureQueue[key].operationId = crypto.randomUUID();
+      delete secureQueue[key].inflight; delete secureQueue[key].blocked;
+      securePersist(); acted++;
+    }
+  }
+  fbSetSyncStatus('syncing');
   secureFlush();
-  if (!Object.keys(secureQueue).length) toastSaved(secureReady ? 'All changes saved to cloud ☁' : 'No pending edits (offline).');
 }
 function pageSaveBtn(keys) { return '<button onclick="fbFlushNow()">☁ Save / review</button>'; }
 function fbUploadLocalData() { alert('Bulk upload is disabled to protect other devices. Use the reviewed migration procedure in ROLLOUT.md.'); }
@@ -21417,6 +21437,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.15': ['🐛 Fix — ☁ Save button now actually works: forceSaveKeys enqueues/unblocks the specified keys with the correct cloud base instead of just calling secureFlush(); Retry save button also sets job.base = secureBases[key] so the three-way merge succeeds on the first try instead of throwing aborted on arrays like bk_price_lib'],
   '2.4.14': ['☁ Draft recovery — "Review / save drafts" dialog now distinguishes data conflicts from server-side blocks (e.g. undeployed function rejecting a new key). Server-block dialogs show a green "Retry save" button so you can unblock a stuck draft after a system update without losing your data — no need to archive or discard.'],
   '2.4.13': ['📦 Raw Material Prices — new "Protein" category (terracotta color, tagged FOH·Sandwich in Supply Board); unit converter in the Add form: enter price per lb/oz/kg/100g/gram and $/gram auto-fills with live preview showing all three unit values; case weight now also accepts lb/oz/kg input; $/lb display column added to the price table (updates live when $/gram changes)'],
   '2.4.12': ['☁ Cloud sync — bk_price_lib (raw material prices, Owner-only write) and bk_supply_board (order board state) are now in FB_SYNC_KEYS; both keys added to server-side KEYS whitelist in functions/access.js; ☁ Save buttons added to Supply Board header and Raw Material Prices panel header; requires Firebase Function re-deploy to take effect'],
