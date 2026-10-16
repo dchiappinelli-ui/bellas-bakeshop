@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
     --surface: #ffffff;
     --surface2: #e8e8e8;
     --border: #cccccc;
-    --accent: #111111;
-    --accent2: #333333;
+    --accent: #e8a045;
+    --accent2: #111111;
     --text: #111111;
     --muted: #777777;
     --success: #2a7a48;
@@ -2733,7 +2733,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.10';
+const APP_VERSION      = '2.4.11';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -21327,6 +21327,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.11': ['🎨 Root fix — CSS variable --accent was incorrectly set to #111111 (black) instead of the intended #e8a045 (warm orange); this caused every action button, active chip, and accent element across the entire app to appear black; corrected at the source so Raw Materials + Add/Save, Supply Board chips, Bulletin Board, Opening/Closing, and all other var(--accent) elements now render with the correct bakery amber color'],
   '2.4.10': ['📦 Supply Board — on-hand quantity: each In Stock card now has a # input and free-text unit field (bags, lbs, cases, etc.) saved per item; 🐛 filter chips (FOH/BOH etc.) no longer go black when active — fixed by replacing var(--accent)=#111 with hardcoded #e8a045 orange'],
   '2.4.9': ['📅 Bake Board view selector — dropdown (7 Days / 3 Days / 1 Day) in the board header; narrower views automatically start from today\'s column (or Monday if viewing another week) and columns expand to fill the space'],
   '2.4.8': [
