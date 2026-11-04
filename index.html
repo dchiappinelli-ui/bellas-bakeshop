@@ -1747,7 +1747,7 @@ document.addEventListener('DOMContentLoaded', function() {
         style="padding:10px 12px;border:2px solid #ccc;border-radius:4px;background:#fff;
           font-size:13px;font-weight:700;color:#111;cursor:pointer;touch-action:manipulation">
         <option value="7">7 Days</option>
-        <option value="3">3 Days</option>
+        <option value="3" selected>3 Days</option>
         <option value="1">1 Day</option>
       </select>
       <button onclick="wpCopyToNext()"
@@ -2830,7 +2830,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.20';
+const APP_VERSION      = '2.4.22';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3681,31 +3681,49 @@ function archiveRecipe(id) {
 function sendRecipeToDoughTimer(id) {
   const r = recipes.find(r => r.id === id);
   if (!r) return;
-  if (!r.stages.length) { alert('This recipe has no stages yet.'); return; }
-  const steps = r.stages.map(s => ({
-    name: s.name,
-    duration: s.activeMins + s.waitMins,
-    type: s.waitMins > 0 && s.activeMins === 0 ? 'wait' : 'active',
-    day: s.day || 1
-  }));
-  const batch = {
-    id: 'dt_' + Date.now(),
-    recipeId: r.id,
-    recipeName: r.name,
-    label: r.name,
-    steps,
-    currentStepIdx: 0,
-    stepStartMs: Date.now(),
-    status: 'active',
-    startedAt: Date.now()
-  };
-  let batches = JSON.parse(localStorage.getItem('bk_dt_batches') || '[]');
-  batches.push(batch);
-  localStorage.setItem('bk_dt_batches', JSON.stringify(batches));
+  const stages = r.stages || [];
+  if (!stages.length) { toastSaved('Add production stages to this recipe first.'); return; }
+
+  // Convert stages → DT steps, splitting each stage into active step + wait step
+  const steps = [];
+  stages.forEach(s => {
+    const active = s.activeMins || 0;
+    const wait   = s.waitMins   || 0;
+    if (active > 0) steps.push({
+      id: 'rs_' + s.id + '_a',
+      name: s.name,
+      duration: active,
+      type: 'active',
+      notes: s.notes || '',
+      manualStart: false
+    });
+    if (wait > 0) steps.push({
+      id: 'rs_' + s.id + '_w',
+      name: active > 0 ? s.name + ' – rest' : s.name,
+      duration: wait,
+      type: 'wait',
+      staggerSuggest: wait >= 30,
+      notes: s.notes || '',
+      manualStart: false
+    });
+  });
+  if (!steps.length) { toastSaved('Stages have no active or wait minutes — add timing first.'); return; }
+
+  // Upsert a DT recipe linked to this main recipe (re-syncs if already imported)
+  const dtRecipes = dtGetRecipes();
+  const existingIdx = dtRecipes.findIndex(dr => dr._sourceRecipeId === id);
+  const dtId = existingIdx >= 0 ? dtRecipes[existingIdx].id : 'dr_' + id;
+  const dtRecipe = { id: dtId, name: r.name, steps, _sourceRecipeId: id };
+  if (existingIdx >= 0) { dtRecipes[existingIdx] = dtRecipe; }
+  else { dtRecipes.push(dtRecipe); }
+  dtSaveRecipes(dtRecipes);
+
+  // Navigate to timer with this recipe selected — baker taps ▶ Start when ready
+  _dtSelectedRecipeId = dtId;
   showPageDirect('doughtimer');
   renderDoughTimer();
   dtStartTick();
-  alert(`"${r.name}" added to Dough Timer as a new batch.`);
+  toastSaved(r.name + (existingIdx >= 0 ? ' updated in' : ' added to') + ' Dough Timer — tap ▶ Start when ready');
 }
 
 function addStage(recipeId) {
@@ -15125,15 +15143,15 @@ function dtImportFromLibrary(recipeId) {
   const stages = r.stages || [];
   let steps;
   if (stages.length > 0) {
-    steps = stages.map((s, i) => ({
-      id: 'step_' + Date.now() + '_' + i,
-      name: s.name,
-      duration: Math.max(1, (s.activeMins || 0) + (s.waitMins || 0)),
-      type: (s.waitMins > 0 && (s.activeMins || 0) === 0) ? 'wait' : 'active',
-      manualStart: false
-    }));
+    steps = [];
+    stages.forEach((s, i) => {
+      const active = s.activeMins || 0;
+      const wait   = s.waitMins   || 0;
+      if (active > 0) steps.push({ id: 'step_' + Date.now() + '_' + i + 'a', name: s.name, duration: active, type: 'active', notes: s.notes || '', manualStart: false });
+      if (wait   > 0) steps.push({ id: 'step_' + Date.now() + '_' + i + 'w', name: active > 0 ? s.name + ' – rest' : s.name, duration: wait, type: 'wait', staggerSuggest: wait >= 30, notes: s.notes || '', manualStart: false });
+    });
+    if (!steps.length) steps = [{ id: 'step_' + Date.now(), name: r.name + ' — Step 1', duration: 30, type: 'active', manualStart: false }];
   } else {
-    // No stages — create a single placeholder step for the baker to fill in
     steps = [{ id: 'step_' + Date.now(), name: r.name + ' — Step 1', duration: 30, type: 'active', manualStart: false }];
   }
 
@@ -17759,7 +17777,7 @@ const WP_DAY_SHORT = { mon:'MON', tue:'TUE', wed:'WED', thu:'THU', fri:'FRI', sa
 const WP_BAKER_COLORS = ['#1a2a6a','#1a5a2a','#7a2a00','#4a1a7a','#005a4a','#6a0020','#555500','#003a5a'];
 
 let _wpWeekMonday        = null;
-let _wpViewDays          = 7;
+let _wpViewDays          = 3;
 let _wpCopyItemId        = null;
 let _wpCopyFromDay       = null;
 let _wpEditDay           = null;
@@ -21811,6 +21829,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.22': ['📅 Bake Board defaults to 3-day view on load'],
+  '2.4.21': ['⏱ Dough Timer ↔ Recipe connection fixed — "Send to Dough Timer" button now properly upserts a Dough Timer recipe entry (in bk_dough_recipes) linked to the main recipe by _sourceRecipeId, instead of the broken approach of attaching steps directly to the batch (which the timer tick never read); each recipe stage is now split correctly into separate active step + wait/rest step so the timer can distinguish action time from rest time; wait steps ≥30 min get staggerSuggest:true so the "start next batch" alert fires during long rests; pressing the button a second time re-syncs the timer recipe from the latest stage data; "📖 From Library" picker also updated with the same split logic; navigates to Dough Timer with recipe pre-selected so baker just taps ▶ Start'],
   '2.4.20': ['🧩 Add Ingredient modal — replaced the broken inline add-form with a proper popup modal; click "+ Add Ingredient" on any recipe card to open it; modal has labeled fields (Name with library autocomplete, Amount, Unit, $/Unit), auto-fills $/unit and unit from the price library, shows live total cost preview, Enter key advances through fields, shows ✓ Added confirmation after each addition with the count updating on the Done button; the modal stays open for rapid multi-ingredient entry and re-renders the recipe card on close; "📚 Price Library" picker button also retained'],
   '2.4.19': ['✏️ Recipe editor overhaul — ingredient table now shows editable fields with a clear underline-on-focus affordance; amount + unit in one compact cell; live Total column updates in place without re-rendering; "Recipe Details" header shows a green ✓ saved badge after any field edit (auto-fades); redesigned "Add Ingredient" panel with labeled inputs (NAME / AMOUNT / UNIT / $/UNIT), live cost preview as you type, Tab-to-next-field and Enter-to-add keyboard flow, and auto-focus on the name field after adding so you can add multiple ingredients quickly; Firebase sync path unchanged — save() → localStorage monkey-patch → secureFlush()'],
   '2.4.18': ['🐛 Fix — prepStatus declared with var instead of let so it hoists correctly when renderRecipes() is called during init before the declaration is reached; guards added in recipeCard so the prep-item banner renders safely even if prepStatus or PREP_STATUS_META is not yet initialized'],
