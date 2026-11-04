@@ -956,18 +956,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">📦 Supply Board<span id="sb-nav-badge" style="display:none;margin-left:5px;background:#cc3333;color:#fff;border-radius:8px;padding:1px 5px;font-size:10px;font-weight:900;vertical-align:middle"></span></button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('prep')">🫙 Prep Items</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('checksheet')">✅ Order Check Sheet</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('orders')">📋 Orders</button>
   <!-- All staff tabs -->
-  <button class="nav-btn" onclick="showPage('dayview')">📋 Day View</button>
   <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
   <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
   <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <button class="nav-btn" onclick="showPage('displaystock')">🖼 Display Stock</button>
   <button class="nav-btn" onclick="showPage('staffboard')">💬 Staff Board</button>
-  <button class="nav-btn" onclick="showPage('eod')">📊 End of Day</button>
   <button class="nav-btn" onclick="showPage('opening')">📋 Checklists</button>
   <button class="nav-btn" onclick="showPage('ingredients')">🧂 Ingredients</button>
   <button class="nav-btn" onclick="showPage('stationguide')">📋 Station Guide</button>
@@ -2830,7 +2826,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.22';
+const APP_VERSION      = '2.4.23';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20309,7 +20305,7 @@ async function _dvSquareSyncInner() {
         <div style="font-size:32px;margin-bottom:10px">🔑</div>
         <div style="font-weight:700;font-size:15px;margin-bottom:6px">Square not configured</div>
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Add your Square Personal Access Token and Location ID in<br><strong>End of Day → Square tab</strong>.</div>
-        <button onclick="dvSqHideModal();showPage('eod');" style="padding:8px 20px;background:#4a6fa5;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Go to End of Day →</button>
+        <button onclick="dvSqHideModal();" style="padding:8px 20px;background:#4a6fa5;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Close</button>
       </div>`);
     return;
   }
@@ -20319,7 +20315,7 @@ async function _dvSquareSyncInner() {
       <div style="font-size:32px;margin-bottom:10px">🔧</div>
       <div style="font-weight:700;font-size:15px;margin-bottom:6px">Proxy URL required</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Square's API blocks direct browser requests.<br>Set up a free Cloudflare Worker proxy and paste the URL in<br><strong>End of Day → Square → Worker Proxy URL</strong>.</div>
-      <button onclick="dvSqHideModal();showPage('eod');" style="padding:8px 20px;background:#4a6fa5;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Go to Settings →</button>
+      <button onclick="dvSqHideModal();" style="padding:8px 20px;background:#4a6fa5;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Close</button>
     </div>`);
     return;
   }
@@ -21829,6 +21825,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.23': ['🧭 Nav simplified — removed End of Day, Display Stock, Day View, and Prep Items tabs from navigation; all pages, data, and storage keys preserved intact; Day View Square config modal now closes cleanly instead of linking to removed EOD tab'],
   '2.4.22': ['📅 Bake Board defaults to 3-day view on load'],
   '2.4.21': ['⏱ Dough Timer ↔ Recipe connection fixed — "Send to Dough Timer" button now properly upserts a Dough Timer recipe entry (in bk_dough_recipes) linked to the main recipe by _sourceRecipeId, instead of the broken approach of attaching steps directly to the batch (which the timer tick never read); each recipe stage is now split correctly into separate active step + wait/rest step so the timer can distinguish action time from rest time; wait steps ≥30 min get staggerSuggest:true so the "start next batch" alert fires during long rests; pressing the button a second time re-syncs the timer recipe from the latest stage data; "📖 From Library" picker also updated with the same split logic; navigates to Dough Timer with recipe pre-selected so baker just taps ▶ Start'],
   '2.4.20': ['🧩 Add Ingredient modal — replaced the broken inline add-form with a proper popup modal; click "+ Add Ingredient" on any recipe card to open it; modal has labeled fields (Name with library autocomplete, Amount, Unit, $/Unit), auto-fills $/unit and unit from the price library, shows live total cost preview, Enter key advances through fields, shows ✓ Added confirmation after each addition with the count updating on the Done button; the modal stays open for rapid multi-ingredient entry and re-renders the recipe card on close; "📚 Price Library" picker button also retained'],
