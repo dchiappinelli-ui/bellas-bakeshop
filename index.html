@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.35';
+const APP_VERSION      = '2.4.36';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -9095,11 +9095,15 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
 // MKSF: Saturday sourdough delivery added (Thu+Sat ×12 each).
 // NFFC: Sourdough updated 30→36.
 // Bedford Farms: new wholesale channel added (Fri/Sat/Sun).
-(function migrateJulyChannelData_v4() {
+// Clear superseded flags immediately (don't need the monkey-patch for removeItem)
+localStorage.removeItem('bk_migration_july_channels_v1');
+localStorage.removeItem('bk_migration_july_channels_v2');
+localStorage.removeItem('bk_migration_july_channels_v3');
+// Defer so the migration runs AFTER the localStorage.setItem monkey-patch is defined (~line 20434).
+// That way saveChannels() goes through the patched setItem, which populates _securePreAuthDrafts
+// automatically — the local migrated data then wins over any old cloud snapshot on sign-in.
+setTimeout(function migrateJulyChannelData_v4() {
   const FLAG = 'bk_migration_july_channels_v4';
-  localStorage.removeItem('bk_migration_july_channels_v1'); // clear superseded flags
-  localStorage.removeItem('bk_migration_july_channels_v2');
-  localStorage.removeItem('bk_migration_july_channels_v3');
   if (localStorage.getItem(FLAG)) return;
 
   function ol(product, variation, unitsEach, days) {
@@ -9238,14 +9242,9 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
     });
   }
 
-  // The monkey-patched localStorage.setItem (which populates _securePreAuthDrafts) is defined
-  // much later in the file and doesn't exist yet when migrations run. Manually seed the draft
-  // so secureSignIn merges the migrated channels into the queue and they win over any old cloud snapshot.
-  if (!window._securePreAuthDrafts) window._securePreAuthDrafts = {};
-  window._securePreAuthDrafts['bk_channels'] = JSON.stringify(channels);
   saveChannels();
   localStorage.setItem(FLAG, '1');
-})();
+}, 0);
 
 // Add placeholder recipe stubs for new products that have no existing recipe.
 // Each stub has a yield and one generic "Production" stage so demand rolls through to the bake board.
@@ -22795,6 +22794,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.36': ['🐛 Fix — July channel migration now deferred via setTimeout(..., 0) so it runs AFTER the localStorage.setItem monkey-patch is defined (line ~20434); previously the migration ran synchronously before the patch, so saveChannels() called the real setItem and never populated _securePreAuthDrafts; with the defer, the patched setItem handles saveChannels() automatically and the migrated channels win over the cloud snapshot on sign-in without any manual seeding'],
   '2.4.35': ['🐛 Fix — bump July migration to _v4; _v3 flag was already set by v2.4.33 (which ran the migration but lacked the preAuthDrafts fix), so v2.4.34 skipped the migration entirely; _v4 forces a fresh run with both fixes in place (name-based channel matching + manual _securePreAuthDrafts seeding)'],
   '2.4.34': ['🐛 Fix — July channel migration now manually seeds window._securePreAuthDrafts[\'bk_channels\'] before calling saveChannels(); migrations run before the localStorage.setItem monkey-patch is defined (line ~20434), so saveChannels() was calling the real setItem and never populating _securePreAuthDrafts; on sign-in secureSignIn found preAuth empty, cloud snapshot won, and overwrote the migrated channels — this fix ensures local migration data always wins over cloud on the first sign-in after the migration runs'],
   '2.4.33': ['🐛 Fix — July channel migration bumped to _v3 and now matches channels by name as a fallback (e.g. "bella", "rochambeau", "lpc", "seafood", "nffc", "bedford") so it works regardless of whether channels have the original hardcoded IDs or were re-created via the UI with generated IDs; clears _v1 and _v2 flags on load'],
