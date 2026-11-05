@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.32';
+const APP_VERSION      = '2.4.33';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -9095,17 +9095,22 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
 // MKSF: Saturday sourdough delivery added (Thu+Sat ×12 each).
 // NFFC: Sourdough updated 30→36.
 // Bedford Farms: new wholesale channel added (Fri/Sat/Sun).
-(function migrateJulyChannelData_v2() {
-  const FLAG = 'bk_migration_july_channels_v2';
-  localStorage.removeItem('bk_migration_july_channels_v1'); // clear superseded flag
+(function migrateJulyChannelData_v3() {
+  const FLAG = 'bk_migration_july_channels_v3';
+  localStorage.removeItem('bk_migration_july_channels_v1'); // clear superseded flags
+  localStorage.removeItem('bk_migration_july_channels_v2');
   if (localStorage.getItem(FLAG)) return;
 
   function ol(product, variation, unitsEach, days) {
     return { id: 'ol_' + Math.random().toString(36).slice(2, 10), product, variation, unitsEach, days };
   }
 
+  function findCh(id, ...nameFragments) {
+    return channels.find(c => c.id === id || (c.name && nameFragments.some(f => c.name.toLowerCase().includes(f))));
+  }
+
   // ch1: Bella's Mount Kisco Retail — Jul 10.26 par levels, Mon now open
-  const bellas = channels.find(c => c.id === 'ch1');
+  const bellas = findCh('ch1', "bella's", 'bella', 'mount kisco');
   if (bellas) {
     bellas.activeDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     bellas.orderLines = [
@@ -9152,7 +9157,7 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
   }
 
   // ch3: Rochambeau — cookies now 3-packs, Choc Chip Cookie added
-  const roch = channels.find(c => c.id === 'ch3');
+  const roch = findCh('ch3', 'rochambeau');
   if (roch) {
     roch.orderLines = [
       ol('SOURDOUGH',                  'individual',1,{Wed:4,Sat:3}),
@@ -9169,7 +9174,7 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
   }
 
   // ch4: LPC — Friday added, Apple Cinnamon Pull Apart new, Round Croissant 12, removed discontinued lines
-  const lpc = channels.find(c => c.id === 'ch4');
+  const lpc = findCh('ch4', 'lpc', 'little pink');
   if (lpc) {
     lpc.activeDays = ['Tue','Thu','Fri','Sat'];
     lpc.orderLines = [
@@ -9182,8 +9187,8 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
     ];
   }
 
-  // ch7: MKSF — Saturday sourdough delivery added
-  const mksf = channels.find(c => c.id === 'ch7');
+  // ch7: MKSF / MKFM — Saturday sourdough delivery added
+  const mksf = findCh('ch7', 'mksf', 'mkfm', 'seafood', 'kisco seafood');
   if (mksf) {
     mksf.activeDays = ['Thu','Sat'];
     const sdLine = (mksf.orderLines || []).find(l => l.product === 'SOURDOUGH');
@@ -9195,7 +9200,7 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
   }
 
   // ch8: NFFC — sourdough 30 → 36
-  const nffc = channels.find(c => c.id === 'ch8');
+  const nffc = findCh('ch8', 'nffc', 'upper west');
   if (nffc) {
     const sdLine = (nffc.orderLines || []).find(l => l.product === 'SOURDOUGH');
     if (sdLine) { sdLine.days = {Wed:36}; }
@@ -9206,7 +9211,7 @@ function saveChannels() { localStorage.setItem('bk_channels', JSON.stringify(cha
   }
 
   // Bedford Farms — new wholesale channel
-  if (!channels.find(c => c.id === 'ch_bedford')) {
+  if (!channels.find(c => c.id === 'ch_bedford' || (c.name && c.name.toLowerCase().includes('bedford')))) {
     channels.push({
       id: 'ch_bedford',
       name: 'Bedford Farms',
@@ -22784,6 +22789,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.33': ['🐛 Fix — July channel migration bumped to _v3 and now matches channels by name as a fallback (e.g. "bella", "rochambeau", "lpc", "seafood", "nffc", "bedford") so it works regardless of whether channels have the original hardcoded IDs or were re-created via the UI with generated IDs; clears _v1 and _v2 flags on load'],
   '2.4.32': ['🐛 Fix — July channel migration bumped to _v2 so it re-runs for anyone whose _v1 flag was set before the full July data was loaded; clears the stale _v1 flag on load'],
   '2.4.31': ['🏷 Placeholder badge — recipe cards with a placeholder stub note now show an amber "PLACEHOLDER" badge next to the recipe name, and the placeholder note is suppressed from the subtitle line to keep it clean'],
   '2.4.30': ['🔗 Recipe linking — all July channel products now mapped to recipes; 10 new placeholder recipe stubs added (Apple Cider Croissant, Pumpkin Morning Bun, Peach Cobbler, Chocolate Cake, Lemon Cake, Chocolate Cupcake, Vanilla Cupcake, Cake Pops, Sourdough Pretzel Packs, English Muffin Packs); runtime recipe-link system: products added via channels that have no recipe now show a prompt to either link to an existing recipe or auto-create a placeholder stub — links are saved to bk_product_recipe_links and respected by all demand calculations; getDemandForRecipe + getProductsForRecipe now consult both hardcoded PRODUCT_TO_RECIPE and runtime links'],
