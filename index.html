@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.36';
+const APP_VERSION      = '2.4.38';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -10207,6 +10207,41 @@ function removeOrderLine(chId, lineId) {
   renderChannelsPage();
 }
 
+let _editLineCtx = null;
+function openEditLineModal(chId, lineId) {
+  const ch = channels.find(c => c.id === chId);
+  if (!ch) return;
+  const line = (ch.orderLines || []).find(l => l.id === lineId);
+  if (!line) return;
+  _editLineCtx = { chId, lineId };
+  document.getElementById('el-product').value = line.product;
+  const varSel = document.getElementById('el-variation');
+  if ([...varSel.options].some(o => o.value === line.variation)) varSel.value = line.variation;
+  else { const opt = document.createElement('option'); opt.value = line.variation; opt.textContent = line.variation; varSel.appendChild(opt); varSel.value = line.variation; }
+  document.getElementById('el-units').value = line.unitsEach;
+  document.getElementById('el-notes').value = line.notes || '';
+  document.getElementById('ch-edit-line-modal').style.display = 'block';
+}
+function closeEditLineModal() {
+  document.getElementById('ch-edit-line-modal').style.display = 'none';
+  _editLineCtx = null;
+}
+function saveEditLine() {
+  if (!_editLineCtx) return;
+  const ch = channels.find(c => c.id === _editLineCtx.chId);
+  if (!ch) return;
+  const line = (ch.orderLines || []).find(l => l.id === _editLineCtx.lineId);
+  if (!line) return;
+  line.product = document.getElementById('el-product').value.trim().toUpperCase() || line.product;
+  line.variation = document.getElementById('el-variation').value;
+  line.unitsEach = parseInt(document.getElementById('el-units').value, 10) || 1;
+  const notes = document.getElementById('el-notes').value.trim();
+  if (notes) line.notes = notes; else delete line.notes;
+  saveChannels();
+  closeEditLineModal();
+  renderChannelsPage();
+}
+
 function renderWeeklySummary() {
   const el = document.getElementById('ch-weekly-summary');
   if (!el) return;
@@ -10344,6 +10379,7 @@ function renderChannelsPage() {
                 <td style="padding:5px 8px;font-size:12px">
                   <div style="font-weight:500">${line.product}</div>
                   <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}</div>
+                  ${line.notes ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-style:italic">${line.notes}</div>` : ''}
                 </td>
                 ${ALL_DAYS.map(d => {
                   const dayActive = ch.activeDays.includes(d);
@@ -10357,9 +10393,11 @@ function renderChannelsPage() {
                   <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">${wkUnits}</div>
                   ${line.unitsEach>1?`<div style="font-size:10px;color:var(--muted)">${wkOrdered} ordered</div>`:''}
                 </td>
-                <td style="padding:3px;text-align:center">
+                <td style="padding:3px;text-align:center;white-space:nowrap">
+                  <button data-ch="${ch.id}" data-line="${line.id}" class="edit-line-btn"
+                    style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px" title="Edit line">✏</button>
                   <button data-ch="${ch.id}" data-line="${line.id}" class="rm-order-btn"
-                    style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">✕</button>
+                    style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px">✕</button>
                 </td>
               </tr>`;
             }).join('')}
@@ -10410,6 +10448,9 @@ function renderChannelsPage() {
   });
   document.querySelectorAll('.rm-order-btn').forEach(btn => {
     btn.addEventListener('click', () => removeOrderLine(btn.dataset.ch, btn.dataset.line));
+  });
+  document.querySelectorAll('.edit-line-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditLineModal(btn.dataset.ch, btn.dataset.line));
   });
   document.querySelectorAll('.edit-ch-btn').forEach(btn => {
     btn.addEventListener('click', () => openEditChannel(btn.dataset.ch));
@@ -22794,6 +22835,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.38': ['✏ Edit order line — pencil button on each channel order line opens a modal to edit product name, variation, units each, and add a free-text notes field; notes display in amber italic under the product row; notes are stored on the orderLine object and sync to cloud with the next saveChannels()'],
+  '2.4.37': ['🐛 Fix — July channel migration moved into applyPendingChannelMigrations(), called directly inside secureSignIn right after secureReady = true; this guarantees saveChannels() runs through the fully-wired monkey-patched setItem → queue → Firestore pipeline with no cloud-sync race; previous attempts (preAuthDrafts seeding, setTimeout) all ran before sign-in and lost to the cloud snapshot'],
   '2.4.36': ['🐛 Fix — July channel migration now deferred via setTimeout(..., 0) so it runs AFTER the localStorage.setItem monkey-patch is defined (line ~20434); previously the migration ran synchronously before the patch, so saveChannels() called the real setItem and never populated _securePreAuthDrafts; with the defer, the patched setItem handles saveChannels() automatically and the migrated channels win over the cloud snapshot on sign-in without any manual seeding'],
   '2.4.35': ['🐛 Fix — bump July migration to _v4; _v3 flag was already set by v2.4.33 (which ran the migration but lacked the preAuthDrafts fix), so v2.4.34 skipped the migration entirely; _v4 forces a fresh run with both fixes in place (name-based channel matching + manual _securePreAuthDrafts seeding)'],
   '2.4.34': ['🐛 Fix — July channel migration now manually seeds window._securePreAuthDrafts[\'bk_channels\'] before calling saveChannels(); migrations run before the localStorage.setItem monkey-patch is defined (line ~20434), so saveChannels() was calling the real setItem and never populating _securePreAuthDrafts; on sign-in secureSignIn found preAuth empty, cloud snapshot won, and overwrote the migrated channels — this fix ensures local migration data always wins over cloud on the first sign-in after the migration runs'],
@@ -23156,6 +23199,129 @@ function versionDismiss() {
 
 
 
+// Post-signin channel migrations — runs AFTER secureReady = true so saveChannels() properly
+// queues to Firestore. This is the only reliable place to run migrations that must win over cloud.
+function applyPendingChannelMigrations() {
+  const FLAG = 'bk_migration_july_channels_v4';
+  if (localStorage.getItem(FLAG)) return;
+  function ol(product, variation, unitsEach, days) {
+    return { id: 'ol_' + Math.random().toString(36).slice(2, 10), product, variation, unitsEach, days };
+  }
+  function findCh(id, ...nameFragments) {
+    return channels.find(c => c.id === id || (c.name && nameFragments.some(f => c.name.toLowerCase().includes(f))));
+  }
+  const bellas = findCh('ch1', "bella's", 'bella', 'mount kisco');
+  if (bellas) {
+    bellas.activeDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    bellas.orderLines = [
+      ol('SOURDOUGH',                     'individual',1,{Mon:24,Tue:16,Wed:14,Thu:24,Fri:24,Sat:24,Sun:24}),
+      ol('BAGUETTE',                      'individual',1,{Wed:4,Thu:4,Fri:6,Sat:6,Sun:6}),
+      ol('SOURDOUGH BAGELS',              'individual',1,{Tue:30,Wed:30,Thu:30,Fri:30,Sat:30,Sun:30}),
+      ol('SOURDOUGH EVERYTHING BAGELS',   'individual',1,{Tue:18,Wed:18,Thu:18,Fri:18,Sat:18,Sun:18}),
+      ol('OLIVE SOURDOUGH',               'individual',1,{Mon:2,Tue:2,Wed:2,Thu:2,Fri:3,Sat:3,Sun:3}),
+      ol('CRANBERRY WALNUT SOURDOUGH',    'individual',1,{Mon:2,Tue:2,Wed:2,Thu:2,Fri:3,Sat:3,Sun:3}),
+      ol('BRIOCHE LOAF',                  'individual',1,{Thu:2,Fri:2,Sat:2,Sun:2}),
+      ol('CROISSANT',                     'individual',1,{Mon:18,Tue:18,Wed:18,Thu:18,Fri:24,Sat:42,Sun:36}),
+      ol('CHOCOLATE CROISSANT',           'individual',1,{Mon:8,Tue:6,Wed:8,Thu:10,Fri:12,Sat:16,Sun:12}),
+      ol('ALMOND CROISSANT',              'individual',1,{Mon:8,Tue:6,Wed:6,Thu:8,Fri:8,Sat:12,Sun:12}),
+      ol('CROISSANT CINNAMON BUN',        'individual',1,{Mon:4,Tue:4,Wed:4,Thu:4,Fri:6,Sat:8,Sun:9}),
+      ol('APPLE CINNAMON PULL APART',     'individual',1,{Mon:6,Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+      ol('APPLE CIDER CROISSANT',         'individual',1,{Mon:4,Tue:4,Wed:4,Thu:4,Fri:6,Sat:6,Sun:6}),
+      ol('EVERYTHING ROUND CROISSANT',    'individual',1,{Mon:4,Tue:4,Wed:4,Thu:4,Fri:6,Sat:6,Sun:4}),
+      ol('PUMPKIN MORNING BUN',           'individual',1,{Mon:4,Tue:4,Wed:4,Thu:4,Fri:6,Sat:6,Sun:6}),
+      ol('PEACH COBBLER',                 'individual',1,{Mon:4,Tue:4,Wed:4,Thu:4,Fri:4,Sat:6,Sun:6}),
+      ol('BLUEBERRY MUFFIN',              'individual',1,{Mon:4,Tue:4,Wed:4,Thu:4,Fri:4,Sat:4,Sun:4}),
+      ol('CHOCOLATE CHIP COOKIE',         'individual',1,{Mon:12,Tue:12,Wed:12,Thu:12,Fri:12,Sat:12,Sun:12}),
+      ol('OATMEAL CRANBERRY',             'individual',1,{Mon:8,Tue:8,Wed:8,Thu:8,Fri:8,Sat:12,Sun:8}),
+      ol('RASPBERRY WHITE CHOCOLATE',     'individual',1,{Mon:8,Tue:8,Wed:8,Thu:8,Fri:8,Sat:12,Sun:8}),
+      ol('CHOCOLATE CHIP WALNUT COOKIE',  'individual',1,{Mon:8,Tue:8,Wed:8,Thu:8,Fri:8,Sat:12,Sun:8}),
+      ol('FRENCH MACARON (VANILLA)',      'individual',1,{Mon:20,Tue:20,Wed:20,Thu:20,Fri:20,Sat:20,Sun:20}),
+      ol('FRENCH MACARON (DOUBLE CHOCOLATE)','individual',1,{Mon:20,Tue:20,Wed:20,Thu:20,Fri:20,Sat:20,Sun:20}),
+      ol('FUNFETTI MACARON',              'individual',1,{Mon:20,Tue:20,Wed:20,Thu:20,Fri:20,Sat:20,Sun:20}),
+      ol('SMORES MACARON',                'individual',1,{Mon:20,Tue:20,Wed:20,Thu:20,Fri:20,Sat:20,Sun:20}),
+      ol('PUMPKIN CREME PIE MACARON',     'individual',1,{Mon:20,Tue:20,Wed:20,Thu:20,Fri:20,Sat:20,Sun:20}),
+      ol('RASPBERRY MACARON',             'individual',1,{Mon:20,Tue:20,Wed:20,Thu:20,Fri:20,Sat:20,Sun:20}),
+      ol('CHOCOLATE CAKE SLICE',          'individual',1,{Mon:6,Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+      ol('LEMON CAKE SLICE',              'individual',1,{Mon:6,Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+      ol('COFFEE CAKE SLICE',             'individual',1,{Mon:6,Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+      ol('VANILLA CUPCAKE',               'individual',1,{Mon:6,Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+      ol('CHOCOLATE CUPCAKE',             'individual',1,{Mon:6,Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+      ol('CAKE POP CHOCOLATE',            'individual',1,{Mon:6,Tue:8,Wed:8,Thu:8,Fri:8,Sat:10,Sun:8}),
+      ol('CAKE POP FUNFETTI',             'individual',1,{Mon:6,Tue:8,Wed:8,Thu:8,Fri:8,Sat:10,Sun:8}),
+      ol('CAKE POP LEMON',                'individual',1,{Mon:6,Tue:8,Wed:8,Thu:8,Fri:8,Sat:10,Sun:8}),
+      ol('CAKE POP RED VELVET',           'individual',1,{Mon:6,Tue:8,Wed:8,Thu:8,Fri:8,Sat:10,Sun:8}),
+      ol('SOURDOUGH PRETZEL (FREEZER PACKS)','individual',1,{Tue:3,Wed:3,Thu:3,Fri:3,Sat:3,Sun:3}),
+      ol('ENGLISH MUFFIN (FREEZER PACKS)','individual',1,{Tue:3,Wed:3,Thu:3,Fri:3,Sat:3,Sun:3}),
+      ol('PIZZA DOUGH (FREEZER)',         'individual',1,{Tue:6,Wed:6,Thu:6,Fri:6,Sat:6,Sun:6}),
+    ];
+  }
+  const roch = findCh('ch3', 'rochambeau');
+  if (roch) {
+    roch.orderLines = [
+      ol('SOURDOUGH',                  'individual',1,{Wed:4,Sat:3}),
+      ol('BAGUETTE',                   'individual',1,{Wed:3,Sat:2}),
+      ol('CROISSANT',                  'individual',1,{Wed:6,Sat:6}),
+      ol('ALMOND CROISSANT',           'individual',1,{Wed:3,Sat:3}),
+      ol('CHOCOLATE CROISSANT',        'individual',1,{Wed:5,Sat:5}),
+      ol('OLIVE SOURDOUGH',            'individual',1,{Wed:2,Sat:2}),
+      ol('CRANBERRY WALNUT SOURDOUGH', 'individual',1,{Wed:4,Sat:3}),
+      ol('CHOCOLATE CHIP COOKIE',      '3-pack',    3,{Wed:3,Sat:3}),
+      ol('OATMEAL CRANBERRY',          '3-pack',    3,{Wed:3,Sat:3}),
+      ol('RASPBERRY WHITE CHOCOLATE',  '3-pack',    3,{Wed:3,Sat:3}),
+    ];
+  }
+  const lpc = findCh('ch4', 'lpc', 'little pink');
+  if (lpc) {
+    lpc.activeDays = ['Tue','Thu','Fri','Sat'];
+    lpc.orderLines = [
+      ol('SOURDOUGH',               'individual',1,{Tue:2,Thu:3,Sat:4}),
+      ol('CROISSANT',               'individual',1,{Tue:12,Thu:12,Sat:12}),
+      ol('CHOCOLATE CROISSANT',     'individual',1,{Tue:6,Thu:6,Fri:6,Sat:6}),
+      ol('ROUND CROISSANT',         'individual',1,{Tue:12,Thu:12,Sat:12}),
+      ol('APPLE CINNAMON PULL APART','individual',1,{Tue:6,Thu:6,Fri:6,Sat:6}),
+      ol('CIABATTA ROLLS',          'individual',1,{Tue:6,Sat:6}),
+    ];
+  }
+  const mksf = findCh('ch7', 'mksf', 'mkfm', 'seafood', 'kisco seafood');
+  if (mksf) {
+    mksf.activeDays = ['Thu','Sat'];
+    const sdLine = (mksf.orderLines || []).find(l => l.product === 'SOURDOUGH');
+    if (sdLine) { sdLine.days = {Thu:12,Sat:12}; }
+    else { if (!mksf.orderLines) mksf.orderLines = []; mksf.orderLines.push(ol('SOURDOUGH','individual',1,{Thu:12,Sat:12})); }
+  }
+  const nffc = findCh('ch8', 'nffc', 'upper west');
+  if (nffc) {
+    const sdLine = (nffc.orderLines || []).find(l => l.product === 'SOURDOUGH');
+    if (sdLine) { sdLine.days = {Wed:36}; }
+    else { if (!nffc.orderLines) nffc.orderLines = []; nffc.orderLines.push(ol('SOURDOUGH','individual',1,{Wed:36})); }
+  }
+  if (!channels.find(c => c.id === 'ch_bedford' || (c.name && c.name.toLowerCase().includes('bedford')))) {
+    channels.push({
+      id: 'ch_bedford', name: 'Bedford Farms', type: 'wholesale',
+      contact: '', notes: 'Wholesale retail — Fri/Sat/Sun deliveries; cookies in 3-packs',
+      alwaysOn: false, activeDays: ['Fri','Sat','Sun'], activeThisWeek: false,
+      orderLines: [
+        ol('CHOCOLATE CHIP COOKIE',    '3-pack',    3,{Fri:3,Sat:3,Sun:3}),
+        ol('OATMEAL CRANBERRY',        '3-pack',    3,{Fri:3,Sat:3,Sun:3}),
+        ol('RASPBERRY WHITE CHOCOLATE','3-pack',    3,{Fri:3,Sat:3,Sun:3}),
+        ol('CROISSANT',          'individual',1,{Fri:2,Sat:2,Sun:2}),
+        ol('ALMOND CROISSANT',   'individual',1,{Fri:2,Sat:2,Sun:2}),
+        ol('CHOCOLATE CROISSANT','individual',1,{Fri:2,Sat:2,Sun:2}),
+        ol('APPLE CINNAMON PULL APART','individual',1,{Fri:2,Sat:2,Sun:2}),
+        ol('CHOCOLATE CUPCAKE',  'individual',1,{Sat:3,Sun:3}),
+        ol('BREAD PUDDING',      'individual',1,{Sat:2,Sun:2}),
+        ol('COFFEE CAKE',        'individual',1,{Fri:1,Sat:1,Sun:1}),
+        ol('SOURDOUGH PRETZEL (SINGLE)','individual',1,{Fri:2,Sat:3,Sun:3}),
+      ],
+    });
+  }
+  saveChannels();
+  localStorage.setItem(FLAG, '1');
+  if (typeof renderChannelsPage === 'function' && document.getElementById('page-channels')?.classList.contains('active')) {
+    renderChannelsPage();
+  }
+}
+
 // SOURCE: bootstrap.js
 let secureLoginBusy = false;
 async function secureSignOut() {
@@ -23201,6 +23367,7 @@ async function secureSignIn(staffId, pin) {
       }
     });
     secureReady = true;
+    applyPendingChannelMigrations();
     localStorage.removeItem('bk_staff_pins');
     localStorage.removeItem('bk_auth_session');
     idleTouch(); authHideModal(); authUpdateChip(); authRedirectForRole(result.member.role);
@@ -23330,6 +23497,39 @@ async function _loadFirebase() {
 </div>
 
 <!-- Recipe-link prompt: shown after adding a channel order line with no recipe mapping -->
+<div id="ch-edit-line-modal" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,0.65)" onclick="if(event.target===this)closeEditLineModal()">
+  <div style="background:var(--card);border-radius:14px;padding:24px 24px 18px;max-width:440px;width:90%;margin:10% auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+    <button onclick="closeEditLineModal()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
+    <div style="font-weight:700;font-size:16px;margin-bottom:14px">Edit order line</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px">Product
+        <input id="el-product" type="text" style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px">
+      </label>
+      <div style="display:flex;gap:10px">
+        <label style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;flex:1">Variation
+          <select id="el-variation" style="padding:7px 8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px">
+            <option value="individual">individual</option>
+            <option value="3-pack">3-pack</option>
+            <option value="6-pack">6-pack</option>
+            <option value="4-pack">4-pack</option>
+            <option value="2-pack">2-pack</option>
+          </select>
+        </label>
+        <label style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;width:90px">Units each
+          <input id="el-units" type="number" min="1" style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace">
+        </label>
+      </div>
+      <label style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px">Notes <span style="font-weight:400">(shown under product name)</span>
+        <input id="el-notes" type="text" placeholder="e.g. allergen note, packaging detail…" style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px">
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
+      <button onclick="closeEditLineModal()" style="padding:7px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px">Cancel</button>
+      <button onclick="saveEditLine()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="ch-recipe-link-modal" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,0.65)" onclick="if(event.target===this)closeRecipeLinkModal()">
   <div style="background:var(--card);border-radius:14px;padding:24px 24px 18px;max-width:420px;width:90%;margin:12% auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
     <button onclick="closeRecipeLinkModal()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
