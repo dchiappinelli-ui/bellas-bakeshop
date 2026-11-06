@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.39';
+const APP_VERSION      = '2.4.40';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2924,6 +2924,7 @@ function getCatMeta(name) {
   return recipeCategories.find(c => c.name === name) || { name: name || 'Other', color: '#707880' };
 }
 let recipeFilterCat = 'All';
+let demandFilterCat = 'All';
 
 // Runtime product→recipe links: persisted in localStorage so links added via the prompt survive reloads.
 // Keys not in the hardcoded PRODUCT_TO_RECIPE map are looked up here by getDemandForRecipe / getProductsForRecipe.
@@ -10356,7 +10357,57 @@ function renderWeeklySummary() {
     });
   });
 
-  el.innerHTML = `<div style="overflow-x:auto">
+  // Category dropdown filter
+  const catDropdown = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <label style="font-size:11px;color:var(--muted);font-weight:600">Category</label>
+    <select onchange="demandFilterCat=this.value;renderWeeklySummary()"
+      style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;cursor:pointer">
+      <option value="All" ${demandFilterCat==='All'?'selected':''}>All categories</option>
+      ${recipeCategories.map(c => `<option value="${c.name}" ${demandFilterCat===c.name?'selected':''}>${c.name}</option>`).join('')}
+    </select>
+    ${demandFilterCat !== 'All' ? `<button onclick="demandFilterCat='All';renderWeeklySummary()" style="padding:3px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✕ Clear</button>` : ''}
+    ${demandFilterCat !== 'All' ? `<span style="font-size:11px;padding:3px 10px;border-radius:12px;background:${getCatMeta(demandFilterCat).color}22;color:${getCatMeta(demandFilterCat).color};font-weight:600">${demandFilterCat}</span>` : ''}
+  </div>`;
+
+  // Build sorted product list grouped by category
+  const catOrder = recipeCategories.map(c => c.name);
+  const allProducts = Object.entries(totals).sort(([a],[b]) => {
+    const ca = catOrder.indexOf(getProductCategory(a));
+    const cb = catOrder.indexOf(getProductCategory(b));
+    if (ca !== cb) return (ca===-1?999:ca)-(cb===-1?999:cb);
+    return a.localeCompare(b);
+  });
+  const filtered = demandFilterCat === 'All' ? allProducts : allProducts.filter(([p]) => getProductCategory(p) === demandFilterCat);
+
+  let lastDemandCat = null;
+  const tableRows = filtered.map(([product, weekUnits]) => {
+    const meta = getPackMeta(product);
+    const lineCat = getProductCategory(product);
+    const catMeta = getCatMeta(lineCat);
+    let catHeaderRow = '';
+    if (demandFilterCat === 'All' && lineCat !== lastDemandCat) {
+      lastDemandCat = lineCat;
+      catHeaderRow = `<tr><td colspan="${DAYS_SHORT.length+2}" style="padding:8px 10px 3px;border-bottom:1px solid ${catMeta.color}44">
+        <span style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${catMeta.color}">${catMeta.name}</span>
+      </td></tr>`;
+    }
+    return catHeaderRow + `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 10px;border-left:2px solid ${catMeta.color}66">
+        <div style="font-weight:500;font-size:12px">${product}</div>
+        ${meta.unitsPerPack>1?`<div style="font-size:10px;color:var(--muted)">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
+        ${meta.deliveryLead>0?`<div style="font-size:10px;color:var(--warn)">⏱ bake & pack day before</div>`:''}
+      </td>
+      ${DAYS_SHORT.map(d => {
+        const units = byDay[d][product] || 0;
+        return `<td style="padding:6px;text-align:center;font-size:11px;color:${units>0?'var(--text)':'var(--border)'}">
+          ${units>0 ? `<div style="font-family:'DM Mono',monospace;font-weight:600">${units}</div>` : '—'}
+        </td>`;
+      }).join('')}
+      <td style="padding:6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${weekUnits}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = catDropdown + `<div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px">
       <thead>
         <tr style="border-bottom:2px solid var(--border)">
@@ -10365,26 +10416,7 @@ function renderWeeklySummary() {
           <th style="padding:6px;text-align:center;color:var(--accent);font-size:10px;text-transform:uppercase">Week Units</th>
         </tr>
       </thead>
-      <tbody>
-        ${Object.entries(totals).sort().map(([product, weekUnits]) => {
-          const meta = getPackMeta(product);
-          return `
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:6px 10px">
-              <div style="font-weight:500;font-size:12px">${product}</div>
-              ${meta.unitsPerPack>1?`<div style="font-size:10px;color:var(--muted)">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
-              ${meta.deliveryLead>0?`<div style="font-size:10px;color:var(--warn)">⏱ bake & pack day before</div>`:''}
-            </td>
-            ${DAYS_SHORT.map(d => {
-              const units = byDay[d][product] || 0; // already in production units
-              return `<td style="padding:6px;text-align:center;font-size:11px;color:${units>0?'var(--text)':'var(--border)'}">
-                ${units>0 ? `<div style="font-family:'DM Mono',monospace;font-weight:600">${units}</div>` : '—'}
-              </td>`;
-            }).join('')}
-            <td style="padding:6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${weekUnits}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
+      <tbody>${tableRows}</tbody>
     </table>
   </div>
 
@@ -22947,6 +22979,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.40': ['📊 Weekly Demand Summary — category filter dropdown above the demand table; select any category to filter to only those products; when All is selected, products are grouped by category with colored section headers and a left-border accent per category color, sorted by category order then alphabetically; Clear button resets to All'],
   '2.4.39': ['🏷 Recipe categories — user-defined categories with color coding: filter tabs on Recipe Library (All + per category, with recipe counts); colored category badges on every recipe card; colored section dividers per category; category dropdown in recipe edit form uses the live category list; "Manage" button to add, reorder, recolor, or delete categories; channels order lines now grouped by category with colored sub-headers and a left-border accent; categories stored in bk_recipe_categories (localStorage); initial set: Bread, Croissant, Pastry, Cookies, Cake, Bagel, Savory, Freezer, Other'],
   '2.4.38': ['✏ Edit order line — pencil button on each channel order line opens a modal to edit product name, variation, units each, and add a free-text notes field; notes display in amber italic under the product row; notes are stored on the orderLine object and sync to cloud with the next saveChannels()'],
   '2.4.37': ['🐛 Fix — July channel migration moved into applyPendingChannelMigrations(), called directly inside secureSignIn right after secureReady = true; this guarantees saveChannels() runs through the fully-wired monkey-patched setItem → queue → Firestore pipeline with no cloud-sync race; previous attempts (preAuthDrafts seeding, setTimeout) all ran before sign-in and lost to the cloud snapshot'],
