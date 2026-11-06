@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.38';
+const APP_VERSION      = '2.4.39';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -2906,6 +2906,25 @@ function migrateSkillStrings() {
 
 // ============ DATA STORE ============
 let recipes = JSON.parse(localStorage.getItem('bk_recipes') || '[]');
+
+const DEFAULT_RECIPE_CATS = [
+  { id:'bread',     name:'Bread',     color:'#c8902a' },
+  { id:'croissant', name:'Croissant', color:'#b8a040' },
+  { id:'pastry',    name:'Pastry',    color:'#8060c0' },
+  { id:'cookies',   name:'Cookies',   color:'#d06040' },
+  { id:'cake',      name:'Cake',      color:'#c05080' },
+  { id:'bagel',     name:'Bagel',     color:'#3a9080' },
+  { id:'savory',    name:'Savory',    color:'#789050' },
+  { id:'freezer',   name:'Freezer',   color:'#4878c0' },
+  { id:'other',     name:'Other',     color:'#707880' },
+];
+let recipeCategories = JSON.parse(localStorage.getItem('bk_recipe_categories') || 'null') || DEFAULT_RECIPE_CATS;
+function saveRecipeCategories() { localStorage.setItem('bk_recipe_categories', JSON.stringify(recipeCategories)); }
+function getCatMeta(name) {
+  return recipeCategories.find(c => c.name === name) || { name: name || 'Other', color: '#707880' };
+}
+let recipeFilterCat = 'All';
+
 // Runtime product→recipe links: persisted in localStorage so links added via the prompt survive reloads.
 // Keys not in the hardcoded PRODUCT_TO_RECIPE map are looked up here by getDemandForRecipe / getProductsForRecipe.
 let _productRecipeLinks = JSON.parse(localStorage.getItem('bk_product_recipe_links') || '{}');
@@ -4290,18 +4309,36 @@ function renderRecipes() {
   if (migrated) save();
 
   const SKILLS   = ['Head Baker','Baker','Bakery Assistant','Anyone'];
-  const CAT_ORDER = ['Bread','Croissant','Bagel','Pastry','Cookie / Bar','Savory','Other'];
+  const CAT_ORDER = recipeCategories.map(c => c.name);
 
-  const active   = recipes.filter(r => r.active !== false);
-  const archived = recipes.filter(r => r.active === false);
+  const allActive  = recipes.filter(r => r.active !== false);
+  const active     = recipeFilterCat === 'All' ? allActive : allActive.filter(r => (r.category || 'Other') === recipeFilterCat);
+  const archived   = recipes.filter(r => r.active === false);
+
+  // Build filter tab row
+  const catCounts = {};
+  recipeCategories.forEach(c => { catCounts[c.name] = 0; });
+  allActive.forEach(r => { const k = r.category || 'Other'; if (catCounts[k] !== undefined) catCounts[k]++; else catCounts['Other'] = (catCounts['Other']||0)+1; });
+  const filterTabs = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+    <button onclick="recipeFilterCat='All';renderRecipes()" style="padding:4px 12px;border-radius:20px;border:1px solid ${recipeFilterCat==='All'?'var(--accent)':'var(--border)'};background:${recipeFilterCat==='All'?'var(--accent)':'transparent'};color:${recipeFilterCat==='All'?'#fff':'var(--muted)'};cursor:pointer;font-size:11px;font-weight:600">All</button>
+    ${recipeCategories.map(c => {
+      const active2 = recipeFilterCat === c.name;
+      const count = catCounts[c.name] || 0;
+      return `<button onclick="recipeFilterCat='${c.name}';renderRecipes()" style="padding:4px 12px;border-radius:20px;border:1px solid ${active2?c.color:'var(--border)'};background:${active2?c.color+'22':'transparent'};color:${active2?c.color:'var(--muted)'};cursor:pointer;font-size:11px;font-weight:600">${c.name}${count?' ('+count+')':''}</button>`;
+    }).join('')}
+    <button onclick="openManageCatsModal()" style="padding:4px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;margin-left:auto">+ Manage</button>
+  </div>`;
 
   // Group active by category
   const byCategory = {};
   CAT_ORDER.forEach(c => byCategory[c] = []);
   active.forEach(r => {
     const cat = CAT_ORDER.includes(r.category) ? r.category : 'Other';
+    if (!byCategory[cat]) byCategory[cat] = [];
     byCategory[cat].push(r);
   });
+
+  let html = filterTabs;
 
   function recipeCard(r) {
     const totalActive = r.stages.reduce((s, x) => s + x.activeMins, 0);
@@ -4344,7 +4381,7 @@ function renderRecipes() {
         <input type="text" value="${(r.prepYieldUnit||'').replace(/"/g,'&quot;')}" placeholder="e.g. 500g, 2 jars, 1 batch"
           onchange="updateRecipe(${r.id},'prepYieldUnit',this.value)" style="width:160px">
       </div>` : ''}`;
-    const CATS        = ['Bread','Pastry','Cookie / Bar','Bagel','Croissant','Savory','Other'];
+    const CATS        = recipeCategories.map(c => c.name);
 
     return `
     <div class="recipe-card" style="${isArchived ? 'opacity:0.6' : ''}">
@@ -4352,6 +4389,7 @@ function renderRecipes() {
         <div style="flex:1">
           <div class="recipe-name" style="display:flex;align-items:center;gap:8px">
             ${r.name}
+            ${(()=>{ const m=getCatMeta(r.category||'Other'); return `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:${m.color};border:1px solid ${m.color}66;border-radius:12px;padding:1px 8px;flex-shrink:0">${m.name}</span>`; })()}
             ${(r.notes || '').startsWith('⚠️ Placeholder') ? `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:#3a2800;color:#e8a045;border:1px solid #6b4700;border-radius:4px;padding:1px 7px;flex-shrink:0">Placeholder</span>` : ''}
           </div>
           <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.yield || '?'} ${r.notes && !(r.notes || '').startsWith('⚠️ Placeholder') ? '· '+r.notes : ''}</div>
@@ -4788,15 +4826,15 @@ function renderRecipes() {
   }
 
   // ── Render: grouped by category, archived at bottom ──────────────────────
-  let html = '';
 
   CAT_ORDER.forEach(cat => {
     const list = byCategory[cat];
-    if (!list.length) return;
+    if (!list || !list.length) return;
+    const meta = getCatMeta(cat);
     html += `<div style="display:flex;align-items:center;gap:10px;margin:20px 0 10px">
       <div style="font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;
-        color:var(--accent);white-space:nowrap">${cat}</div>
-      <div style="flex:1;height:1px;background:var(--border)"></div>
+        color:${meta.color};white-space:nowrap">${cat}</div>
+      <div style="flex:1;height:1px;background:${meta.color}44"></div>
       <div style="font-size:11px;color:var(--muted)">${list.length} recipe${list.length !== 1 ? 's' : ''}</div>
     </div>`;
     list.forEach(r => { html += recipeCard(r); });
@@ -10199,12 +10237,66 @@ function chRlinkCreatePlaceholder() {
   renderRecipes();
 }
 
+function getProductCategory(productName) {
+  const recipeId = resolveRecipeId(productName);
+  if (!recipeId) return 'Other';
+  const recipe = recipes.find(r => r.id === recipeId);
+  return (recipe && recipe.category) ? recipe.category : 'Other';
+}
+
 function removeOrderLine(chId, lineId) {
   const ch = channels.find(c => c.id === chId);
   if (!ch) return;
   ch.orderLines = (ch.orderLines || []).filter(l => l.id !== lineId);
   saveChannels();
   renderChannelsPage();
+}
+
+function openManageCatsModal() {
+  renderManageCatsList();
+  document.getElementById('manage-cats-modal').style.display = 'block';
+}
+function closeManageCatsModal() {
+  document.getElementById('manage-cats-modal').style.display = 'none';
+  renderRecipes();
+}
+function renderManageCatsList() {
+  const el = document.getElementById('manage-cats-list');
+  if (!el) return;
+  el.innerHTML = recipeCategories.map((c, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--surface2);border-radius:6px">
+      <input type="color" value="${c.color}" onchange="recipeCategories[${i}].color=this.value;saveRecipeCategories();renderManageCatsList()"
+        style="width:28px;height:28px;border:none;border-radius:4px;cursor:pointer;padding:0;background:none">
+      <span style="flex:1;font-size:13px;font-weight:600;color:${c.color}">${c.name}</span>
+      ${i > 0 ? `<button onclick="rcMoveUp(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px" title="Move up">↑</button>` : '<span style="width:24px"></span>'}
+      ${i < recipeCategories.length-1 ? `<button onclick="rcMoveDown(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px" title="Move down">↓</button>` : '<span style="width:24px"></span>'}
+      <button onclick="rcDelete(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px" title="Delete">✕</button>
+    </div>`).join('');
+}
+function addRecipeCat() {
+  const name = document.getElementById('new-cat-name').value.trim();
+  if (!name) return;
+  if (recipeCategories.some(c => c.name.toLowerCase() === name.toLowerCase())) { alert('Category already exists'); return; }
+  const color = document.getElementById('new-cat-color').value;
+  recipeCategories.push({ id: name.toLowerCase().replace(/\s+/g,'-'), name, color });
+  saveRecipeCategories();
+  document.getElementById('new-cat-name').value = '';
+  renderManageCatsList();
+}
+function rcMoveUp(i) {
+  if (i < 1) return;
+  [recipeCategories[i-1], recipeCategories[i]] = [recipeCategories[i], recipeCategories[i-1]];
+  saveRecipeCategories(); renderManageCatsList();
+}
+function rcMoveDown(i) {
+  if (i >= recipeCategories.length-1) return;
+  [recipeCategories[i+1], recipeCategories[i]] = [recipeCategories[i], recipeCategories[i+1]];
+  saveRecipeCategories(); renderManageCatsList();
+}
+function rcDelete(i) {
+  if (!confirm(`Delete category "${recipeCategories[i].name}"? Recipes assigned to it will show under Other.`)) return;
+  recipeCategories.splice(i, 1);
+  saveRecipeCategories(); renderManageCatsList();
 }
 
 let _editLineCtx = null;
@@ -10371,36 +10463,56 @@ function renderChannelsPage() {
             </tr>
           </thead>
           <tbody>
-            ${orderLines.map(line => {
-              const meta = getPackMeta(line.product);
-              const wkOrdered = ALL_DAYS.reduce((s,d) => s+(line.days[d]||0), 0);
-              const wkUnits   = wkOrdered * line.unitsEach;
-              return `<tr style="border-bottom:1px solid var(--border)">
-                <td style="padding:5px 8px;font-size:12px">
-                  <div style="font-weight:500">${line.product}</div>
-                  <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}</div>
-                  ${line.notes ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-style:italic">${line.notes}</div>` : ''}
-                </td>
-                ${ALL_DAYS.map(d => {
-                  const dayActive = ch.activeDays.includes(d);
-                  return `<td style="padding:3px${dayActive?'':';opacity:0.3'}">
-                    <input type="number" min="0" value="${line.days[d]||0}"
-                      data-ch="${ch.id}" data-line="${line.id}" data-day="${d}" class="order-qty-input"
-                      style="width:48px;text-align:center;padding:3px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:11px;font-family:'DM Mono',monospace">
-                  </td>`;
-                }).join('')}
-                <td style="padding:5px;text-align:center">
-                  <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">${wkUnits}</div>
-                  ${line.unitsEach>1?`<div style="font-size:10px;color:var(--muted)">${wkOrdered} ordered</div>`:''}
-                </td>
-                <td style="padding:3px;text-align:center;white-space:nowrap">
-                  <button data-ch="${ch.id}" data-line="${line.id}" class="edit-line-btn"
-                    style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px" title="Edit line">✏</button>
-                  <button data-ch="${ch.id}" data-line="${line.id}" class="rm-order-btn"
-                    style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px">✕</button>
-                </td>
-              </tr>`;
-            }).join('')}
+            ${(()=>{
+              // Sort lines by category order then alphabetically within category
+              const catOrder = recipeCategories.map(c => c.name);
+              const sorted = [...orderLines].sort((a, b) => {
+                const ca = catOrder.indexOf(getProductCategory(a.product));
+                const cb = catOrder.indexOf(getProductCategory(b.product));
+                if (ca !== cb) return (ca === -1 ? 999 : ca) - (cb === -1 ? 999 : cb);
+                return a.product.localeCompare(b.product);
+              });
+              let lastCat = null;
+              return sorted.map(line => {
+                const meta = getPackMeta(line.product);
+                const wkOrdered = ALL_DAYS.reduce((s,d) => s+(line.days[d]||0), 0);
+                const wkUnits   = wkOrdered * line.unitsEach;
+                const lineCat   = getProductCategory(line.product);
+                const catMeta   = getCatMeta(lineCat);
+                let catHeader = '';
+                if (lineCat !== lastCat) {
+                  lastCat = lineCat;
+                  catHeader = `<tr><td colspan="${ALL_DAYS.length+3}" style="padding:6px 8px 2px;border-bottom:1px solid ${catMeta.color}44">
+                    <span style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${catMeta.color}">${catMeta.name}</span>
+                  </td></tr>`;
+                }
+                return catHeader + `<tr style="border-bottom:1px solid var(--border)">
+                  <td style="padding:5px 8px;font-size:12px;border-left:2px solid ${catMeta.color}66">
+                    <div style="font-weight:500">${line.product}</div>
+                    <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}</div>
+                    ${line.notes ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-style:italic">${line.notes}</div>` : ''}
+                  </td>
+                  ${ALL_DAYS.map(d => {
+                    const dayActive = ch.activeDays.includes(d);
+                    return `<td style="padding:3px${dayActive?'':';opacity:0.3'}">
+                      <input type="number" min="0" value="${line.days[d]||0}"
+                        data-ch="${ch.id}" data-line="${line.id}" data-day="${d}" class="order-qty-input"
+                        style="width:48px;text-align:center;padding:3px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:11px;font-family:'DM Mono',monospace">
+                    </td>`;
+                  }).join('')}
+                  <td style="padding:5px;text-align:center">
+                    <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">${wkUnits}</div>
+                    ${line.unitsEach>1?`<div style="font-size:10px;color:var(--muted)">${wkOrdered} ordered</div>`:''}
+                  </td>
+                  <td style="padding:3px;text-align:center;white-space:nowrap">
+                    <button data-ch="${ch.id}" data-line="${line.id}" class="edit-line-btn"
+                      style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px" title="Edit line">✏</button>
+                    <button data-ch="${ch.id}" data-line="${line.id}" class="rm-order-btn"
+                      style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px">✕</button>
+                  </td>
+                </tr>`;
+              }).join('');
+            })()}
           </tbody>
         </table>
       </div>` : `<div style="color:var(--muted);font-size:12px;margin-top:10px;font-style:italic">No order lines yet — add products below</div>`;
@@ -22835,6 +22947,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.39': ['🏷 Recipe categories — user-defined categories with color coding: filter tabs on Recipe Library (All + per category, with recipe counts); colored category badges on every recipe card; colored section dividers per category; category dropdown in recipe edit form uses the live category list; "Manage" button to add, reorder, recolor, or delete categories; channels order lines now grouped by category with colored sub-headers and a left-border accent; categories stored in bk_recipe_categories (localStorage); initial set: Bread, Croissant, Pastry, Cookies, Cake, Bagel, Savory, Freezer, Other'],
   '2.4.38': ['✏ Edit order line — pencil button on each channel order line opens a modal to edit product name, variation, units each, and add a free-text notes field; notes display in amber italic under the product row; notes are stored on the orderLine object and sync to cloud with the next saveChannels()'],
   '2.4.37': ['🐛 Fix — July channel migration moved into applyPendingChannelMigrations(), called directly inside secureSignIn right after secureReady = true; this guarantees saveChannels() runs through the fully-wired monkey-patched setItem → queue → Firestore pipeline with no cloud-sync race; previous attempts (preAuthDrafts seeding, setTimeout) all ran before sign-in and lost to the cloud snapshot'],
   '2.4.36': ['🐛 Fix — July channel migration now deferred via setTimeout(..., 0) so it runs AFTER the localStorage.setItem monkey-patch is defined (line ~20434); previously the migration ran synchronously before the patch, so saveChannels() called the real setItem and never populated _securePreAuthDrafts; with the defer, the patched setItem handles saveChannels() automatically and the migrated channels win over the cloud snapshot on sign-in without any manual seeding'],
@@ -23497,6 +23610,25 @@ async function _loadFirebase() {
 </div>
 
 <!-- Recipe-link prompt: shown after adding a channel order line with no recipe mapping -->
+<div id="manage-cats-modal" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,0.65)" onclick="if(event.target===this)closeManageCatsModal()">
+  <div style="background:var(--card);border-radius:14px;padding:24px 24px 18px;max-width:460px;width:90%;margin:8% auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+    <button onclick="closeManageCatsModal()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
+    <div style="font-weight:700;font-size:16px;margin-bottom:4px">Recipe Categories</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Categories apply to both the Recipe Library and the Channels order view.</div>
+    <div id="manage-cats-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Add category</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="new-cat-name" type="text" placeholder="Category name" maxlength="32"
+          style="flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px">
+        <input id="new-cat-color" type="color" value="#c8902a"
+          style="width:38px;height:34px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;padding:2px">
+        <button onclick="addRecipeCat()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="ch-edit-line-modal" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,0.65)" onclick="if(event.target===this)closeEditLineModal()">
   <div style="background:var(--card);border-radius:14px;padding:24px 24px 18px;max-width:440px;width:90%;margin:10% auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
     <button onclick="closeEditLineModal()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
