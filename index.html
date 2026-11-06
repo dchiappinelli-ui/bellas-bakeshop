@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.40';
+const APP_VERSION      = '2.4.41';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -10358,15 +10358,17 @@ function renderWeeklySummary() {
   });
 
   // Category dropdown filter
+  const _dfc = demandFilterCat;
+  const _dcm = getCatMeta(_dfc);
   const catDropdown = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <label style="font-size:11px;color:var(--muted);font-weight:600">Category</label>
+    <label style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">Filter by category:</label>
     <select onchange="demandFilterCat=this.value;renderWeeklySummary()"
-      style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;cursor:pointer">
-      <option value="All" ${demandFilterCat==='All'?'selected':''}>All categories</option>
-      ${recipeCategories.map(c => `<option value="${c.name}" ${demandFilterCat===c.name?'selected':''}>${c.name}</option>`).join('')}
+      style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;flex:0 0 auto;max-width:180px">
+      <option value="All"${_dfc==='All'?' selected':''}>All categories</option>
+      ${recipeCategories.map(c => `<option value="${c.name}"${_dfc===c.name?' selected':''}>${c.name}</option>`).join('')}
     </select>
-    ${demandFilterCat !== 'All' ? `<button onclick="demandFilterCat='All';renderWeeklySummary()" style="padding:3px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✕ Clear</button>` : ''}
-    ${demandFilterCat !== 'All' ? `<span style="font-size:11px;padding:3px 10px;border-radius:12px;background:${getCatMeta(demandFilterCat).color}22;color:${getCatMeta(demandFilterCat).color};font-weight:600">${demandFilterCat}</span>` : ''}
+    ${_dfc !== 'All' ? `<button onclick="demandFilterCat='All';renderWeeklySummary()" style="padding:3px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;flex:0 0 auto">✕ Clear</button>` : ''}
+    ${_dfc !== 'All' ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid ${_dcm.color};color:${_dcm.color};font-weight:600;flex:0 0 auto">${_dfc}</span>` : ''}
   </div>`;
 
   // Build sorted product list grouped by category
@@ -22979,6 +22981,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.41': ['🐛 Fix demand filter dropdown — removed CSS variable background from select (caused blue bar in dark/certain themes), constrained select width, switched category badge to border-only style without hex-alpha backgrounds'],
   '2.4.40': ['📊 Weekly Demand Summary — category filter dropdown above the demand table; select any category to filter to only those products; when All is selected, products are grouped by category with colored section headers and a left-border accent per category color, sorted by category order then alphabetically; Clear button resets to All'],
   '2.4.39': ['🏷 Recipe categories — user-defined categories with color coding: filter tabs on Recipe Library (All + per category, with recipe counts); colored category badges on every recipe card; colored section dividers per category; category dropdown in recipe edit form uses the live category list; "Manage" button to add, reorder, recolor, or delete categories; channels order lines now grouped by category with colored sub-headers and a left-border accent; categories stored in bk_recipe_categories (localStorage); initial set: Bread, Croissant, Pastry, Cookies, Cake, Bagel, Savory, Freezer, Other'],
   '2.4.38': ['✏ Edit order line — pencil button on each channel order line opens a modal to edit product name, variation, units each, and add a free-text notes field; notes display in amber italic under the product row; notes are stored on the orderLine object and sync to cloud with the next saveChannels()'],
