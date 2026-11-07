@@ -2900,7 +2900,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.51';
+const APP_VERSION      = '2.4.52';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3135,6 +3135,8 @@ const STAFF_PAGES = [
   { id: 'displaystock', label: '🖼 Display Stock' },
   { id: 'staffboard',   label: '💬 Staff Board' },
   { id: 'eod',          label: '📊 End of Day' },
+  { id: 'opening',      label: '📋 Checklists' },
+  { id: 'stationguide', label: '📋 Station Guide' },
 ];
 
 function setStaffPageAccess(staffId, pageId, allowed) {
@@ -23331,6 +23333,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.52': ['👤 Staff cards — Page Access now includes Checklists (📋 opening) and Station Guide (📋 stationguide); both were accessible to all staff but missing from the per-staff toggle list'],
   '2.4.51': ['📦 Bulk price import — all 54 ingredients (with $/gram prices) now auto-merged into the Ingredient List on first load; runs once via bk_pl_migrated_v1 flag; updates prices for existing items and adds any missing ones (including BRIOCHE); syncs to Firebase automatically'],
   '2.4.50': ['🔗 Recipe ingredient costs now resolve LIVE from the price library — adding an ingredient that isn\'t in the library yet will auto-price as soon as it\'s added later; stored costPerUnit becomes a manual override only; 📚 badge click now clears the override (returns to live); ⚠ badge shows ingredients with no library match and no manual price; batch total also uses live prices'],
   '2.4.49': ['🏪 Ingredient List — Supplier field per ingredient: dropdown pulls from bk_suppliers list (seeded: Ace Endico, Restaurant Depot, Costco, BJs Wholesale, Mount Kisco Farm, Baldor Foods, Bake Mark); supplier filter in search bar; ⚙ Suppliers manager to add/remove suppliers inline; supplier saved in new ingredient form'],
