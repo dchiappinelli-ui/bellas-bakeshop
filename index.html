@@ -1217,6 +1217,47 @@ document.addEventListener('DOMContentLoaded', function() {
       <option value="common">Most Common</option>
     </select>
     <button id="sb-select-btn" onclick="sbToggleSelectMode()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;font-size:13px;cursor:pointer">☐ Select</button>
+    <button onclick="sbToggleQuickAdd()" style="padding:8px 12px;background:#2a7d4f;border:1px solid #2a7d4f;color:#fff;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">+ Add Item</button>
+  </div>
+
+  <!-- Quick-add form -->
+  <div id="sb-quick-add-form" style="display:none;padding:10px 12px;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px">New Supply Item</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:10px;color:var(--muted)">Name *</label>
+        <input id="sb-qa-name" type="text" placeholder="e.g. BREAD FLOUR" autocomplete="off"
+          style="width:140px;padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-weight:700;text-transform:uppercase"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')sbConfirmQuickAdd()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:10px;color:var(--muted)">Category</label>
+        <select id="sb-qa-cat" style="padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px">
+          <option>Flour</option><option>Dairy</option><option>Fat</option><option>Sugar</option>
+          <option>Leavening</option><option>Chocolate</option><option>Fruit</option>
+          <option>Nut/Seed</option><option>Savory</option><option>Spice</option>
+          <option>Prep</option><option>Protein</option><option selected>Other</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:10px;color:var(--muted)">$/lb (optional)</label>
+        <input id="sb-qa-price" type="number" placeholder="0.00" min="0" step="0.01"
+          style="width:80px;padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px"
+          onkeydown="if(event.key==='Enter')sbConfirmQuickAdd()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:10px;color:var(--muted)">Par level (optional)</label>
+        <input id="sb-qa-par" type="number" placeholder="e.g. 5" min="0" step="any"
+          style="width:80px;padding:5px 7px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px"
+          onkeydown="if(event.key==='Enter')sbConfirmQuickAdd()">
+      </div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <button onclick="sbConfirmQuickAdd()" style="padding:5px 14px;background:#2a7d4f;border:1px solid #2a7d4f;color:#fff;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer">Add</button>
+        <button onclick="sbToggleQuickAdd()" style="padding:5px 10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;font-size:12px;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">Press Enter or click Add. Item stays in Price Library even if removed from the board.</div>
   </div>
 
   <!-- 3-column Kanban board -->
@@ -2818,7 +2859,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.44';
+const APP_VERSION      = '2.4.45';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -22521,11 +22562,27 @@ function sbLoad() {
 }
 function sbSave(data) { try { localStorage.setItem(_SB_SUPPLY_KEY, JSON.stringify(data)); } catch(e) {} }
 
+function sbExpiryBadge(expiry) {
+  if (!expiry) return '';
+  var today = new Date(); today.setHours(0,0,0,0);
+  var exp = new Date(expiry + 'T00:00:00');
+  var diff = Math.round((exp - today) / 86400000);
+  if (diff < 0)  return '<span style="margin-left:5px;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:900;background:#cc3333;color:#fff">EXPIRED</span>';
+  if (diff === 0) return '<span style="margin-left:5px;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:900;background:#cc3333;color:#fff">EXP TODAY</span>';
+  if (diff <= 3)  return '<span style="margin-left:5px;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:900;background:#c87a00;color:#fff">EXP ' + (exp.getMonth()+1) + '/' + exp.getDate() + '</span>';
+  return '';
+}
+
 function sbSetEntry(itemId, fields) {
   const data = sbLoad();
   const key = String(itemId);
   if (fields.status === 'in_stock') {
-    delete data[key];
+    // Preserve permanent per-item settings even when returning to In Stock
+    const ex = data[key] || {};
+    const keep = {};
+    ['par','expiry','onHandQty','onHandUnit'].forEach(function(f) { if (ex[f] !== undefined && ex[f] !== '') keep[f] = ex[f]; });
+    if (Object.keys(keep).length) data[key] = keep;
+    else delete data[key];
   } else {
     const existing = data[key] || {};
     const wasInStock = !existing.status || existing.status === 'in_stock';
@@ -22637,9 +22694,89 @@ function sbReturnToStock(itemId) {
 function sbUpdateOrderField(itemId, field, val) {
   var data = sbLoad();
   var key = String(itemId);
-  if (!data[key]) return;
+  if (!data[key]) data[key] = {};
   data[key][field] = val;
+  // Auto-flag if on-hand drops below par
+  if (field === 'onHandQty') {
+    var qty = parseFloat(val);
+    var par = parseFloat(data[key].par);
+    var curStatus = data[key].status || 'in_stock';
+    if (!isNaN(qty) && !isNaN(par) && par > 0 && qty < par && curStatus === 'in_stock') {
+      data[key].status = 'order_soon';
+      data[key].at = data[key].at || Date.now();
+    }
+  }
   sbSave(data);
+  if (field === 'onHandQty') renderSupplyBoard();
+}
+
+function sbUpdateExpiry(itemId, val) {
+  var data = sbLoad();
+  var key = String(itemId);
+  if (!data[key]) data[key] = {};
+  data[key].expiry = val;
+  sbSave(data);
+}
+
+function sbUpdatePar(itemId, val) {
+  var data = sbLoad();
+  var key = String(itemId);
+  if (!data[key]) data[key] = {};
+  data[key].par = val;
+  // Auto-flag if on-hand is already below the new par
+  var qty = parseFloat(data[key].onHandQty);
+  var par = parseFloat(val);
+  var curStatus = data[key].status || 'in_stock';
+  if (!isNaN(qty) && !isNaN(par) && par > 0 && qty < par && curStatus === 'in_stock') {
+    data[key].status = 'order_soon';
+    data[key].at = Date.now();
+  }
+  sbSave(data);
+  renderSupplyBoard();
+}
+
+function sbToggleQuickAdd() {
+  var form = document.getElementById('sb-quick-add-form');
+  if (!form) return;
+  var open = form.style.display !== 'none';
+  form.style.display = open ? 'none' : '';
+  if (!open) {
+    var nameEl = document.getElementById('sb-qa-name');
+    if (nameEl) nameEl.focus();
+  }
+}
+
+function sbConfirmQuickAdd() {
+  var nameEl  = document.getElementById('sb-qa-name');
+  var catEl   = document.getElementById('sb-qa-cat');
+  var priceEl = document.getElementById('sb-qa-price');
+  var parEl   = document.getElementById('sb-qa-par');
+  if (!nameEl) return;
+  var name = nameEl.value.trim().toUpperCase();
+  if (!name) { nameEl.focus(); return; }
+  var cat  = catEl  ? catEl.value  : 'Other';
+  var ppLb = priceEl ? parseFloat(priceEl.value) : 0;
+  var par  = parEl  ? parEl.value.trim() : '';
+  var ppg  = (!isNaN(ppLb) && ppLb > 0) ? ppLb / 453.592 : 0;
+  var all  = plGetAll();
+  if (all.find(function(e) { return e.name === name; })) {
+    alert(name + ' already exists in the price library.'); nameEl.focus(); return;
+  }
+  var newId = Date.now();
+  all.push({ id: newId, name: name, cat: cat, pricePerGram: ppg, caseCost: 0, caseWeightGrams: 0, updatedAt: Date.now() });
+  plSave(all);
+  if (par !== '') {
+    var data = sbLoad();
+    data[String(newId)] = { par: par };
+    sbSave(data);
+  }
+  // Clear form but keep open for another entry
+  nameEl.value = '';
+  if (priceEl) priceEl.value = '';
+  if (parEl)   parEl.value   = '';
+  nameEl.focus();
+  _sbUsageCache = null;
+  renderSupplyBoard();
 }
 
 function sbResetBoard() {
@@ -22771,15 +22908,20 @@ function renderSupplyBoard() {
 }
 
 function sbRenderStockCard(item) {
-  var cc      = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
-  var tags    = sbGetTags(item);
-  var usage   = sbGetUsageCount(item);
-  var isSel   = _sbSelected.has(String(item.id));
-  var entry   = item._entry || {};
-  var tagStr  = tags.filter(function(t) { return t !== 'BOH' && t !== 'SOLID'; }).join(' · ');
-  var qtyVal  = (entry.onHandQty  || '').toString().replace(/"/g, '&quot;');
-  var unitVal = (entry.onHandUnit || '').replace(/"/g, '&quot;');
-  var hasQty  = qtyVal !== '';
+  var cc       = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
+  var tags     = sbGetTags(item);
+  var usage    = sbGetUsageCount(item);
+  var isSel    = _sbSelected.has(String(item.id));
+  var entry    = item._entry || {};
+  var tagStr   = tags.filter(function(t) { return t !== 'BOH' && t !== 'SOLID'; }).join(' · ');
+  var qtyVal   = (entry.onHandQty  || '').toString().replace(/"/g, '&quot;');
+  var unitVal  = (entry.onHandUnit || '').replace(/"/g, '&quot;');
+  var parVal   = (entry.par  || '').toString().replace(/"/g, '&quot;');
+  var expiryVal = (entry.expiry || '').replace(/"/g, '&quot;');
+  var hasQty   = qtyVal !== '';
+  var ppg      = item.pricePerGram || 0;
+  var costStr  = ppg > 0 ? ' · $' + (ppg * 453.592).toFixed(2) + '/lb' : '';
+  var expBadge = sbExpiryBadge(entry.expiry);
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="in_stock"' +
     ' style="padding:7px 7px;margin-bottom:3px;border-radius:5px;' +
     'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:none;user-select:none;' +
@@ -22788,8 +22930,8 @@ function sbRenderStockCard(item) {
       '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
       (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:#e8a045">' : '') +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + costStr + '</div>' +
       '</div>' +
       (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
       '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' : '') +
@@ -22803,30 +22945,52 @@ function sbRenderStockCard(item) {
         ' style="flex:1;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (unitVal ? ';border-color:#2a7d4f' : '') + '"' +
         ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandUnit\',this.value)" touch-action="manipulation">' +
     '</div>' +
+    '<div style="display:flex;gap:4px;margin-top:3px;margin-left:10px" onclick="event.stopPropagation()">' +
+      '<input type="number" value="' + parVal + '" placeholder="Par level" min="0" step="any"' +
+        ' title="Par level — flags Order Soon when on-hand falls below this"' +
+        ' style="width:70px;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (parVal ? ';border-color:#5588cc' : '') + '"' +
+        ' oninput="sbUpdatePar(' + item.id + ',this.value)" touch-action="manipulation">' +
+      '<label style="display:flex;align-items:center;gap:3px;flex:1;min-width:0">' +
+        '<span style="font-size:9px;color:var(--muted);white-space:nowrap">Exp:</span>' +
+        '<input type="date" value="' + expiryVal + '"' +
+          ' style="flex:1;min-width:0;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (expiryVal ? ';border-color:#888' : '') + '"' +
+          ' onchange="sbUpdateExpiry(' + item.id + ',this.value)" touch-action="manipulation">' +
+      '</label>' +
+    '</div>' +
     '</div>';
 }
 
 function sbRenderOrderCard(item, col) {
-  var cc      = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
-  var entry   = item._entry || {};
-  var timeStr = entry.at ? sbFmtTime(entry.at) : '';
-  var bgTint  = col === 'order_now' ? 'rgba(200,50,50,0.08)' : 'rgba(232,160,69,0.08)';
-  var borderC = col === 'order_now' ? 'rgba(200,50,50,0.35)' : 'rgba(232,160,69,0.35)';
-  var qtyVal  = (entry.qty  || '').replace(/"/g, '&quot;');
-  var noteVal = (entry.note || '').replace(/"/g, '&quot;');
+  var cc       = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
+  var entry    = item._entry || {};
+  var timeStr  = entry.at ? sbFmtTime(entry.at) : '';
+  var bgTint   = col === 'order_now' ? 'rgba(200,50,50,0.08)' : 'rgba(232,160,69,0.08)';
+  var borderC  = col === 'order_now' ? 'rgba(200,50,50,0.35)' : 'rgba(232,160,69,0.35)';
+  var qtyVal   = (entry.qty  || '').replace(/"/g, '&quot;');
+  var noteVal  = (entry.note || '').replace(/"/g, '&quot;');
+  var ppg      = item.pricePerGram || 0;
+  var costStr  = ppg > 0 ? ' · $' + (ppg * 453.592).toFixed(2) + '/lb' : '';
+  var expBadge = sbExpiryBadge(entry.expiry);
+  var expiryVal = (entry.expiry || '').replace(/"/g, '&quot;');
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="' + col + '"' +
     ' style="padding:8px 9px;margin-bottom:5px;border-radius:5px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:none;user-select:none">' +
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
       '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + costStr + '</div>' +
       '</div>' +
       '<button onclick="sbReturnToStock(' + item.id + ')" title="Back to In Stock" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0;touch-action:manipulation;line-height:1">↩</button>' +
     '</div>' +
-    '<div style="display:flex;gap:5px">' +
+    '<div style="display:flex;gap:5px;margin-bottom:4px">' +
       '<input type="text" value="' + qtyVal + '" placeholder="Qty…" style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'qty\',this.value)" onclick="event.stopPropagation()">' +
       '<input type="text" value="' + noteVal + '" placeholder="Note…" style="flex:2;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'note\',this.value)" onclick="event.stopPropagation()">' +
+    '</div>' +
+    '<div style="display:flex;gap:3px;align-items:center" onclick="event.stopPropagation()">' +
+      '<span style="font-size:9px;color:var(--muted);white-space:nowrap">Exp:</span>' +
+      '<input type="date" value="' + expiryVal + '"' +
+        ' style="flex:1;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (expiryVal ? ';border-color:#888' : '') + '"' +
+        ' onchange="sbUpdateExpiry(' + item.id + ',this.value)">' +
     '</div>' +
     '</div>';
 }
@@ -22987,6 +23151,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.45': ['📦 Supply Board upgrades: (1) + Add Item button with quick-add form (name, category, $/lb, par); (2) par level per item — auto-flags Order Soon when on-hand falls below par; (3) expiry date per item — amber badge ≤3 days, red EXPIRED badge; (4) $/lb cost shown on every card; (5) In Stock → flagged round-trips now preserve par, expiry, and on-hand fields'],
   '2.4.44': ['🗑 Removed FOH Ingredients tab — nav button, page (hidden), renderIngredientsPage calls, and DS_PAGE_CHECKS entry retired; Supply Board (📦) covers FOH/BOH stock status with Kanban drag, on-hand counts, and EOD report'],
   '2.4.43': ['🗑 Removed Order Check Sheet — nav button, page, and all JS (getChannelBreakdownForDay, toggleCheckRow, renderCheckSheet, checksheetExpanded) retired; Channels Weekly Demand Summary and individual channel detail cover the same ground'],
   '2.4.42': ['🔗 Weekly Orders now seeds from channel pars — no duplicate entry: buildOrdersFromPars() converts orderLines into the orders grid automatically; new weeks pre-fill from standing pars with a green banner; "Use last week\'s numbers instead" button in the banner; "↩ Reset to Pars" button always available in header; legacy carry-forward shows amber banner with "Switch to standing pars" escape hatch; existing accounts with no pars fall back to last week\'s actuals'],
