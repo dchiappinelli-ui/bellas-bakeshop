@@ -1324,9 +1324,9 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
       </div>
       <div style="padding:16px 20px;flex:1">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
           <input id="pl-search" type="text" placeholder="Search…" oninput="renderPriceLib()"
-            style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;width:160px">
+            style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;width:140px">
           <select id="pl-cat-filter" onchange="renderPriceLib()"
             style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
             <option value="">All Categories</option>
@@ -1335,7 +1335,23 @@ document.addEventListener('DOMContentLoaded', function() {
             <option>Fruit</option><option>Nut/Seed</option><option>Protein</option>
             <option>Savory</option><option>Spice</option><option>Other</option>
           </select>
+          <select id="pl-supplier-filter" onchange="renderPriceLib()"
+            style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+            <option value="">All Suppliers</option>
+          </select>
           <button onclick="plShowAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+          <button onclick="plToggleSupplierMgr()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 12px;font-size:13px;cursor:pointer" title="Manage supplier list">⚙ Suppliers</button>
+        </div>
+        <!-- Supplier manager (collapsed by default) -->
+        <div id="pl-supplier-mgr" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Suppliers</div>
+          <div id="pl-supplier-list" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="pl-new-supplier" type="text" placeholder="New supplier name…"
+              style="flex:1;max-width:240px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"
+              onkeydown="if(event.key==='Enter')plAddSupplier()">
+            <button onclick="plAddSupplier()" style="padding:6px 14px;background:#2a7d4f;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Add</button>
+          </div>
         </div>
         <div id="pl-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:16px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">New Ingredient</div>
@@ -1353,6 +1369,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
                 <option>Fruit</option><option>Nut/Seed</option><option>Protein</option>
                 <option>Savory</option><option>Spice</option><option>Other</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:140px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Supplier</div>
+              <select id="pl-add-supplier" style="width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;box-sizing:border-box">
+                <option value="">— supplier —</option>
               </select>
             </div>
           </div>
@@ -2878,7 +2900,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.48';
+const APP_VERSION      = '2.4.49';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -22270,6 +22292,43 @@ var PL_KEY = 'bk_price_lib';
 function plLoad() { return JSON.parse(localStorage.getItem(PL_KEY) || 'null'); }
 function plSave(data) { localStorage.setItem(PL_KEY, JSON.stringify(data)); }
 
+var PL_SUPPLIERS_KEY = 'bk_suppliers';
+var PL_DEFAULT_SUPPLIERS = ['Ace Endico','Restaurant Depot','Costco','BJs Wholesale','Mount Kisco Farm','Baldor Foods','Bake Mark'];
+function plGetSuppliers() {
+  var d = localStorage.getItem(PL_SUPPLIERS_KEY);
+  if (!d) {
+    var seeded = PL_DEFAULT_SUPPLIERS.map(function(n,i){ return { id: Date.now()+i, name: n }; });
+    localStorage.setItem(PL_SUPPLIERS_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+  return JSON.parse(d);
+}
+function plSaveSuppliers(list) { localStorage.setItem(PL_SUPPLIERS_KEY, JSON.stringify(list)); }
+
+function plToggleSupplierMgr() {
+  var el = document.getElementById('pl-supplier-mgr');
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+function plAddSupplier() {
+  var inp = document.getElementById('pl-new-supplier');
+  if (!inp) return;
+  var name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  var list = plGetSuppliers();
+  if (list.some(function(s){ return s.name.toLowerCase() === name.toLowerCase(); })) {
+    alert('Already exists'); return;
+  }
+  list.push({ id: Date.now(), name: name });
+  plSaveSuppliers(list);
+  inp.value = '';
+  renderPriceLib();
+}
+function plDeleteSupplier(id) {
+  if (!confirm('Remove this supplier? Ingredients assigned to it will be unassigned.')) return;
+  plSaveSuppliers(plGetSuppliers().filter(function(s){ return s.id !== id; }));
+  renderPriceLib();
+}
+
 var PL_DEFAULTS = [
   { name:'WATER',                        cat:'Other',     pricePerGram:0,        caseCost:0,      caseWeightGrams:0      },
   { name:'YEAST',                        cat:'Leavening', pricePerGram:0.00634,  caseCost:0,      caseWeightGrams:0      },
@@ -22370,11 +22429,43 @@ var PL_CAT_COLORS = {
 function renderPriceLib() {
   const wrap = document.getElementById('pl-table-wrap');
   if (!wrap) return;
-  const all = plGetAll();
-  const search = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
-  const catF   = document.getElementById('pl-cat-filter')?.value || '';
+  const all  = plGetAll();
+  const suppList = plGetSuppliers();
+
+  // Populate supplier filter dropdown
+  const suppFilterEl = document.getElementById('pl-supplier-filter');
+  if (suppFilterEl) {
+    const curVal = suppFilterEl.value;
+    suppFilterEl.innerHTML = '<option value="">All Suppliers</option>' +
+      suppList.map(s => `<option value="${s.name}"${curVal===s.name?' selected':''}>${s.name}</option>`).join('');
+  }
+
+  // Populate supplier manager chip list
+  const mgrEl = document.getElementById('pl-supplier-list');
+  if (mgrEl) {
+    mgrEl.innerHTML = suppList.length
+      ? suppList.map(s =>
+          `<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;font-size:12px">
+            ${s.name}
+            <button onclick="plDeleteSupplier(${s.id})" title="Remove" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 1px;line-height:1">✕</button>
+          </span>`).join(' ')
+      : '<span style="font-size:12px;color:var(--muted)">No suppliers yet</span>';
+  }
+
+  // Populate supplier selects in add form
+  const addSuppEl = document.getElementById('pl-add-supplier');
+  if (addSuppEl) {
+    const curAdd = addSuppEl.value;
+    addSuppEl.innerHTML = '<option value="">— supplier —</option>' +
+      suppList.map(s => `<option value="${s.name}"${curAdd===s.name?' selected':''}>${s.name}</option>`).join('');
+  }
+
+  const search  = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
+  const catF    = document.getElementById('pl-cat-filter')?.value || '';
+  const suppF   = suppFilterEl ? suppFilterEl.value : '';
   const filtered = all.filter(e => {
-    if (catF && e.cat !== catF) return false;
+    if (catF  && e.cat !== catF) return false;
+    if (suppF && e.supplier !== suppF) return false;
     if (search && !e.name.toLowerCase().includes(search)) return false;
     return true;
   }).sort((a, b) => a.cat !== b.cat ? a.cat.localeCompare(b.cat) : a.name.localeCompare(b.name));
@@ -22402,6 +22493,8 @@ function renderPriceLib() {
       ? `<button onclick="plClearTags(${e.id})" title="Reset to category defaults"
            style="padding:1px 4px;border-radius:6px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);line-height:1.4">↺</button>`
       : '';
+    const suppOpts = `<option value="">— supplier —</option>` +
+      suppList.map(s => `<option value="${s.name}"${e.supplier===s.name?' selected':''}>${s.name}</option>`).join('');
     return `<tr style="border-bottom:1px solid var(--border)" id="pl-row-${e.id}">
       <td style="padding:6px 10px">
         <input type="text" value="${(e.name||'').replace(/"/g,'&quot;')}"
@@ -22414,6 +22507,10 @@ function renderPriceLib() {
           ${['Flour','Dairy','Fat','Sugar','Leavening','Chocolate','Fruit','Nut/Seed','Protein','Savory','Spice','Other'].map(c =>
             `<option value="${c}"${e.cat===c?' selected':''}>${c}</option>`).join('')}
         </select>
+      </td>
+      <td style="padding:6px 8px">
+        <select style="background:transparent;border:none;font-size:12px;color:var(--text);cursor:pointer;min-width:100px"
+          onchange="plUpdateField(${e.id},'supplier',this.value)">${suppOpts}</select>
       </td>
       <td style="padding:6px 8px">
         <div style="display:flex;gap:2px;flex-wrap:wrap;min-width:110px">${tagChips}${resetBtn}</div>
@@ -22450,6 +22547,7 @@ function renderPriceLib() {
         <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)">
           <th style="text-align:left;padding:6px 10px">Name</th>
           <th style="text-align:left;padding:6px 8px">Category</th>
+          <th style="text-align:left;padding:6px 8px">Supplier</th>
           <th style="text-align:left;padding:6px 8px">Tags</th>
           <th style="text-align:right;padding:6px 8px">$/gram</th>
           <th style="text-align:right;padding:6px 8px">$/100g</th>
@@ -22544,13 +22642,14 @@ function plCalcCaseWt() {
 function plConfirmAdd() {
   const name = (document.getElementById('pl-add-name')?.value || '').trim().toUpperCase();
   if (!name) { alert('Please enter a name'); return; }
-  const ppg     = parseFloat(document.getElementById('pl-add-ppg')?.value)     || 0;
-  const cat     = document.getElementById('pl-add-cat')?.value                 || 'Other';
-  const caseCost= parseFloat(document.getElementById('pl-add-case')?.value)    || 0;
+  const ppg      = parseFloat(document.getElementById('pl-add-ppg')?.value)      || 0;
+  const cat      = document.getElementById('pl-add-cat')?.value                  || 'Other';
+  const supplier = document.getElementById('pl-add-supplier')?.value             || '';
+  const caseCost = parseFloat(document.getElementById('pl-add-case')?.value)     || 0;
   const caseWtRaw = parseFloat(document.getElementById('pl-add-casewt-g')?.value) || 0;
-  const caseWt  = caseWtRaw || (parseFloat(document.getElementById('pl-add-casewt')?.value) || 0);
+  const caseWt   = caseWtRaw || (parseFloat(document.getElementById('pl-add-casewt')?.value) || 0);
   const all = plGetAll();
-  all.push({ id: Date.now(), name, cat, pricePerGram: ppg, caseCost, caseWeightGrams: caseWt, updatedAt: Date.now() });
+  all.push({ id: Date.now(), name, cat, supplier, pricePerGram: ppg, caseCost, caseWeightGrams: caseWt, updatedAt: Date.now() });
   plSave(all);
   plHideAdd();
   ['pl-add-name','pl-add-ppg','pl-add-case','pl-add-casewt','pl-add-unit-price','pl-add-casewt-g'].forEach(id => {
@@ -23187,6 +23286,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.49': ['🏪 Ingredient List — Supplier field per ingredient: dropdown pulls from bk_suppliers list (seeded: Ace Endico, Restaurant Depot, Costco, BJs Wholesale, Mount Kisco Farm, Baldor Foods, Bake Mark); supplier filter in search bar; ⚙ Suppliers manager to add/remove suppliers inline; supplier saved in new ingredient form'],
   '2.4.48': ['🏷 Renamed nav button to "📦 Supply / Ingredients"; renamed "Manage Prices" button to "📋 Ingredient List ▸" for discoverability'],
   '2.4.47': ['📏 Supply Board — wider 10px scrollbar on all columns (tappable on iPad, always visible); cards made larger (padding 10px, 14px name, 11px subtitle, 4px color bar)'],
   '2.4.46': ['✎ Supply Board — ✎ edit icon on every card opens Manage Prices panel scrolled directly to that item (highlighted in orange); lets you edit name, category, tags, $/gram, case cost, case weight without leaving the board'],
