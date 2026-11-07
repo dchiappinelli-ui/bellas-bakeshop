@@ -100,6 +100,25 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   .nav::-webkit-scrollbar { display: none; }
 
+  /* Supply Board column scrollbars — wide enough to tap on iPad */
+  .sb-col-body {
+    overflow-y: scroll;
+    flex: 1;
+    padding: 8px 8px 70px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) transparent;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sb-col-body::-webkit-scrollbar { width: 10px; }
+  .sb-col-body::-webkit-scrollbar-track { background: transparent; }
+  .sb-col-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .sb-col-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
   .nav-btn {
     padding: 13px 26px;
     border: 1px solid transparent;
@@ -1267,21 +1286,21 @@ document.addEventListener('DOMContentLoaded', function() {
         <span style="font-size:12px;font-weight:900;letter-spacing:.06em;color:var(--text)">📦 IN STOCK</span>
         <span id="sb-cnt-in_stock" style="font-size:11px;color:var(--muted)">—</span>
       </div>
-      <div id="sb-body-in_stock" style="overflow-y:auto;flex:1;padding:6px 6px 60px"></div>
+      <div id="sb-body-in_stock" class="sb-col-body"></div>
     </div>
     <div class="sb-col" data-col="order_soon" style="flex:0 0 26%;min-width:160px;display:flex;flex-direction:column;border-right:2px solid var(--border)">
       <div style="padding:10px 14px;background:rgba(232,160,69,0.12);border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
         <span style="font-size:12px;font-weight:900;letter-spacing:.06em;color:#d4890a">⏰ ORDER SOON</span>
         <span id="sb-cnt-order_soon" style="font-size:11px;color:#d4890a">—</span>
       </div>
-      <div id="sb-body-order_soon" style="overflow-y:auto;flex:1;padding:6px 6px 60px"></div>
+      <div id="sb-body-order_soon" class="sb-col-body"></div>
     </div>
     <div class="sb-col" data-col="order_now" style="flex:0 0 26%;min-width:160px;display:flex;flex-direction:column">
       <div style="padding:10px 14px;background:rgba(200,50,50,0.12);border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
         <span style="font-size:12px;font-weight:900;letter-spacing:.06em;color:#cc4444">🚨 ORDER NOW</span>
         <span id="sb-cnt-order_now" style="font-size:11px;color:#cc4444">—</span>
       </div>
-      <div id="sb-body-order_now" style="overflow-y:auto;flex:1;padding:6px 6px 60px"></div>
+      <div id="sb-body-order_now" class="sb-col-body"></div>
     </div>
   </div>
 
@@ -2859,7 +2878,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.46';
+const APP_VERSION      = '2.4.47';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -22938,38 +22957,38 @@ function sbRenderStockCard(item) {
   var costStr  = ppg > 0 ? ' · $' + (ppg * 453.592).toFixed(2) + '/lb' : '';
   var expBadge = sbExpiryBadge(entry.expiry);
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="in_stock"' +
-    ' style="padding:7px 7px;margin-bottom:3px;border-radius:5px;' +
+    ' style="padding:10px 9px;margin-bottom:5px;border-radius:6px;' +
     'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:none;user-select:none;' +
     (isSel ? 'outline:2px solid #e8a045;' : '') + '">' +
-    '<div style="display:flex;align-items:center;gap:7px">' +
-      '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
-      (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:#e8a045">' : '') +
+    '<div style="display:flex;align-items:center;gap:8px">' +
+      '<div style="width:4px;height:38px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
+      (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:#e8a045">' : '') +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + costStr + '</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + costStr + '</div>' +
       '</div>' +
       (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
       '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' +
       '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">✎</button>' : '') +
       '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>' +
     '</div>' +
-    '<div style="display:flex;gap:4px;margin-top:5px;margin-left:10px" onclick="event.stopPropagation()">' +
+    '<div style="display:flex;gap:5px;margin-top:7px;margin-left:12px" onclick="event.stopPropagation()">' +
       '<input type="number" value="' + qtyVal + '" placeholder="On hand #" min="0" step="any"' +
-        ' style="width:70px;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-weight:700' + (hasQty ? ';border-color:#2a7d4f' : '') + '"' +
+        ' style="width:76px;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-weight:700' + (hasQty ? ';border-color:#2a7d4f' : '') + '"' +
         ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandQty\',this.value)" touch-action="manipulation">' +
       '<input type="text" value="' + unitVal + '" placeholder="unit (bags, lbs…)"' +
-        ' style="flex:1;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (unitVal ? ';border-color:#2a7d4f' : '') + '"' +
+        ' style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (unitVal ? ';border-color:#2a7d4f' : '') + '"' +
         ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandUnit\',this.value)" touch-action="manipulation">' +
     '</div>' +
-    '<div style="display:flex;gap:4px;margin-top:3px;margin-left:10px" onclick="event.stopPropagation()">' +
+    '<div style="display:flex;gap:5px;margin-top:4px;margin-left:12px" onclick="event.stopPropagation()">' +
       '<input type="number" value="' + parVal + '" placeholder="Par level" min="0" step="any"' +
         ' title="Par level — flags Order Soon when on-hand falls below this"' +
-        ' style="width:70px;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (parVal ? ';border-color:#5588cc' : '') + '"' +
+        ' style="width:76px;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (parVal ? ';border-color:#5588cc' : '') + '"' +
         ' oninput="sbUpdatePar(' + item.id + ',this.value)" touch-action="manipulation">' +
-      '<label style="display:flex;align-items:center;gap:3px;flex:1;min-width:0">' +
-        '<span style="font-size:9px;color:var(--muted);white-space:nowrap">Exp:</span>' +
+      '<label style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">' +
+        '<span style="font-size:10px;color:var(--muted);white-space:nowrap">Exp:</span>' +
         '<input type="date" value="' + expiryVal + '"' +
-          ' style="flex:1;min-width:0;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (expiryVal ? ';border-color:#888' : '') + '"' +
+          ' style="flex:1;min-width:0;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (expiryVal ? ';border-color:#888' : '') + '"' +
           ' onchange="sbUpdateExpiry(' + item.id + ',this.value)" touch-action="manipulation">' +
       '</label>' +
     '</div>' +
@@ -22989,24 +23008,24 @@ function sbRenderOrderCard(item, col) {
   var expBadge = sbExpiryBadge(entry.expiry);
   var expiryVal = (entry.expiry || '').replace(/"/g, '&quot;');
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="' + col + '"' +
-    ' style="padding:8px 9px;margin-bottom:5px;border-radius:5px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:none;user-select:none">' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
-      '<div style="width:3px;height:34px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
+    ' style="padding:10px 10px;margin-bottom:6px;border-radius:6px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:none;user-select:none">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+      '<div style="width:4px;height:38px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + costStr + '</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + costStr + '</div>' +
       '</div>' +
       '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">✎</button>' +
       '<button onclick="sbReturnToStock(' + item.id + ')" title="Back to In Stock" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0;touch-action:manipulation;line-height:1">↩</button>' +
     '</div>' +
-    '<div style="display:flex;gap:5px;margin-bottom:4px">' +
-      '<input type="text" value="' + qtyVal + '" placeholder="Qty…" style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'qty\',this.value)" onclick="event.stopPropagation()">' +
-      '<input type="text" value="' + noteVal + '" placeholder="Note…" style="flex:2;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'note\',this.value)" onclick="event.stopPropagation()">' +
+    '<div style="display:flex;gap:5px;margin-bottom:5px">' +
+      '<input type="text" value="' + qtyVal + '" placeholder="Qty…" style="flex:1;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'qty\',this.value)" onclick="event.stopPropagation()">' +
+      '<input type="text" value="' + noteVal + '" placeholder="Note…" style="flex:2;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'note\',this.value)" onclick="event.stopPropagation()">' +
     '</div>' +
-    '<div style="display:flex;gap:3px;align-items:center" onclick="event.stopPropagation()">' +
-      '<span style="font-size:9px;color:var(--muted);white-space:nowrap">Exp:</span>' +
+    '<div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">' +
+      '<span style="font-size:10px;color:var(--muted);white-space:nowrap">Exp:</span>' +
       '<input type="date" value="' + expiryVal + '"' +
-        ' style="flex:1;padding:3px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px' + (expiryVal ? ';border-color:#888' : '') + '"' +
+        ' style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (expiryVal ? ';border-color:#888' : '') + '"' +
         ' onchange="sbUpdateExpiry(' + item.id + ',this.value)">' +
     '</div>' +
     '</div>';
@@ -23168,6 +23187,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.47': ['📏 Supply Board — wider 10px scrollbar on all columns (tappable on iPad, always visible); cards made larger (padding 10px, 14px name, 11px subtitle, 4px color bar)'],
   '2.4.46': ['✎ Supply Board — ✎ edit icon on every card opens Manage Prices panel scrolled directly to that item (highlighted in orange); lets you edit name, category, tags, $/gram, case cost, case weight without leaving the board'],
   '2.4.45': ['📦 Supply Board upgrades: (1) + Add Item button with quick-add form (name, category, $/lb, par); (2) par level per item — auto-flags Order Soon when on-hand falls below par; (3) expiry date per item — amber badge ≤3 days, red EXPIRED badge; (4) $/lb cost shown on every card; (5) In Stock → flagged round-trips now preserve par, expiry, and on-hand fields'],
   '2.4.44': ['🗑 Removed FOH Ingredients tab — nav button, page (hidden), renderIngredientsPage calls, and DS_PAGE_CHECKS entry retired; Supply Board (📦) covers FOH/BOH stock status with Kanban drag, on-hand counts, and EOD report'],
