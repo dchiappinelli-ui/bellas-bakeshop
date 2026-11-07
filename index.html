@@ -2859,7 +2859,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.45';
+const APP_VERSION      = '2.4.46';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -22796,6 +22796,21 @@ function sbTogglePriceManager() {
   }
 }
 
+function sbEditItem(itemId) {
+  var panel = document.getElementById('sb-price-panel');
+  if (!panel) return;
+  panel.style.display = '';
+  renderPriceLib();
+  setTimeout(function() {
+    var row = document.getElementById('pl-row-' + itemId);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.style.outline = '2px solid #e8a045';
+      setTimeout(function() { row.style.outline = ''; }, 1800);
+    }
+  }, 80);
+}
+
 function sbClosePriceManager() {
   var panel = document.getElementById('sb-price-panel');
   if (panel) panel.style.display = 'none';
@@ -22934,7 +22949,8 @@ function sbRenderStockCard(item) {
         '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + costStr + '</div>' +
       '</div>' +
       (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
-      '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' : '') +
+      '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' +
+      '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">✎</button>' : '') +
       '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>' +
     '</div>' +
     '<div style="display:flex;gap:4px;margin-top:5px;margin-left:10px" onclick="event.stopPropagation()">' +
@@ -22980,6 +22996,7 @@ function sbRenderOrderCard(item, col) {
         '<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
         '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + costStr + '</div>' +
       '</div>' +
+      '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">✎</button>' +
       '<button onclick="sbReturnToStock(' + item.id + ')" title="Back to In Stock" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0;touch-action:manipulation;line-height:1">↩</button>' +
     '</div>' +
     '<div style="display:flex;gap:5px;margin-bottom:4px">' +
@@ -23151,6 +23168,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.46': ['✎ Supply Board — ✎ edit icon on every card opens Manage Prices panel scrolled directly to that item (highlighted in orange); lets you edit name, category, tags, $/gram, case cost, case weight without leaving the board'],
   '2.4.45': ['📦 Supply Board upgrades: (1) + Add Item button with quick-add form (name, category, $/lb, par); (2) par level per item — auto-flags Order Soon when on-hand falls below par; (3) expiry date per item — amber badge ≤3 days, red EXPIRED badge; (4) $/lb cost shown on every card; (5) In Stock → flagged round-trips now preserve par, expiry, and on-hand fields'],
   '2.4.44': ['🗑 Removed FOH Ingredients tab — nav button, page (hidden), renderIngredientsPage calls, and DS_PAGE_CHECKS entry retired; Supply Board (📦) covers FOH/BOH stock status with Kanban drag, on-hand counts, and EOD report'],
   '2.4.43': ['🗑 Removed Order Check Sheet — nav button, page, and all JS (getChannelBreakdownForDay, toggleCheckRow, renderCheckSheet, checksheetExpanded) retired; Channels Weekly Demand Summary and individual channel detail cover the same ground'],
