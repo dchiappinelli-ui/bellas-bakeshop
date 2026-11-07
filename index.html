@@ -2900,7 +2900,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.50';
+const APP_VERSION      = '2.4.51';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -22368,6 +22368,7 @@ var PL_DEFAULTS = [
   { name:'SP FLOUR',                     cat:'Flour',     pricePerGram:0.00082,  caseCost:18.69,  caseWeightGrams:22679  },
   { name:'BUTTER',                       cat:'Fat',       pricePerGram:0.00655,  caseCost:107,    caseWeightGrams:16344  },
   { name:'SUGAR',                        cat:'Sugar',     pricePerGram:0.00194,  caseCost:44,     caseWeightGrams:22679  },
+  { name:'BRIOCHE',                      cat:'Prep',      pricePerGram:0.01136,  caseCost:0,      caseWeightGrams:0      },
   { name:'VANILLA',                      cat:'Spice',     pricePerGram:0.01586,  caseCost:0,      caseWeightGrams:0      },
   { name:'OLIVE OIL',                    cat:'Fat',       pricePerGram:0.00852,  caseCost:23,     caseWeightGrams:2700   },
   { name:'MILK',                         cat:'Dairy',     pricePerGram:0.00061,  caseCost:0,      caseWeightGrams:0      },
@@ -22415,6 +22416,29 @@ function plGetAll() {
   }
   return data;
 }
+
+// One-time migration: merge PL_DEFAULTS into existing bk_price_lib installations
+(function plMigrateDefaults() {
+  if (localStorage.getItem('bk_pl_migrated_v1')) return;
+  const existing = plLoad();
+  if (existing === null) { localStorage.setItem('bk_pl_migrated_v1', '1'); return; } // fresh install — plGetAll seeds from defaults
+  let changed = false;
+  PL_DEFAULTS.forEach(function(def, i) {
+    const found = existing.find(function(e) { return e.name.toUpperCase() === def.name.toUpperCase(); });
+    if (found) {
+      if (Math.abs((found.pricePerGram || 0) - def.pricePerGram) > 0.000001) {
+        found.pricePerGram = def.pricePerGram;
+        found.updatedAt = Date.now();
+        changed = true;
+      }
+    } else {
+      existing.push({ id: Date.now() + i + Math.round(Math.random() * 1000), name: def.name, cat: def.cat, supplier: '', pricePerGram: def.pricePerGram, caseCost: def.caseCost || 0, caseWeightGrams: def.caseWeightGrams || 0, updatedAt: Date.now() });
+      changed = true;
+    }
+  });
+  if (changed) plSave(existing);
+  localStorage.setItem('bk_pl_migrated_v1', '1');
+})();
 
 function plLookupByName(name) {
   if (!name) return null;
@@ -23307,6 +23331,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.51': ['📦 Bulk price import — all 54 ingredients (with $/gram prices) now auto-merged into the Ingredient List on first load; runs once via bk_pl_migrated_v1 flag; updates prices for existing items and adds any missing ones (including BRIOCHE); syncs to Firebase automatically'],
   '2.4.50': ['🔗 Recipe ingredient costs now resolve LIVE from the price library — adding an ingredient that isn\'t in the library yet will auto-price as soon as it\'s added later; stored costPerUnit becomes a manual override only; 📚 badge click now clears the override (returns to live); ⚠ badge shows ingredients with no library match and no manual price; batch total also uses live prices'],
   '2.4.49': ['🏪 Ingredient List — Supplier field per ingredient: dropdown pulls from bk_suppliers list (seeded: Ace Endico, Restaurant Depot, Costco, BJs Wholesale, Mount Kisco Farm, Baldor Foods, Bake Mark); supplier filter in search bar; ⚙ Suppliers manager to add/remove suppliers inline; supplier saved in new ingredient form'],
   '2.4.48': ['🏷 Renamed nav button to "📦 Supply / Ingredients"; renamed "Manage Prices" button to "📋 Ingredient List ▸" for discoverability'],
