@@ -974,7 +974,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('ordering')">🛒 Ordering</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">📦 Supply Board<span id="sb-nav-badge" style="display:none;margin-left:5px;background:#cc3333;color:#fff;border-radius:8px;padding:1px 5px;font-size:10px;font-weight:900;vertical-align:middle"></span></button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">📦 Supply / Ingredients<span id="sb-nav-badge" style="display:none;margin-left:5px;background:#cc3333;color:#fff;border-radius:8px;padding:1px 5px;font-size:10px;font-weight:900;vertical-align:middle"></span></button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
   <button class="nav-btn" data-min-role="Owner" onclick="showPage('orders')">📋 Orders</button>
   <!-- All staff tabs -->
@@ -1214,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button onclick="sbPrintReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨 Report</button>
       <button onclick="sbResetBoard()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
-      <button onclick="sbTogglePriceManager()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">💰 Manage Prices ▸</button>
+      <button onclick="sbTogglePriceManager()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📋 Ingredient List ▸</button>
       <button onclick="forceSaveKeys(['bk_price_lib','bk_supply_board'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" title="Save prices and order board to cloud now">☁ Save</button>
     </div>
   </div>
@@ -2878,7 +2878,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.47';
+const APP_VERSION      = '2.4.48';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -23187,6 +23187,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.48': ['🏷 Renamed nav button to "📦 Supply / Ingredients"; renamed "Manage Prices" button to "📋 Ingredient List ▸" for discoverability'],
   '2.4.47': ['📏 Supply Board — wider 10px scrollbar on all columns (tappable on iPad, always visible); cards made larger (padding 10px, 14px name, 11px subtitle, 4px color bar)'],
   '2.4.46': ['✎ Supply Board — ✎ edit icon on every card opens Manage Prices panel scrolled directly to that item (highlighted in orange); lets you edit name, category, tags, $/gram, case cost, case weight without leaving the board'],
   '2.4.45': ['📦 Supply Board upgrades: (1) + Add Item button with quick-add form (name, category, $/lb, par); (2) par level per item — auto-flags Order Soon when on-hand falls below par; (3) expiry date per item — amber badge ≤3 days, red EXPIRED badge; (4) $/lb cost shown on every card; (5) In Stock → flagged round-trips now preserve par, expiry, and on-hand fields'],
