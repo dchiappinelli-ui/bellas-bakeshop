@@ -2832,7 +2832,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.41';
+const APP_VERSION      = '2.4.42';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -11196,6 +11196,19 @@ const TIER_LOW_PCT   = 0.80; // 80% of MSRP
 let ordersState = JSON.parse(localStorage.getItem('bk_orders_state') || '{}');
 function saveOrdersState() { localStorage.setItem('bk_orders_state', JSON.stringify(ordersState)); }
 
+function buildOrdersFromPars(ch) {
+  const orders = {};
+  (ch.orderLines || []).forEach(line => {
+    const p = line.product;
+    if (!orders[p]) orders[p] = {};
+    (ch.activeDays || DAYS_SHORT).forEach(d => {
+      if (!orders[p][d]) orders[p][d] = 0;
+      orders[p][d] += (line.days[d] || 0) * line.unitsEach;
+    });
+  });
+  return orders;
+}
+
 const ORDER_HISTORY_LIMIT = 12; // ~3 months of weekly snapshots per account
 
 // Bakery's operating week runs Tue–Sun (Monday is the closed day), so "week start" = most recent Tuesday
@@ -11262,11 +11275,16 @@ function checkWeekRollover(chId) {
   });
   state.history = state.history.slice(0, ORDER_HISTORY_LIMIT);
 
-  // Carry forward — this week starts as a copy of last week's actual numbers
-  state.orders = JSON.parse(JSON.stringify(state.history[0].orders));
+  // Seed from current pars — single source of truth; user can switch to last week's actuals via banner
+  const _ch = channels.find(c => c.id === chId);
+  const parOrders = _ch ? buildOrdersFromPars(_ch) : null;
+  state.orders = (parOrders && Object.keys(parOrders).length > 0)
+    ? parOrders
+    : JSON.parse(JSON.stringify(state.history[0].orders));
   state.confirmed = false;
   state.weekStartDate = thisWeek;
-  state.carriedForward = true; // transient flag, drives the "pre-filled" banner
+  state.fromPars = !!(parOrders && Object.keys(parOrders).length > 0);
+  state.carriedForward = false;
   saveOrdersState();
 }
 
@@ -11275,11 +11293,13 @@ let activeOrderAccount = null;
 function getOrderState(chId) {
   if (!ordersState[chId]) {
     const ch = channels.find(c => c.id === chId);
+    const _parSeed = ch ? buildOrdersFromPars(ch) : {};
     ordersState[chId] = {
       weekStartDate: currentWeekKey(),
       confirmed: false,
       priceOverrides: {},
-      orders: ch ? JSON.parse(JSON.stringify(ch.orders)) : {},
+      orders: _parSeed,
+      fromPars: Object.keys(_parSeed).length > 0,
       notes: {},
       pickupTime: ch?.notes?.match(/\d+:\d+/)?.[0] || '',
       contact: ch?.contact || '',
@@ -11314,6 +11334,29 @@ function restoreOrderFromHistory(chId, historyIndex) {
   if (!confirm(`Replace this week's numbers with the order from ${weekLabelFor(entry.weekStartDate)}?`)) return;
   state.orders = JSON.parse(JSON.stringify(entry.orders));
   state.confirmed = false;
+  saveOrdersState();
+  renderOrderAccount(chId);
+}
+
+function resetOrdersToPars(chId) {
+  const ch = channels.find(c => c.id === chId);
+  if (!ch) return;
+  const state = getOrderState(chId);
+  const pars = buildOrdersFromPars(ch);
+  if (Object.keys(pars).length === 0) { alert('No standing order lines found in Channels for this account.'); return; }
+  state.orders = pars;
+  state.fromPars = true;
+  state.carriedForward = false;
+  saveOrdersState();
+  renderOrderAccount(chId);
+}
+
+function useLastWeekActuals(chId) {
+  const state = getOrderState(chId);
+  if (!state.history || !state.history[0]) { alert('No prior week history yet.'); return; }
+  state.orders = JSON.parse(JSON.stringify(state.history[0].orders));
+  state.fromPars = false;
+  state.carriedForward = true;
   saveOrdersState();
   renderOrderAccount(chId);
 }
@@ -11518,13 +11561,20 @@ function renderOrderAccount(chId) {
           </span>
           <button onclick="confirmOrder('${chId}')" class="btn btn-success btn-sm">${state.carriedForward ? '✓ Confirm — Repeat of Last Week' : '✓ Confirm Order'}</button>
           <button onclick="printOrderSheet('${chId}')" class="btn btn-ghost btn-sm">🖨 Print Pickup Sheet</button>
+          <button onclick="resetOrdersToPars('${chId}')" class="btn btn-ghost btn-sm" title="Replace this week's quantities with current standing pars from Channels">↩ Reset to Pars</button>
           ${state.history && state.history.length ? `<button onclick="toggleOrderHistory('${chId}')" class="btn btn-ghost btn-sm">🕘 History (${state.history.length})</button>` : ''}
         </div>
       </div>
 
+      ${state.fromPars ? `
+      <div style="margin-bottom:16px;padding:10px 14px;background:rgba(80,160,100,0.08);border:1px solid rgba(80,160,100,0.3);border-radius:6px;font-size:12px;color:var(--success);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>📋 Pre-filled from standing pars — adjust anything that's different this week, then confirm.</span>
+        ${state.history && state.history[0] ? `<button onclick="useLastWeekActuals('${chId}')" style="padding:3px 10px;border-radius:10px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer;font-size:11px;white-space:nowrap">Use last week's numbers instead</button>` : ''}
+      </div>` : ''}
       ${state.carriedForward ? `
-      <div id="carried-banner-${chId}" style="margin-bottom:16px;padding:10px 14px;background:rgba(232,160,69,0.08);border:1px solid rgba(232,160,69,0.25);border-radius:6px;font-size:12px;color:var(--accent);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <span>🔁 Pre-filled from last week's order (${state.history[0] ? weekLabelFor(state.history[0].weekStartDate) : 'last week'}) — review and adjust, then confirm.</span>
+      <div style="margin-bottom:16px;padding:10px 14px;background:rgba(232,160,69,0.08);border:1px solid rgba(232,160,69,0.25);border-radius:6px;font-size:12px;color:var(--accent);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>🔁 Using last week's actuals (${state.history[0] ? weekLabelFor(state.history[0].weekStartDate) : 'last week'}) — review and adjust, then confirm.</span>
+        <button onclick="resetOrdersToPars('${chId}')" style="padding:3px 10px;border-radius:10px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:11px;white-space:nowrap">↩ Switch to standing pars</button>
       </div>` : ''}
 
       ${state.history && state.history.length ? `
@@ -22981,6 +23031,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.42': ['🔗 Weekly Orders now seeds from channel pars — no duplicate entry: buildOrdersFromPars() converts orderLines into the orders grid automatically; new weeks pre-fill from standing pars with a green banner; "Use last week\'s numbers instead" button in the banner; "↩ Reset to Pars" button always available in header; legacy carry-forward shows amber banner with "Switch to standing pars" escape hatch; existing accounts with no pars fall back to last week\'s actuals'],
   '2.4.41': ['🐛 Fix demand filter dropdown — removed CSS variable background from select (caused blue bar in dark/certain themes), constrained select width, switched category badge to border-only style without hex-alpha backgrounds'],
   '2.4.40': ['📊 Weekly Demand Summary — category filter dropdown above the demand table; select any category to filter to only those products; when All is selected, products are grouped by category with colored section headers and a left-border accent per category color, sorted by category order then alphabetically; Clear button resets to All'],
   '2.4.39': ['🏷 Recipe categories — user-defined categories with color coding: filter tabs on Recipe Library (All + per category, with recipe counts); colored category badges on every recipe card; colored section dividers per category; category dropdown in recipe edit form uses the live category list; "Manage" button to add, reorder, recolor, or delete categories; channels order lines now grouped by category with colored sub-headers and a left-border accent; categories stored in bk_recipe_categories (localStorage); initial set: Bread, Croissant, Pastry, Cookies, Cake, Bagel, Savory, Freezer, Other'],
