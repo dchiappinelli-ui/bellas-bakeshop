@@ -2900,7 +2900,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.49';
+const APP_VERSION      = '2.4.50';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3979,7 +3979,8 @@ function plSyncIngredient(recipeId, ingId) {
   if (!ing) return;
   const lib = plLookupByName(ing.name);
   if (!lib) return;
-  ing.costPerUnit = lib.pricePerGram;
+  // Clear any manual override so the ingredient uses the live library price going forward
+  ing.costPerUnit = 0;
   if (!ing.unit) ing.unit = 'g';
   save();
   renderRecipes();
@@ -4008,7 +4009,8 @@ function plSyncAllIngredients(recipeId) {
   let synced = 0;
   r.ingredients.forEach(ing => {
     const lib = plLookupByName(ing.name);
-    if (lib && lib.pricePerGram) { ing.costPerUnit = lib.pricePerGram; if (!ing.unit) ing.unit = 'g'; synced++; }
+    // Clear manual override so each ingredient resolves live from the library going forward
+    if (lib && lib.pricePerGram) { ing.costPerUnit = 0; if (!ing.unit) ing.unit = 'g'; synced++; }
   });
   if (synced > 0) { save(); renderRecipes(); setTimeout(() => toggleRecipe(recipeId), 30); }
 }
@@ -4539,20 +4541,39 @@ function renderRecipes() {
     + recipeStagesHtml(r, SKILLS);
   }
 
+  // Resolves effective cost per gram for an ingredient:
+  // — if it matches the price library by name, use the LIVE library price (not the stored snapshot)
+  // — stored ing.costPerUnit is a manual override, used only when no library match exists
+  function resolveIngCost(ing) {
+    const lib = plLookupByName(ing.name);
+    if (lib && lib.pricePerGram > 0) return lib.pricePerGram;
+    return parseFloat(ing.costPerUnit) || 0;
+  }
+
   function recipeIngredientsHtml(r) {
     const ings = r.ingredients || [];
     const rows = ings.map(ing => {
       const lib = plLookupByName(ing.name);
       const hasLib = !!lib;
-      const priceDiffers = hasLib && ing.costPerUnit > 0 && Math.abs(ing.costPerUnit - lib.pricePerGram) > 0.000001;
+      const hasOverride = ing.costPerUnit > 0;
+      // Live cost: library price when linked; stored override otherwise
+      const liveCost = resolveIngCost(ing);
+      const isOverridden = hasLib && hasOverride && Math.abs(ing.costPerUnit - lib.pricePerGram) > 0.000001;
       const rowBg = hasLib ? 'rgba(74,156,110,0.04)' : 'transparent';
-      const badge = hasLib ? `<span
-          title="${priceDiffers ? 'Price differs from library ($'+lib.pricePerGram.toFixed(5)+'/g) — click to sync' : 'Linked to price library — click to re-sync'}"
-          style="font-size:10px;${priceDiffers ? 'color:#e8a045;border-color:#e8a045' : 'color:#4a9c6e;border-color:#4a9c6e'};
+      let badge;
+      if (hasLib) {
+        badge = `<span
+          title="${isOverridden ? 'Manual override active ($'+ing.costPerUnit.toFixed(5)+'/g). Library price: $'+lib.pricePerGram.toFixed(5)+'/g. Click to clear override.' : 'Live price from library · $'+lib.pricePerGram.toFixed(5)+'/g'}"
+          style="font-size:10px;${isOverridden ? 'color:#e8a045;border-color:#e8a045' : 'color:#4a9c6e;border-color:#4a9c6e'};
             cursor:pointer;border:1px solid;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap"
-          onclick="plSyncIngredient(${r.id},${ing.id})">📚${priceDiffers ? ' ≠' : ''}</span>` : '';
+          onclick="plSyncIngredient(${r.id},${ing.id})">📚${isOverridden ? ' ≠' : ''}</span>`;
+      } else {
+        badge = hasOverride
+          ? ''
+          : `<span title="Not in ingredient library — no price set" style="font-size:10px;color:#cc4444;border:1px solid #cc4444;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap">⚠ no price</span>`;
+      }
       const qty = parseFloat(ing.quantity) || 0;
-      const cpu = parseFloat(ing.costPerUnit) || 0;
+      const cpu = liveCost;
       const rowCost = (qty && cpu) ? '$' + (qty * cpu).toFixed(2) : '—';
       return `
       <tr style="border-bottom:1px solid var(--border);background:${rowBg}"
@@ -4612,7 +4633,7 @@ function renderRecipes() {
           <div style="display:flex;align-items:center;gap:8px">
             ${libCount > 0 ? `<button class="btn btn-ghost btn-sm" onclick="plSyncAllIngredients(${r.id})"
               style="font-size:11px;color:#4a9c6e;border-color:#4a9c6e">📚 Sync All (${libCount})</button>` : ''}
-            ${unlibCount > 0 && libCount > 0 ? `<span style="font-size:11px;color:var(--muted)">${unlibCount} unlinked</span>` : ''}
+            ${unlibCount > 0 ? `<span style="font-size:11px;color:#cc4444;font-weight:600">⚠ ${unlibCount} not in library</span>` : ''}
           </div>
         </div>
         ${ings.length > 0 ? `
@@ -4642,7 +4663,7 @@ function renderRecipes() {
 
   function recipeCostSummaryHtml(r) {
     const ings = r.ingredients || [];
-    const ingCost = ings.reduce((sum, ing) => sum + (parseFloat(ing.quantity)||0)*(parseFloat(ing.costPerUnit)||0), 0);
+    const ingCost = ings.reduce((sum, ing) => sum + (parseFloat(ing.quantity)||0) * resolveIngCost(ing), 0);
     const totalActiveMins = r.stages.reduce((s, x) => s + (x.activeMins||0), 0);
     const laborRate = r.laborRatePerHour || 18;
     const laborCost = (totalActiveMins / 60) * laborRate;
@@ -23286,6 +23307,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.50': ['🔗 Recipe ingredient costs now resolve LIVE from the price library — adding an ingredient that isn\'t in the library yet will auto-price as soon as it\'s added later; stored costPerUnit becomes a manual override only; 📚 badge click now clears the override (returns to live); ⚠ badge shows ingredients with no library match and no manual price; batch total also uses live prices'],
   '2.4.49': ['🏪 Ingredient List — Supplier field per ingredient: dropdown pulls from bk_suppliers list (seeded: Ace Endico, Restaurant Depot, Costco, BJs Wholesale, Mount Kisco Farm, Baldor Foods, Bake Mark); supplier filter in search bar; ⚙ Suppliers manager to add/remove suppliers inline; supplier saved in new ingredient form'],
   '2.4.48': ['🏷 Renamed nav button to "📦 Supply / Ingredients"; renamed "Manage Prices" button to "📋 Ingredient List ▸" for discoverability'],
   '2.4.47': ['📏 Supply Board — wider 10px scrollbar on all columns (tappable on iPad, always visible); cards made larger (padding 10px, 14px name, 11px subtitle, 4px color bar)'],
