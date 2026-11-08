@@ -1315,11 +1315,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Manage Prices slide-in panel (contains existing price editor) -->
   <div id="sb-price-panel" style="display:none;position:fixed;inset:0;z-index:99980;background:rgba(0,0,0,0.55)" onclick="if(event.target===this)sbClosePriceManager()">
-    <div style="position:absolute;right:0;top:0;bottom:0;width:min(760px,100vw);background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;box-shadow:-6px 0 30px rgba(0,0,0,0.4)">
+    <div id="sb-price-inner" style="position:absolute;right:0;top:0;bottom:0;width:min(760px,100vw);background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;box-shadow:-6px 0 30px rgba(0,0,0,0.4)">
+      <!-- Drag-to-resize handle on left edge -->
+      <div onmousedown="sbResizePanelStart(event)" ontouchstart="sbResizePanelStart(event)"
+        style="position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;z-index:10;display:flex;align-items:center;justify-content:center">
+        <div style="width:3px;height:48px;border-radius:2px;background:var(--border);opacity:0.7;pointer-events:none"></div>
+      </div>
       <div style="padding:16px 20px;border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);flex-shrink:0">
         <h3 style="margin:0;font-family:'Playfair Display',serif;font-size:18px">💰 Raw Material Prices</h3>
         <div style="display:flex;align-items:center;gap:8px">
           <button onclick="forceSaveKeys(['bk_price_lib'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
+          <button id="sb-price-expand-btn" onclick="sbTogglePanelExpand()" title="Expand / restore" style="background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:16px;line-height:1;border-radius:4px;padding:4px 8px">⤢</button>
           <button onclick="sbClosePriceManager()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
         </div>
       </div>
@@ -1694,6 +1700,11 @@ document.addEventListener('DOMContentLoaded', function() {
         touch-action:manipulation">
       ✓ Done — Step Complete</button>
   </div>
+  <button onclick="dtDismissAlarm()"
+    style="margin-top:18px;padding:10px 24px;background:transparent;color:rgba(255,255,255,0.65);
+      border:1px solid rgba(255,255,255,0.35);border-radius:6px;
+      font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation">
+    ✕ Not my timer — just close</button>
 </div>
 
 <!-- Dough Timer Schedule Modal -->
@@ -2900,7 +2911,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.53';
+const APP_VERSION      = '2.4.55';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -15508,7 +15519,8 @@ function dtPlayAlert() {
 // ── Persistent alarm system ─────────────────────────────────────────────────
 let _dtAlarmKey      = null;   // 'batchId_stepIdx' of currently-shown alarm
 let _dtAlarmInterval = null;   // setInterval handle for repeating audio beat
-const _dtAlarmSnoozed = {};    // { 'batchId_stepIdx': snoozeUntilMs }
+const _dtAlarmSnoozed   = {};  // { 'batchId_stepIdx': snoozeUntilMs }
+const _dtAlarmDismissed = {};  // keys dismissed this session — won't re-fire on this device
 
 // Three sharp commercial-kitchen beeps
 function dtAlarmBeat() {
@@ -15533,6 +15545,7 @@ function dtStopAlarmAudio() {
 }
 
 function dtShowAlarm(batchId, key, batchLabel, stepName, overdueSeconds) {
+  if (_dtAlarmDismissed[key]) return; // this device dismissed it — don't re-show
   if (_dtAlarmKey === key) {
     // Already showing for this batch/step — just refresh the overdue counter
     const ov = document.getElementById('dt-alarm-overdue');
@@ -15562,6 +15575,13 @@ function dtAcknowledgeAlarm() {
 
 function dtSnoozeAlarm(minutes) {
   if (_dtAlarmKey) _dtAlarmSnoozed[_dtAlarmKey] = Date.now() + minutes * 60000;
+  dtStopAlarmAudio();
+  _dtAlarmKey = null;
+  document.getElementById('dt-alarm-overlay').style.display = 'none';
+}
+
+function dtDismissAlarm() {
+  if (_dtAlarmKey) _dtAlarmDismissed[_dtAlarmKey] = true;
   dtStopAlarmAudio();
   _dtAlarmKey = null;
   document.getElementById('dt-alarm-overlay').style.display = 'none';
@@ -22985,6 +23005,7 @@ function sbTogglePriceManager() {
   if (!panel) return;
   if (panel.style.display === 'none' || !panel.style.display) {
     panel.style.display = '';
+    sbRestorePanelWidth();
     renderPriceLib();
   } else {
     panel.style.display = 'none';
@@ -22995,6 +23016,7 @@ function sbEditItem(itemId) {
   var panel = document.getElementById('sb-price-panel');
   if (!panel) return;
   panel.style.display = '';
+  sbRestorePanelWidth();
   renderPriceLib();
   setTimeout(function() {
     var row = document.getElementById('pl-row-' + itemId);
@@ -23009,6 +23031,50 @@ function sbEditItem(itemId) {
 function sbClosePriceManager() {
   var panel = document.getElementById('sb-price-panel');
   if (panel) panel.style.display = 'none';
+}
+
+var _sbPanelExpanded = false;
+function sbRestorePanelWidth() {
+  var inner = document.getElementById('sb-price-inner');
+  if (!inner) return;
+  _sbPanelExpanded = false;
+  var saved = localStorage.getItem('bk_pl_panel_w');
+  inner.style.width = saved || 'min(760px,100vw)';
+  var btn = document.getElementById('sb-price-expand-btn');
+  if (btn) btn.textContent = '⤢';
+}
+function sbTogglePanelExpand() {
+  var inner = document.getElementById('sb-price-inner');
+  if (!inner) return;
+  _sbPanelExpanded = !_sbPanelExpanded;
+  inner.style.width = _sbPanelExpanded ? '100vw' : (localStorage.getItem('bk_pl_panel_w') || 'min(760px,100vw)');
+  var btn = document.getElementById('sb-price-expand-btn');
+  if (btn) btn.textContent = _sbPanelExpanded ? '⤡' : '⤢';
+}
+function sbResizePanelStart(e) {
+  e.preventDefault();
+  var inner = document.getElementById('sb-price-inner');
+  if (!inner) return;
+  var startX = e.touches ? e.touches[0].clientX : e.clientX;
+  var startW = inner.offsetWidth;
+  function onMove(ev) {
+    if (ev.cancelable) ev.preventDefault();
+    var x = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    var newW = Math.max(400, Math.min(window.innerWidth, startW + (startX - x)));
+    inner.style.width = newW + 'px';
+  }
+  function onUp() {
+    var el = document.getElementById('sb-price-inner');
+    if (el) { try { localStorage.setItem('bk_pl_panel_w', el.style.width); } catch(e) {} }
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchend', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchend', onUp);
 }
 
 function sbFmtTime(ts) {
@@ -23363,6 +23429,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.55': ['⏰ Dough timer alarm — added "✕ Not my timer — just close" button for bystanders on other devices; closes the alarm popup and mutes audio without snoozing or marking the step complete; alarm will not re-pop on that device this session (_dtAlarmDismissed key)'],
+  '2.4.54': ['↔ Raw Material Prices panel — drag the left edge to resize (min 400px, max full-width); ⤢ button in header to toggle full-screen and back; resized width saved to localStorage so it restores on next open'],
   '2.4.53': ['👤 Staff cards — Page Access now auto-derived from live nav buttons (getNavPages()); split into two groups: Staff Tabs (default on, uncheck to hide) and Owner Tabs (default off, check to grant); Supply/Ingredients and all other owner-only pages now appear and can be individually granted; authApplyNav updated to show owner-only pages to non-owners when explicitly granted; setStaffPageAccess stores true to grant owner pages and false to deny staff pages (undefined = default); adding/removing a nav button automatically appears/disappears from staff cards'],
   '2.4.52': ['👤 Staff cards — Page Access now includes Checklists (📋 opening) and Station Guide (📋 stationguide); both were accessible to all staff but missing from the per-staff toggle list'],
   '2.4.51': ['📦 Bulk price import — all 54 ingredients (with $/gram prices) now auto-merged into the Ingredient List on first load; runs once via bk_pl_migrated_v1 flag; updates prices for existing items and adds any missing ones (including BRIOCHE); syncs to Firebase automatically'],
