@@ -2900,7 +2900,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.52';
+const APP_VERSION      = '2.4.53';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3127,23 +3127,39 @@ function setStaffRole(staffId, role) {
 
 const STAFF_STATIONS = ['Kitchen', 'FOH · Barista', 'Sandwich', 'Sales', 'Manager'];
 
-const STAFF_PAGES = [
-  { id: 'dayview',      label: '📋 Day View' },
-  { id: 'doughtimer',   label: '⏱ Dough Timer' },
-  { id: 'weekplan',     label: '🗓 Bake Board' },
-  { id: 'freezer',      label: '❄️ Freezer Stock' },
-  { id: 'displaystock', label: '🖼 Display Stock' },
-  { id: 'staffboard',   label: '💬 Staff Board' },
-  { id: 'eod',          label: '📊 End of Day' },
-  { id: 'opening',      label: '📋 Checklists' },
-  { id: 'stationguide', label: '📋 Station Guide' },
-];
+const STAFF_PAGES = []; // legacy — now auto-derived via getNavPages()
 
-function setStaffPageAccess(staffId, pageId, allowed) {
+// Derives the page list from live nav buttons — always in sync with the actual nav.
+// ownerOnly pages default to denied for non-owners; staff pages default to allowed.
+function getNavPages() {
+  const pages = [];
+  document.querySelectorAll('#main-nav .nav-btn').forEach(function(btn) {
+    const m = (btn.getAttribute('onclick') || '').match(/showPage\('(\w+)'\)/);
+    if (!m) return;
+    const id = m[1];
+    if (id === 'staff') return; // skip the management page itself
+    const ownerOnly = btn.getAttribute('data-min-role') === 'Owner';
+    const clone = btn.cloneNode(true);
+    clone.querySelectorAll('span').forEach(function(s) { s.remove(); });
+    const text = clone.textContent.trim() || id;
+    pages.push({ id: id, label: text, ownerOnly: ownerOnly });
+  });
+  return pages;
+}
+
+function setStaffPageAccess(staffId, pageId, allowed, ownerOnly) {
   const m = staff.find(s => s.id === staffId);
   if (!m) return;
   if (!m.pageAccess) m.pageAccess = {};
-  m.pageAccess[pageId] = allowed;
+  if (ownerOnly) {
+    // Owner pages: default is denied — store true to grant, delete key to restore denial
+    if (allowed) m.pageAccess[pageId] = true;
+    else delete m.pageAccess[pageId];
+  } else {
+    // Staff pages: default is allowed — store false to deny, delete key to restore allow
+    if (!allowed) m.pageAccess[pageId] = false;
+    else delete m.pageAccess[pageId];
+  }
   saveStaff();
   // If the currently logged-in user is this staff member, refresh nav immediately
   const session = authGetSession();
@@ -3374,20 +3390,27 @@ function renderStaffPage() {
               <div style="font-size:11px;color:var(--muted)">${isOwner ? 'Full app + Staff page + settings' : 'Staff view: Dough Timer, Bake Board, Day View, Board'}</div>
             </div>
           </label>
-          ${!isOwner ? `<div style="margin-top:12px">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">Page Access</div>
-            <div style="display:flex;flex-direction:column;gap:4px">
-              ${STAFF_PAGES.map(p => {
-                const allowed = !(m.pageAccess && m.pageAccess[p.id] === false);
-                return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 8px;border-radius:4px;background:${allowed?'transparent':'rgba(204,51,0,0.05)'}">
-                  <input type="checkbox" ${allowed?'checked':''} onchange="setStaffPageAccess('${m.id}','${p.id}',this.checked)"
-                    style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
-                  <span style="font-size:12px;color:${allowed?'var(--text)':'var(--muted)'}">${p.label}</span>
-                  ${!allowed?'<span style="font-size:10px;color:#c33;margin-left:auto">hidden</span>':''}
-                </label>`;
-              }).join('')}
-            </div>
-          </div>` : ''}`;
+          ${!isOwner ? (()=>{
+            const navPages = getNavPages();
+            const staffPages = navPages.filter(p => !p.ownerOnly);
+            const ownerPages = navPages.filter(p => p.ownerOnly);
+            const acc = m.pageAccess || {};
+            const rowHtml = p => {
+              const allowed = p.ownerOnly ? acc[p.id] === true : acc[p.id] !== false;
+              return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 8px;border-radius:4px;background:${allowed?'transparent':'rgba(204,51,0,0.05)'}">
+                <input type="checkbox" ${allowed?'checked':''} onchange="setStaffPageAccess('${m.id}','${p.id}',this.checked,${p.ownerOnly})"
+                  style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+                <span style="font-size:12px;color:${allowed?'var(--text)':'var(--muted)'}">${p.label}</span>
+                ${!allowed?'<span style="font-size:10px;color:#c33;margin-left:auto">hidden</span>':''}
+              </label>`;
+            };
+            return `<div style="margin-top:12px">
+              <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">Page Access — Staff Tabs</div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">${staffPages.map(rowHtml).join('')}</div>
+              <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">Page Access — Owner Tabs (grant to this staff)</div>
+              <div style="display:flex;flex-direction:column;gap:4px">${ownerPages.map(rowHtml).join('')}</div>
+            </div>`;
+          })() : ''}`;
       })()}
     </div>`;
   }).join('');
@@ -14347,7 +14370,14 @@ function authApplyNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const minRole = btn.getAttribute('data-min-role');
     if (minRole === 'Owner') {
-      btn.style.display = isOwner ? '' : 'none';
+      if (isOwner) { btn.style.display = ''; return; }
+      // Non-owner: show only if owner explicitly granted this page
+      if (pageAccess) {
+        const pg = (btn.getAttribute('onclick') || '').match(/showPage\('(\w+)'\)/);
+        if (pg && pageAccess[pg[1]] === true) { btn.style.display = ''; return; }
+      }
+      btn.style.display = 'none';
+      return;
     } else {
       if (!isStaff) { btn.style.display = 'none'; return; }
       if (pageAccess) {
@@ -23333,6 +23363,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.53': ['👤 Staff cards — Page Access now auto-derived from live nav buttons (getNavPages()); split into two groups: Staff Tabs (default on, uncheck to hide) and Owner Tabs (default off, check to grant); Supply/Ingredients and all other owner-only pages now appear and can be individually granted; authApplyNav updated to show owner-only pages to non-owners when explicitly granted; setStaffPageAccess stores true to grant owner pages and false to deny staff pages (undefined = default); adding/removing a nav button automatically appears/disappears from staff cards'],
   '2.4.52': ['👤 Staff cards — Page Access now includes Checklists (📋 opening) and Station Guide (📋 stationguide); both were accessible to all staff but missing from the per-staff toggle list'],
   '2.4.51': ['📦 Bulk price import — all 54 ingredients (with $/gram prices) now auto-merged into the Ingredient List on first load; runs once via bk_pl_migrated_v1 flag; updates prices for existing items and adds any missing ones (including BRIOCHE); syncs to Firebase automatically'],
   '2.4.50': ['🔗 Recipe ingredient costs now resolve LIVE from the price library — adding an ingredient that isn\'t in the library yet will auto-price as soon as it\'s added later; stored costPerUnit becomes a manual override only; 📚 badge click now clears the override (returns to live); ⚠ badge shows ingredients with no library match and no manual price; batch total also uses live prices'],
