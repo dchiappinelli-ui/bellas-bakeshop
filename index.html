@@ -108,6 +108,8 @@ document.addEventListener('DOMContentLoaded', function() {
     scrollbar-width: thin;
     scrollbar-color: var(--muted) transparent;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   .sb-col-body::-webkit-scrollbar { width: 10px; }
   .sb-col-body::-webkit-scrollbar-track { background: transparent; }
@@ -2911,7 +2913,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.55';
+const APP_VERSION      = '2.4.56';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -23200,7 +23202,7 @@ function sbRenderStockCard(item) {
   var expBadge = sbExpiryBadge(entry.expiry);
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="in_stock"' +
     ' style="padding:10px 9px;margin-bottom:5px;border-radius:6px;' +
-    'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:none;user-select:none;' +
+    'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:pan-y;user-select:none;' +
     (isSel ? 'outline:2px solid #e8a045;' : '') + '">' +
     '<div style="display:flex;align-items:center;gap:8px">' +
       '<div style="width:4px;height:38px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
@@ -23250,7 +23252,7 @@ function sbRenderOrderCard(item, col) {
   var expBadge = sbExpiryBadge(entry.expiry);
   var expiryVal = (entry.expiry || '').replace(/"/g, '&quot;');
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="' + col + '"' +
-    ' style="padding:10px 10px;margin-bottom:6px;border-radius:6px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:none;user-select:none">' +
+    ' style="padding:10px 10px;margin-bottom:6px;border-radius:6px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:pan-y;user-select:none">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
       '<div style="width:4px;height:38px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
       '<div style="flex:1;min-width:0">' +
@@ -23289,12 +23291,17 @@ function sbDragDown(e) {
   if (!item) return;
   if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
   if (_sbSelectMode) { sbToggleSelect(item.dataset.itemId); return; }
-  e.preventDefault();
+  // Only prevent default and capture pointer when starting on the drag handle —
+  // otherwise the browser can handle vertical scroll on the card body (touch-action:pan-y)
+  var onHandle = e.target.closest('.sb-drag-handle');
+  if (onHandle) {
+    e.preventDefault();
+    item.setPointerCapture && item.setPointerCapture(e.pointerId);
+  }
   _sbDragGest = {
     item: item, itemId: item.dataset.itemId, fromCol: item.dataset.col,
     startX: e.clientX, startY: e.clientY, active: false, targetCol: null
   };
-  item.setPointerCapture && item.setPointerCapture(e.pointerId);
   _sbDragGest.timer = setTimeout(function() {
     if (!_sbDragGest) return;
     _sbDragGest.active = true;
@@ -23429,6 +23436,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.56': ['📱 Supply Board iPad scroll fix — root cause was touch-action:none on every card, which told iOS to give ALL touch control to JS (blocking native scroll); changed cards to touch-action:pan-y so the browser handles vertical scroll natively; sbDragDown now only calls preventDefault()/setPointerCapture when the touch started on the ⠿ drag handle (not card body); .sb-col-body gets explicit touch-action:pan-y + overscroll-behavior:contain'],
   '2.4.55': ['⏰ Dough timer alarm — added "✕ Not my timer — just close" button for bystanders on other devices; closes the alarm popup and mutes audio without snoozing or marking the step complete; alarm will not re-pop on that device this session (_dtAlarmDismissed key)'],
   '2.4.54': ['↔ Raw Material Prices panel — drag the left edge to resize (min 400px, max full-width); ⤢ button in header to toggle full-screen and back; resized width saved to localStorage so it restores on next open'],
   '2.4.53': ['👤 Staff cards — Page Access now auto-derived from live nav buttons (getNavPages()); split into two groups: Staff Tabs (default on, uncheck to hide) and Owner Tabs (default off, check to grant); Supply/Ingredients and all other owner-only pages now appear and can be individually granted; authApplyNav updated to show owner-only pages to non-owners when explicitly granted; setStaffPageAccess stores true to grant owner pages and false to deny staff pages (undefined = default); adding/removing a nav button automatically appears/disappears from staff cards'],
