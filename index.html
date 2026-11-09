@@ -807,7 +807,7 @@ document.addEventListener('DOMContentLoaded', function() {
   #tl-export-modal, #tl-load-modal, #tl-modal, #tl-recipe-modal,
   #dt-library-picker-modal,
   #wp-copy-modal, #wp-push-modal,
-  #deploy-modal, #sq-import-modal, #yield-modal, #freezer-scan-modal {
+  #deploy-modal, #sq-import-modal, #yield-modal, #freezer-scan-modal, #pl-receipt-modal {
     align-items: flex-start !important;
     overflow-y: auto !important;
     padding: 20px !important;
@@ -817,7 +817,8 @@ document.addEventListener('DOMContentLoaded', function() {
   #tl-export-modal > *, #tl-load-modal > *, #tl-modal > *, #tl-recipe-modal > *,
   #dt-library-picker-modal > *,
   #wp-copy-modal > *, #wp-push-modal > *,
-  #deploy-modal > *, #sq-import-modal > *, #yield-modal > *, #freezer-scan-modal > * {
+  #deploy-modal > *, #sq-import-modal > *, #yield-modal > *, #freezer-scan-modal > *,
+  #pl-receipt-modal > * {
     flex-shrink: 0 !important;
   }
   /* Lock body scroll whenever any modal overlay is visible */
@@ -1325,7 +1326,9 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="padding:16px 20px;border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);flex-shrink:0">
         <h3 style="margin:0;font-family:'Playfair Display',serif;font-size:18px">💰 Raw Material Prices</h3>
         <div style="display:flex;align-items:center;gap:8px">
+          <button id="pl-scan-btn" onclick="plScanReceipt()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer" title="Scan a supplier receipt to update prices">📷 Scan Receipt</button>
           <button onclick="forceSaveKeys(['bk_price_lib'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
+          <input id="pl-scan-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="plScanFileChosen(event)">
           <button id="sb-price-expand-btn" onclick="sbTogglePanelExpand()" title="Expand / restore" style="background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:16px;line-height:1;border-radius:4px;padding:4px 8px">⤢</button>
           <button onclick="sbClosePriceManager()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
         </div>
@@ -2771,6 +2774,28 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- Receipt Scan Confirmation Modal -->
+<div id="pl-receipt-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);
+     align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
+              width:600px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:17px">📷 Receipt Scan</div>
+        <div id="pl-receipt-subtitle" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button onclick="plScanCloseModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
+    </div>
+    <div id="pl-receipt-rows" style="padding:16px 24px;display:flex;flex-direction:column;gap:4px"></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;align-items:center">
+      <span id="pl-receipt-apply-count" style="font-size:12px;color:var(--muted);margin-right:auto"></span>
+      <button onclick="plScanCloseModal()" style="padding:10px 20px;border:1px solid var(--border);background:none;color:var(--muted);border-radius:4px;cursor:pointer;font-size:14px">Cancel</button>
+      <button onclick="plScanApply()" id="pl-receipt-apply-btn"
+        style="padding:10px 24px;background:var(--accent);color:#1a1209;border:none;border-radius:4px;font-size:14px;font-weight:700;cursor:pointer">Apply Updates</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SCRIPT ======== -->
 <script>
 
@@ -2921,7 +2946,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.59';
+const APP_VERSION      = '2.4.63';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -5211,54 +5236,164 @@ function projectRecipe(recipe) {
     ? weeklyBuffers[bufferKey]
     : suggestBuffer(bufferKey, yieldPer);
 
-  let stock = 0;
+  // Shelf life: minimum shelfDays across all products for this recipe
+  const shelfDays = products.reduce((min, pname) => {
+    const pd = PRODUCTS.find(p => p.name === pname);
+    return pd ? Math.min(min, pd.shelfDays) : min;
+  }, 99);
+
+  // Age-aware stock tracker: [{amount, expiresAtOffset}]
+  // On-hand stock expires after shelfDays; frozen stock is long-lived (90 days)
+  const stockBatches = [];
   products.forEach(pname => {
-    stock += (invState[pname] && invState[pname].onHand)  || 0;
-    stock += (invState[pname] && invState[pname].frozen)  || 0;
+    const oh  = (invState[pname] && invState[pname].onHand)  || 0;
+    const frz = (invState[pname] && invState[pname].frozen)  || 0;
+    if (oh  > 0) stockBatches.push({ amount: oh,  expiresAtOffset: shelfDays });
+    if (frz > 0) stockBatches.push({ amount: frz, expiresAtOffset: 90 });
   });
 
   const days = [];
   for (let offset = 0; offset < 7; offset++) {
     const dayShort = dayShortForOffset(offset);
     const dk = dateKey(offset);
+
+    // Expire batches that have passed their shelf life
+    stockBatches.forEach(b => { if (b.expiresAtOffset <= offset) b.amount = 0; });
+
+    const stockBefore = stockBatches.reduce((s, b) => s + b.amount, 0);
+
     let demand = 0;
     products.forEach(pname => { demand += getOrderedUnitsForDay(pname, dayShort); });
 
     const conf = weeklyConfirmed[dk] && weeklyConfirmed[dk][recipe.id];
     const plannedBatches = conf ? (conf.batches || 0) : 0;
-    const stockBefore = stock;
-    stock = Math.max(0, stock - demand) + plannedBatches * yieldPer;
 
+    // Consume stock FIFO (oldest/soonest-expiring first)
+    let toConsume = Math.min(demand, stockBefore);
+    for (const b of stockBatches) {
+      if (toConsume <= 0) break;
+      const take = Math.min(toConsume, b.amount);
+      b.amount -= take;
+      toConsume -= take;
+    }
+
+    // New production becomes a fresh batch expiring shelfDays from now
+    if (plannedBatches > 0) {
+      stockBatches.push({ amount: plannedBatches * yieldPer, expiresAtOffset: offset + shelfDays });
+    }
+
+    const stockAfter = stockBatches.reduce((s, b) => s + b.amount, 0);
     const projectedAfterDemand = stockBefore - demand;
     const dipsBelow = projectedAfterDemand < buffer;
     const triggered = dipsBelow && !conf;
     const batchesNeeded = Math.max(1, Math.ceil((buffer - projectedAfterDemand) / yieldPer));
 
-    days.push({ offset, dayShort, dk, demand, stockBefore, stockAfter: stock,
+    days.push({ offset, dayShort, dk, demand, stockBefore, stockAfter,
       buffer, triggered, batchesNeeded, confirmed: conf || null,
-      plannedBatches, yieldPer, leadDays: recipe.leadDays || 0 });
+      plannedBatches, yieldPer, shelfDays, leadDays: recipe.leadDays || 0 });
   }
-  return { recipe, days, buffer, yieldPer, products };
+  return { recipe, days, buffer, yieldPer, products, shelfDays };
+}
+
+// Project a channel product that has no recipe in the Recipe Library.
+// Returns the same shape as projectRecipe(), using a synthetic recipe-like object
+// so renderWeeklySchedule works without changes.
+function projectProduct(pd) {
+  const productName = pd.name;
+  const shelfDays   = pd.shelfDays || 1;
+  const batchSize   = pd.batch     || 1;
+  const packMeta    = getPackMeta(productName);
+  const deliveryLead = packMeta.deliveryLead || 0;
+
+  // Synthetic recipe object — lets renderWeeklySchedule/confirmDay work unchanged
+  const syntheticRecipe = {
+    id: `__p_${productName}`,
+    name: productName,
+    yield: String(batchSize),
+    leadDays: deliveryLead,
+    _isProductPlan: true
+  };
+
+  const buffer = suggestBuffer(productName, batchSize);
+
+  // Age-aware stock tracker (same pattern as projectRecipe)
+  const stockBatches = [];
+  const oh  = (invState[productName] && invState[productName].onHand)  || 0;
+  const frz = (invState[productName] && invState[productName].frozen)  || 0;
+  if (oh  > 0) stockBatches.push({ amount: oh,  expiresAtOffset: shelfDays });
+  if (frz > 0) stockBatches.push({ amount: frz, expiresAtOffset: 90 });
+
+  const days = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const dayShort = dayShortForOffset(offset);
+    const dk       = dateKey(offset);
+
+    stockBatches.forEach(b => { if (b.expiresAtOffset <= offset) b.amount = 0; });
+    const stockBefore = stockBatches.reduce((s, b) => s + b.amount, 0);
+
+    const demand = getOrderedUnitsForDay(productName, dayShort);
+
+    const confKey = syntheticRecipe.id;
+    const conf    = weeklyConfirmed[dk] && weeklyConfirmed[dk][confKey];
+    const plannedBatches = conf ? (conf.batches || 0) : 0;
+
+    let toConsume = Math.min(demand, stockBefore);
+    for (const b of stockBatches) {
+      if (toConsume <= 0) break;
+      const take = Math.min(toConsume, b.amount);
+      b.amount -= take;
+      toConsume -= take;
+    }
+    if (plannedBatches > 0) {
+      stockBatches.push({ amount: plannedBatches * batchSize, expiresAtOffset: offset + shelfDays });
+    }
+
+    const stockAfter = stockBatches.reduce((s, b) => s + b.amount, 0);
+    const projectedAfterDemand = stockBefore - demand;
+    const dipsBelow  = projectedAfterDemand < buffer;
+    const triggered  = dipsBelow && !conf;
+    const batchesNeeded = Math.max(1, Math.ceil((buffer - projectedAfterDemand) / batchSize));
+
+    days.push({ offset, dayShort, dk, demand, stockBefore, stockAfter,
+      buffer, triggered, batchesNeeded, confirmed: conf || null,
+      plannedBatches, yieldPer: batchSize, shelfDays, leadDays: deliveryLead });
+  }
+  return { recipe: syntheticRecipe, days, buffer, yieldPer: batchSize, products: [productName], shelfDays };
 }
 
 function buildWeeklyPlan() {
   const plan = Array.from({length: 7}, (_, i) => ({
     offset: i, dayShort: dayShortForOffset(i), dk: dateKey(i), triggers: [], needed: []
   }));
-  recipes.forEach(recipe => {
-    const proj = projectRecipe(recipe);
-    if (!proj) return;
+
+  function _addToPlan(proj) {
     proj.days.forEach(day => {
       if (!day.triggered && !day.confirmed) return;
       const makeByOffset = Math.max(0, day.offset - day.leadDays);
       const needByOffset = day.offset;
-      plan[makeByOffset].triggers.push({ recipe, day, makeByOffset, needByOffset,
+      plan[makeByOffset].triggers.push({ recipe: proj.recipe, day, makeByOffset, needByOffset,
         isUrgent: makeByOffset === day.offset && day.leadDays > 0 });
       if (needByOffset !== makeByOffset) {
-        plan[needByOffset].needed.push({ recipe, day, makeByOffset, needByOffset });
+        plan[needByOffset].needed.push({ recipe: proj.recipe, day, makeByOffset, needByOffset });
       }
     });
+  }
+
+  // Recipe-linked products
+  recipes.forEach(recipe => {
+    const proj = projectRecipe(recipe);
+    if (proj) _addToPlan(proj);
   });
+
+  // Channel-only products: in PRODUCTS catalog, have channel demand, not linked to any recipe
+  PRODUCTS.forEach(pd => {
+    if (resolveRecipeId(pd.name)) return; // already covered by a recipe
+    const hasChannelDemand = DAYS_SHORT.some(d => getOrderedUnitsForDay(pd.name, d) > 0);
+    if (!hasChannelDemand) return;
+    const proj = projectProduct(pd);
+    if (proj) _addToPlan(proj);
+  });
+
   return plan;
 }
 
@@ -5867,6 +6002,29 @@ function buildBoardFromFallback() {
     if (!recipe) return;
     items.BAKING.push({ time: null, timeLabel: '—', label: `${recipe.name} × ${data.batches} batch${data.batches>1?'es':''}`, urgent: false });
   });
+
+  // Phase 1C — production plan: unconfirmed triggers from weekly projection
+  try {
+    const plan = buildWeeklyPlan();
+    const todayTriggers = (plan[0] && plan[0].triggers) ? plan[0].triggers : [];
+    todayTriggers.forEach(({ recipe, day, isUrgent }) => {
+      const isConfirmed = !!(weeklyConfirmed[dk] && weeklyConfirmed[dk][recipe.id]);
+      if (isConfirmed) return;
+      const pname = recipe._isProductPlan ? recipe.name
+        : ((getProductsForRecipe(recipe.id) || [])[0] || recipe.name);
+      const packMeta = getPackMeta(pname);
+      const isStage = packMeta.prepType === 'stage';
+      const batches = day.batchesNeeded || 1;
+      const icon = isStage ? '❄️' : '🔥';
+      const verb = isStage ? 'Pull from freezer' : 'Bake';
+      items.BAKING.push({
+        time: 0,
+        timeLabel: '📋 Plan',
+        label: `${icon} ${verb} — ${recipe.name} × ${batches} batch${batches > 1 ? 'es' : ''}`,
+        urgent: isUrgent
+      });
+    });
+  } catch(e) { /* non-blocking */ }
 
   const allStanding = [...standingTasks.filter(t => t.active), ...todayCustomTasks.filter(t => t.active !== false)];
   allStanding.forEach(t => {
@@ -21875,6 +22033,182 @@ var PL_CAT_COLORS = {
   'Protein':'#c8705a','Other':'#8a8a8a'
 };
 
+// ── Receipt Scan ──────────────────────────────────────────────
+let _plScanMatches = []; // [{receiptItem, entry, newPpg, canConvert, checked}]
+
+function plScanReceipt() {
+  if (!authCanAccess('Owner')) { alert('Owner access required to update prices.'); return; }
+  if (!_fbFunctions) { alert('Cloud sync isn\'t connected — can\'t reach the scan service.'); return; }
+  document.getElementById('pl-scan-input').click();
+}
+
+function plScanFileChosen(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const mimeType = file.type || 'image/jpeg';
+  freezerScanDownscale(file).then(base64 => {
+    plScanRun(base64, mimeType);
+  }).catch(e => {
+    alert('Could not read that photo: ' + e.message);
+  });
+}
+
+function plScanSetBtnState(loading) {
+  const btn = document.getElementById('pl-scan-btn');
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? '⏳ Reading…' : '📷 Scan Receipt';
+  btn.style.opacity = loading ? '0.6' : '1';
+}
+
+function plScanRun(imageBase64, mimeType) {
+  plScanSetBtnState(true);
+  const parseReceipt = _fbFunctions.httpsCallable('parseReceipt');
+  parseReceipt({ imageBase64, mimeType })
+    .then(res => {
+      plScanSetBtnState(false);
+      const items = (res.data && res.data.items) || [];
+      if (!items.length) { alert('No ingredient line items found on that receipt.'); return; }
+      const matches = plScanBuildMatches(items);
+      plScanShowModal(matches);
+    })
+    .catch(e => {
+      plScanSetBtnState(false);
+      console.warn('parseReceipt error:', e);
+      alert('Could not read that receipt: ' + (e.message || 'unknown error'));
+    });
+}
+
+// Unit label → grams conversion for $/gram calculation
+const PL_SCAN_UNIT_GRAMS = {
+  'lb':453.592,'lbs':453.592,'pound':453.592,'pounds':453.592,
+  'oz':28.3495,'ounce':28.3495,'ounces':28.3495,
+  'kg':1000,'kilogram':1000,'kilograms':1000,
+  '100g':100,'gram':1,'g':1,
+};
+
+function plScanToPpg(price, unit, entry) {
+  const u = (unit || '').toLowerCase().trim();
+  if (PL_SCAN_UNIT_GRAMS[u]) return price / PL_SCAN_UNIT_GRAMS[u];
+  if ((u === 'case' || u === 'cs') && entry && entry.caseWeightGrams > 0)
+    return price / entry.caseWeightGrams;
+  return null;
+}
+
+function plScanMatchEntry(receiptName) {
+  const all = plGetAll();
+  const q = receiptName.toUpperCase().trim();
+  // 1. Exact
+  let m = all.find(e => e.name === q);
+  if (m) return m;
+  // 2. Contains
+  m = all.find(e => q.includes(e.name) || e.name.includes(q));
+  if (m) return m;
+  // 3. Token overlap ≥ 60%
+  const qToks = new Set(q.split(/\s+/).filter(Boolean));
+  let best = 0, bestEntry = null;
+  all.forEach(e => {
+    const eToks = e.name.split(/\s+/).filter(Boolean);
+    const hits = eToks.filter(t => qToks.has(t)).length;
+    const score = hits / Math.max(eToks.length, qToks.size);
+    if (score > best && score >= 0.6) { best = score; bestEntry = e; }
+  });
+  return bestEntry;
+}
+
+function plScanBuildMatches(items) {
+  return items.map(item => {
+    const entry = plScanMatchEntry(item.name);
+    const newPpg = (entry && item.price != null)
+      ? plScanToPpg(item.price, item.unit, entry) : null;
+    return { receiptItem: item, entry, newPpg, canConvert: newPpg != null, checked: !!(entry && newPpg != null) };
+  });
+}
+
+function plScanPpgToLb(ppg) { return ppg * 453.592; }
+
+function plScanShowModal(matches) {
+  _plScanMatches = matches;
+  const matchedCount = matches.filter(m => m.entry && m.canConvert).length;
+  const totalCount = matches.length;
+
+  document.getElementById('pl-receipt-subtitle').textContent =
+    `${totalCount} line item${totalCount !== 1 ? 's' : ''} found · ${matchedCount} matched to price library`;
+
+  const rows = document.getElementById('pl-receipt-rows');
+  rows.innerHTML = matches.map((m, i) => {
+    const ri = m.receiptItem;
+    const hasMatch = !!(m.entry && m.canConvert);
+    const oldPpg = m.entry ? (m.entry.pricePerGram || 0) : 0;
+    const newPpg = m.newPpg || 0;
+    const pctChange = oldPpg > 0 ? ((newPpg - oldPpg) / oldPpg * 100) : null;
+    const pctLabel = pctChange != null
+      ? `<span style="font-size:11px;font-weight:700;color:${pctChange > 0 ? 'var(--danger)' : 'var(--success)'}">${pctChange > 0 ? '+' : ''}${pctChange.toFixed(1)}%</span>`
+      : '';
+
+    if (hasMatch) {
+      return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:5px;background:var(--surface2);margin-bottom:2px">
+        <input type="checkbox" id="pl-scan-chk-${i}" ${m.checked ? 'checked' : ''}
+          onchange="_plScanMatches[${i}].checked=this.checked;plScanUpdateCount()"
+          style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${m.entry.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${ri.name}${ri.unit ? ' · ' + ri.unit : ''}${ri.quantity ? ' × ' + ri.quantity : ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:12px;color:var(--muted)">$${plScanPpgToLb(oldPpg).toFixed(2)}/lb → <span style="color:var(--text);font-weight:700">$${plScanPpgToLb(newPpg).toFixed(2)}/lb</span> ${pctLabel}</div>
+          ${ri.price != null ? `<div style="font-size:11px;color:var(--muted);margin-top:1px">Receipt: $${ri.price.toFixed(2)}${ri.unit ? '/' + ri.unit : ''}</div>` : ''}
+        </div>
+      </div>`;
+    } else {
+      const reason = m.entry && !m.canConvert ? 'unit can\'t convert to $/gram'
+        : !m.entry ? 'no match in price library' : '';
+      return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:5px;border:1px dashed var(--border);opacity:0.55;margin-bottom:2px">
+        <div style="width:16px;flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--muted);text-decoration:line-through">${ri.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${reason}</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">${ri.price != null ? '$' + ri.price.toFixed(2) + (ri.unit ? '/' + ri.unit : '') : '—'}</div>
+      </div>`;
+    }
+  }).join('');
+
+  plScanUpdateCount();
+  document.getElementById('pl-receipt-modal').style.display = 'flex';
+}
+
+function plScanUpdateCount() {
+  const n = _plScanMatches.filter(m => m.checked).length;
+  const countEl = document.getElementById('pl-receipt-apply-count');
+  const btn = document.getElementById('pl-receipt-apply-btn');
+  if (countEl) countEl.textContent = `${n} update${n !== 1 ? 's' : ''} selected`;
+  if (btn) btn.textContent = `Apply ${n} Update${n !== 1 ? 's' : ''}`;
+  if (btn) btn.disabled = n === 0;
+}
+
+function plScanApply() {
+  let applied = 0;
+  _plScanMatches.forEach(m => {
+    if (!m.checked || !m.entry || m.newPpg == null) return;
+    plUpdateField(m.entry.id, 'pricePerGram', m.newPpg);
+    applied++;
+  });
+  plScanCloseModal();
+  renderPriceLib();
+  forceSaveKeys(['bk_price_lib']);
+  alert(`✓ Updated ${applied} ingredient price${applied !== 1 ? 's' : ''} from receipt scan`);
+}
+
+function plScanCloseModal() {
+  document.getElementById('pl-receipt-modal').style.display = 'none';
+  _plScanMatches = [];
+}
+// ── End Receipt Scan ──────────────────────────────────────────
+
 function renderPriceLib() {
   const wrap = document.getElementById('pl-table-wrap');
   if (!wrap) return;
@@ -22786,6 +23120,10 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.63': ['📷 Receipt Scan in Raw Material Prices — 📷 Scan Receipt button in price panel header; file input with camera capture; image downscaled client-side then sent to parseReceipt Firebase Function; fuzzy matching (exact → contains → 60% token overlap) maps receipt items to price library entries; unit conversion (lb/oz/kg/case) to $/gram; confirmation modal shows matched items with old→new $/lb and % change, unmatched items greyed with reason; approve/uncheck individual rows; Apply writes pricePerGram updates and triggers cloud save'],
+  '2.4.62': ['📋 Production Plan on Today\'s Board — Phase 1C: buildBoardFromFallback() now calls buildWeeklyPlan() and injects unconfirmed today-triggered items into the BAKING section; 🔥 Bake items for recipes/products whose stock dips below par, ❄️ Pull from freezer items for stage-prep products; sorted to the top of BAKING with "📋 Plan" time label; try/catch keeps the board non-breaking if projections fail'],
+  '2.4.61': ['🧠 Production planning — Phase 1B: projectProduct() covers channel items with no Recipe Library entry; buildWeeklyPlan() now also loops PRODUCTS catalog to find anything with channel demand but no recipe link, projecting it with the same age-aware stock model; uses synthetic recipe-shape objects so Week Plan UI works unchanged; BLUEBERRY MUFFIN and similar catalog-only items now appear in the weekly bake plan'],
+  '2.4.60': ['🧠 Production planning — Phase 1A: projectRecipe() now uses age-aware stock tracking; on-hand inventory expires after each product\'s shelfDays (from PRODUCTS catalog), frozen stock carries 90 days; previously stock rolled forward indefinitely which overstated how much was available on later days of the week'],
   '2.4.59': ['🗑 Removed Ordering & Procurement tab — nav button, page, and all ordering module JS (VENDORS, DEFAULT_INGREDIENTS, RECIPE_INGREDIENTS, ingLib, orderBatches, renderOrderingPage, generateOrder) retired; functionality covered by Recipe Library + Channels + Supply/Ingredients'],
   '2.4.58': ['📥 Channel Par Import — fixed: skip-name regex was too broad (CAKE blocked CAKE POP products); fallback column-detection now handles pastes with no MONDAY/TUESDAY header row (auto-maps first numeric column block to Mon–Sun); all three channel formats (Rochambeau, BORO, LPC, header-less) now parse correctly'],
   '2.4.57': ['📥 Channel Par Import — paste any Excel channel tab (Ctrl+A → Ctrl+C) into the import modal; auto-detects header row and day columns (handles Rochambeau, BORO, LPC, and similar formats); products with no quantities are skipped; Merge mode updates matching products and adds new ones, Replace mode overwrites all pars; syncs to Firebase'],
