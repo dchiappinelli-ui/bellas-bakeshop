@@ -1214,6 +1214,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="font-size:12px;color:var(--muted);margin-top:2px">Daily stock check — drag items to flag for ordering · generate an end-of-day report</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="sq-eod-btn" onclick="sqEODPush()" style="background:#3a1f72;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer" title="Push tomorrow's channel quantities to Square inventory">📤 Push to Square</button>
       <button onclick="sbPrintReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨 Report</button>
       <button onclick="sbResetBoard()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
       <button onclick="sbTogglePriceManager()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📋 Ingredient List ▸</button>
@@ -2796,6 +2797,25 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- ======== RESTOCK REQUEST MODAL ======== -->
+<div id="rr-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:400px;max-width:94vw;padding:24px 20px">
+    <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:4px">🔁 Request Restock</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Kitchen will bake and deliver to the retail floor</div>
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">PRODUCT</label>
+    <input id="rr-product" type="text" placeholder="e.g. Chocolate Chip Cookie" list="rr-product-list"
+      style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px">
+    <datalist id="rr-product-list"></datalist>
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">QUANTITY</label>
+    <input id="rr-qty" type="number" min="1" step="1" placeholder="e.g. 12"
+      style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:20px">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="rrCloseModal()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer">Cancel</button>
+      <button onclick="rrSubmitRequest()" style="background:#e8a045;border:none;color:#1a1209;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer">Send to Kitchen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SCRIPT ======== -->
 <script>
 
@@ -2946,7 +2966,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.63';
+const APP_VERSION      = '2.4.64';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -6120,6 +6140,8 @@ function renderTodaysBoard() {
   if (!anyItems) {
     html += `<div class="empty-state">Nothing on the board yet. Generate today's schedule in the Daily Planner, or confirm batches in the Weekly Schedule tab.</div>`;
   }
+
+  html += renderRestockSection();
 
   el.innerHTML = html;
 }
@@ -20223,7 +20245,7 @@ function wpPrintBakerChecklists(dayData, dateStr) {
 }
 
 // SOURCE: sync.js
-const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board"]);
+const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board","bk_restock_requests"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
 const secureBases = {}, secureStops = [];
@@ -22769,6 +22791,193 @@ function sbFmtTime(ts) {
   return (h > 12 ? h - 12 : h || 12) + ':' + String(m).padStart(2, '0') + (h >= 12 ? 'pm' : 'am');
 }
 
+// ============================================================
+// RESTOCK REQUESTS  (bk_restock_requests)
+// ============================================================
+const RR_KEY = 'bk_restock_requests';
+function rrLoad() { return JSON.parse(localStorage.getItem(RR_KEY) || '[]'); }
+function rrSave(data) { localStorage.setItem(RR_KEY, JSON.stringify(data)); }
+
+function rrShowRequestModal() {
+  if (!_fbFunctions) { alert('Cloud sync isn\'t connected — restock requests need an active session.'); return; }
+  // Populate datalist with PRODUCTS catalog names
+  const dl = document.getElementById('rr-product-list');
+  if (dl) {
+    const names = [];
+    try {
+      const products = getProducts ? getProducts() : (JSON.parse(localStorage.getItem('bk_products') || '[]'));
+      (Array.isArray(products) ? products : []).forEach(p => { if (p.name) names.push(p.name); });
+    } catch(e) {}
+    dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g,'&quot;')}">`).join('');
+  }
+  document.getElementById('rr-product').value = '';
+  document.getElementById('rr-qty').value = '';
+  const modal = document.getElementById('rr-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('rr-product').focus(), 50);
+}
+
+function rrCloseModal() {
+  document.getElementById('rr-modal').style.display = 'none';
+}
+
+function rrSubmitRequest() {
+  const product = (document.getElementById('rr-product').value || '').trim();
+  const qty = parseInt(document.getElementById('rr-qty').value || '0', 10);
+  if (!product) { alert('Please enter a product name.'); return; }
+  if (!qty || qty <= 0) { alert('Please enter a quantity greater than 0.'); return; }
+  const me = (() => { try { return JSON.parse(localStorage.getItem('bk_auth_session') || '{}'); } catch(e) { return {}; } })();
+  const ticket = {
+    id: 'rr-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    product,
+    qty,
+    requestedBy: me.name || 'Staff',
+    status: 'pending',
+    rejectionReason: '',
+    squarePushed: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const list = rrLoad();
+  list.unshift(ticket);
+  rrSave(list.slice(0, 50));
+  rrCloseModal();
+  renderTodaysBoard();
+}
+
+function rrAccept(id) {
+  const list = rrLoad();
+  const t = list.find(r => r.id === id);
+  if (!t || t.status !== 'pending') return;
+  t.status = 'accepted';
+  t.updatedAt = new Date().toISOString();
+  rrSave(list);
+  renderTodaysBoard();
+}
+
+function rrReject(id) {
+  const reason = prompt('Reason for rejection:');
+  if (reason === null) return; // cancelled
+  const list = rrLoad();
+  const t = list.find(r => r.id === id);
+  if (!t || t.status !== 'pending') return;
+  t.status = 'rejected';
+  t.rejectionReason = (reason || '').trim() || 'Unable to fulfil';
+  t.updatedAt = new Date().toISOString();
+  rrSave(list);
+  renderTodaysBoard();
+}
+
+async function rrBakedAndDelivered(id) {
+  const list = rrLoad();
+  const t = list.find(r => r.id === id);
+  if (!t || t.status !== 'accepted') return;
+  if (!_fbFunctions) { alert('Cloud sync needed to update Square.'); return; }
+  const btn = document.querySelector(`[data-rr-deliver="${id}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Pushing to Square…'; }
+  try {
+    const fn = _fbFunctions.httpsCallable('squareRestockDelivered');
+    await fn({ productName: t.product, qty: t.qty });
+    t.status = 'delivered';
+    t.squarePushed = true;
+    t.updatedAt = new Date().toISOString();
+    rrSave(list);
+    renderTodaysBoard();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🍞 Baked & Delivered'; }
+    alert('Square update failed: ' + (e.message || e));
+  }
+}
+
+function rrDismiss(id) {
+  const list = rrLoad();
+  rrSave(list.filter(r => r.id !== id));
+  renderTodaysBoard();
+}
+
+function renderRestockSection() {
+  const tickets = rrLoad();
+  const active = tickets.filter(t => t.status !== 'delivered' || (Date.now() - new Date(t.updatedAt).getTime()) < 2 * 60 * 60 * 1000);
+  const pendingCount = active.filter(t => t.status === 'pending').length;
+
+  let html = `
+  <div style="margin-top:24px;border-top:2px solid var(--border);padding-top:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#e8a045">🔁 Restock Requests</span>
+        ${pendingCount > 0 ? `<span style="background:#cc4444;color:#fff;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:900">${pendingCount} pending</span>` : ''}
+      </div>
+      <button onclick="rrShowRequestModal()" style="background:#e8a045;border:none;color:#1a1209;border-radius:5px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Request Restock</button>
+    </div>`;
+
+  if (active.length === 0) {
+    html += `<div style="color:var(--muted);font-size:13px;padding:8px 0">No active restock requests today.</div>`;
+  } else {
+    active.forEach(t => {
+      const age = Math.round((Date.now() - new Date(t.createdAt).getTime()) / 60000);
+      const ageStr = age < 60 ? age + 'm ago' : Math.round(age / 60) + 'h ago';
+      let statusBadge = '';
+      let actions = '';
+      if (t.status === 'pending') {
+        statusBadge = '<span style="background:#c87a00;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700">PENDING</span>';
+        if (authCanAccess('Baker')) {
+          actions = `
+          <button onclick="rrAccept('${t.id}')" style="background:#2a7d4f;border:none;color:#fff;border-radius:4px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">✓ Accept</button>
+          <button onclick="rrReject('${t.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer">✗ Reject</button>`;
+        }
+      } else if (t.status === 'accepted') {
+        statusBadge = '<span style="background:#2a7d4f;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700">ACCEPTED</span>';
+        if (authCanAccess('Baker')) {
+          actions = `<button data-rr-deliver="${t.id}" onclick="rrBakedAndDelivered('${t.id}')" style="background:#3a1f72;border:none;color:#fff;border-radius:4px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer">🍞 Baked &amp; Delivered</button>`;
+        }
+      } else if (t.status === 'rejected') {
+        statusBadge = '<span style="background:#993333;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700">REJECTED</span>';
+        actions = `<button onclick="rrDismiss('${t.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:5px 11px;font-size:11px;cursor:pointer">Dismiss</button>`;
+      } else if (t.status === 'delivered') {
+        statusBadge = '<span style="background:#1a5c38;color:#aef;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700">✓ DELIVERED' + (t.squarePushed ? ' · Square ✓' : '') + '</span>';
+        actions = `<button onclick="rrDismiss('${t.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:5px 11px;font-size:11px;cursor:pointer">Dismiss</button>`;
+      }
+      html += `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid var(--border)33;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700">${t.product} <span style="font-weight:400;color:var(--muted)">×${t.qty}</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Requested by ${t.requestedBy} · ${ageStr}${t.rejectionReason ? ' · <em>' + t.rejectionReason + '</em>' : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${statusBadge}
+          ${actions}
+        </div>
+      </div>`;
+    });
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// ── Square EOD Push ───────────────────────────────────────────
+async function sqEODPush() {
+  if (!authCanAccess('Owner')) { alert('Owner access required.'); return; }
+  if (!_fbFunctions) { alert('Cloud sync isn\'t connected.'); return; }
+  const btn = document.getElementById('sq-eod-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Pushing…'; }
+  try {
+    const fn = _fbFunctions.httpsCallable('squareEODPush');
+    const result = await fn({});
+    const d = result.data || {};
+    if (d.skipped === true) {
+      alert('Skipped: ' + d.reason);
+    } else {
+      const skippedList = (d.skipped || []).length > 0 ? '\n\nNo Square mapping for:\n• ' + d.skipped.join('\n• ') : '';
+      alert(`✓ Square updated for ${d.day}\n${d.pushed} products pushed.${skippedList}`);
+    }
+  } catch(e) {
+    alert('Square push failed: ' + (e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📤 Push to Square'; }
+  }
+}
+
 function renderSupplyBoard() {
   _sbUsageCache = null;
   var inStockBody = document.getElementById('sb-body-in_stock');
@@ -23120,6 +23329,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.64': ['📤 Square Inventory Workflow — eliminates dependency on ProArt computer for Square updates; (1) squareEODPush Firebase Function reads channel pars for tomorrow from Firestore and sets PHYSICAL_COUNT in Square (replaces nightly Claude scheduled task); (2) squareRestockDelivered Firebase Function posts ADJUSTMENT +qty when kitchen delivers a restock; (3) Intraday Restock Requests on Today\'s Board: FOH taps "+ Request Restock", picks product + qty → ticket syncs to Firestore; kitchen sees pending tickets with Accept/Reject buttons; accepted tickets show "🍞 Baked & Delivered" button which fires Square ADJUSTMENT; (4) "📤 Push to Square" Owner button in Supply Board header triggers EOD push manually; bk_restock_requests added to FB_SYNC_KEYS and server whitelist'],
   '2.4.63': ['📷 Receipt Scan in Raw Material Prices — 📷 Scan Receipt button in price panel header; file input with camera capture; image downscaled client-side then sent to parseReceipt Firebase Function; fuzzy matching (exact → contains → 60% token overlap) maps receipt items to price library entries; unit conversion (lb/oz/kg/case) to $/gram; confirmation modal shows matched items with old→new $/lb and % change, unmatched items greyed with reason; approve/uncheck individual rows; Apply writes pricePerGram updates and triggers cloud save'],
   '2.4.62': ['📋 Production Plan on Today\'s Board — Phase 1C: buildBoardFromFallback() now calls buildWeeklyPlan() and injects unconfirmed today-triggered items into the BAKING section; 🔥 Bake items for recipes/products whose stock dips below par, ❄️ Pull from freezer items for stage-prep products; sorted to the top of BAKING with "📋 Plan" time label; try/catch keeps the board non-breaking if projections fail'],
   '2.4.61': ['🧠 Production planning — Phase 1B: projectProduct() covers channel items with no Recipe Library entry; buildWeeklyPlan() now also loops PRODUCTS catalog to find anything with channel demand but no recipe link, projecting it with the same age-aware stock model; uses synthetic recipe-shape objects so Week Plan UI works unchanged; BLUEBERRY MUFFIN and similar catalog-only items now appear in the weekly bake plan'],
