@@ -2521,7 +2521,7 @@ document.addEventListener('DOMContentLoaded', function() {
         style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;
                padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer">📷 Scan Sheet</button>
       <input id="freezer-scan-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="freezerScanFileChosen(event)">
-      <button onclick="forceSaveKeys(['bk_freezer','bk_freezer_defs','bk_freezer_last_submit','bk_freezer_last_scan'])"
+      <button onclick="forceSaveKeys(['bk_freezer','bk_freezer_pars','bk_freezer_defs','bk_freezer_last_submit','bk_freezer_last_scan'])"
         style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;
                padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer" title="Save to cloud now">☁ Save</button>
     </div>
@@ -2542,7 +2542,23 @@ document.addEventListener('DOMContentLoaded', function() {
        scrollbar-width:none;margin-bottom:20px;padding-bottom:2px"></div>
 
   <!-- Items for selected freezer -->
-  <div id="freezer-items-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;align-items:start"></div>
+  <div id="freezer-items-list"></div>
+
+  <!-- Add Stock Modal -->
+  <div id="fz-add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1200;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:8px;padding:24px 28px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px" id="fz-add-modal-title">Add to Freezer</div>
+      <input type="number" id="fz-add-modal-input" min="1" placeholder="qty"
+        onkeydown="if(event.key==='Enter')freezerConfirmAdd()"
+        oninput="document.getElementById('fz-add-modal-preview').textContent='New total: '+(_fzAddCurrent+(parseInt(this.value)||0))"
+        style="width:100%;box-sizing:border-box;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:22px;font-weight:700;text-align:center;margin-bottom:10px">
+      <div id="fz-add-modal-preview" style="font-size:12px;color:var(--muted);margin-bottom:16px;min-height:18px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="freezerCloseAdd()" style="flex:1;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:14px;cursor:pointer">Cancel</button>
+        <button onclick="freezerConfirmAdd()" style="flex:2;padding:10px;background:var(--accent);color:#1a1209;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer">+ Add to Freezer</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Add item row -->
   <div id="freezer-add-row" style="display:none;margin-top:16px;background:var(--surface2);
@@ -2966,7 +2982,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.64';
+const APP_VERSION      = '2.4.66';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -9868,33 +9884,33 @@ function renderWeeklySummary() {
     let catHeaderRow = '';
     if (demandFilterCat === 'All' && lineCat !== lastDemandCat) {
       lastDemandCat = lineCat;
-      catHeaderRow = `<tr><td colspan="${DAYS_SHORT.length+2}" style="padding:8px 10px 3px;border-bottom:1px solid ${catMeta.color}44">
-        <span style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${catMeta.color}">${catMeta.name}</span>
+      catHeaderRow = `<tr><td colspan="${DAYS_SHORT.length+2}" style="padding:10px 10px 4px;border-bottom:1px solid ${catMeta.color}44">
+        <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${catMeta.color}">${catMeta.name}</span>
       </td></tr>`;
     }
     return catHeaderRow + `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:6px 10px;border-left:2px solid ${catMeta.color}66">
-        <div style="font-weight:500;font-size:12px">${product}</div>
-        ${meta.unitsPerPack>1?`<div style="font-size:10px;color:var(--muted)">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
-        ${meta.deliveryLead>0?`<div style="font-size:10px;color:var(--warn)">⏱ bake & pack day before</div>`:''}
+      <td style="padding:9px 10px;border-left:2px solid ${catMeta.color}66">
+        <div style="font-weight:600;font-size:14px">${product}</div>
+        ${meta.unitsPerPack>1?`<div style="font-size:11px;color:var(--muted)">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
+        ${meta.deliveryLead>0?`<div style="font-size:11px;color:var(--warn)">⏱ bake & pack day before</div>`:''}
       </td>
       ${DAYS_SHORT.map(d => {
         const units = byDay[d][product] || 0;
-        return `<td style="padding:6px;text-align:center;font-size:11px;color:${units>0?'var(--text)':'var(--border)'}">
+        return `<td style="padding:9px 6px;text-align:center;font-size:13px;color:${units>0?'var(--text)':'var(--border)'}">
           ${units>0 ? `<div style="font-family:'DM Mono',monospace;font-weight:600">${units}</div>` : '—'}
         </td>`;
       }).join('')}
-      <td style="padding:6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${weekUnits}</td>
+      <td style="padding:9px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--accent)">${weekUnits}</td>
     </tr>`;
   }).join('');
 
   el.innerHTML = catDropdown + `<div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
       <thead>
         <tr style="border-bottom:2px solid var(--border)">
-          <th style="text-align:left;padding:6px 10px;color:var(--muted);font-size:10px;text-transform:uppercase;min-width:160px">Product</th>
-          ${DAYS_SHORT.map(d => `<th style="padding:6px;text-align:center;color:var(--muted);font-size:10px;text-transform:uppercase">${d}</th>`).join('')}
-          <th style="padding:6px;text-align:center;color:var(--accent);font-size:10px;text-transform:uppercase">Week Units</th>
+          <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;text-transform:uppercase;min-width:180px">Product</th>
+          ${DAYS_SHORT.map(d => `<th style="padding:8px 6px;text-align:center;color:var(--muted);font-size:11px;text-transform:uppercase">${d}</th>`).join('')}
+          <th style="padding:8px 6px;text-align:center;color:var(--accent);font-size:11px;text-transform:uppercase">Week Units</th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
@@ -14191,12 +14207,15 @@ function renderFreezerPage() {
 
   function tabBtn(f) {
     const active = _activeFreezer === f.id;
+    const bc = freezerBadgeCount(f.id);
     return `<button onclick="freezerSelectFreezer('${f.id}')"
-      style="flex-shrink:0;padding:18px 28px;border-radius:4px;border:3px solid ${active?'var(--accent)':'var(--border)'};
+      style="flex-shrink:0;padding:8px 18px;border-radius:6px;border:2px solid ${active?'var(--accent)':'var(--border)'};
              background:${active?'var(--accent)':'var(--surface)'};
-             color:${active?'#fff':'var(--text)'};
-             font-size:18px;font-weight:${active?'800':'600'};cursor:pointer;white-space:nowrap;
-             touch-action:manipulation;min-height:64px">${f.name}</button>`;
+             color:${active?'#1a1209':'var(--text)'};
+             font-size:13px;font-weight:${active?'700':'500'};cursor:pointer;white-space:nowrap;
+             touch-action:manipulation;position:relative;min-height:36px">
+      ${f.name}${bc > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#cc3333;color:#fff;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:900;line-height:1.4">${bc}</span>` : ''}
+    </button>`;
   }
 
   const tabsEl = document.getElementById('freezer-tabs');
@@ -14234,6 +14253,15 @@ function freezerRenderItems(canEdit) {
   document.getElementById('freezer-subtitle').textContent =
     `${freezer.name} · ${freezer.items.length} item${freezer.items.length !== 1 ? 's' : ''}`;
 
+  // Compute today's pulls for all items
+  const todayPulls = {};
+  let totalPulls = 0;
+  freezer.items.forEach(name => {
+    const p = freezerGetTodayPull(name);
+    todayPulls[name] = p;
+    totalPulls += p;
+  });
+
   // Group items by category, preserving order
   const groups = {};
   const groupOrder = [];
@@ -14243,61 +14271,109 @@ function freezerRenderItems(canEdit) {
     groups[cat].push(name);
   });
 
-  let html = '';
+  let tableRows = '';
   groupOrder.forEach(cat => {
     if (cat) {
-      html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;
-        color:var(--muted);margin:16px 0 8px;padding-left:2px;grid-column:1/-1">${cat}</div>`;
+      tableRows += `<tr><td colspan="7" style="padding:12px 10px 4px;background:var(--surface2)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">${cat}</span></td></tr>`;
     }
-    html += groups[cat].map(name => freezerItemCard(freezer.id, name, data, canEdit)).join('');
+    groups[cat].forEach(name => {
+      tableRows += freezerTableRow(freezer.id, name, data, todayPulls[name] || 0, canEdit);
+    });
   });
 
-  document.getElementById('freezer-items-list').innerHTML = html;
+  const todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+
+  const pullBtn = canEdit && totalPulls > 0
+    ? `<button onclick="freezerPullFromFreezer('${freezer.id}')"
+        style="background:#2a3a72;color:#fff;border:none;border-radius:5px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+        🧊 Pull from Freezer</button>`
+    : '';
+
+  document.getElementById('freezer-items-list').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;color:var(--muted)">Today's Pull = ${todayName} channel pars · Staff add stock only · reductions are system-driven</div>
+      ${pullBtn}
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:560px">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Item</th>
+            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Stock</th>
+            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Par</th>
+            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:70px">Today's Pull</th>
+            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Net</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Updated</th>
+            <th style="padding:8px 10px;min-width:110px"></th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
 }
 
-function freezerItemCard(freezerId, name, data, canEdit) {
+function freezerTableRow(freezerId, name, data, pull, canEdit) {
   const key = freezerKey(freezerId, name);
-  const entry = data[key] || { count: null, updatedBy: null, updatedAt: null };
-  const count = entry.count;
-  const statusColor = count === null ? '#888' : count === 0 ? '#e57373' : count <= 3 ? '#e8a045' : '#4a9c6e';
-  const statusDot = count === null ? '' : `<span style="color:${statusColor};font-weight:600;font-size:11px">${count === 0 ? 'Empty' : count <= 3 ? 'Low' : 'Stocked'}</span>`;
+  const entry = data[key] || {};
+  const count = (entry.count !== null && entry.count !== undefined) ? entry.count : null;
+  const par = freezerGetPar(freezerId, name);
+  const net = count !== null ? count - pull : null;
 
-  const updatedLine = entry.updatedBy
-    ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">
-        Updated by ${entry.updatedBy} · ${new Date(entry.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>`
+  let statusColor = 'var(--muted)', statusLabel = '';
+  if (count !== null) {
+    if (pull > 0 && count < pull) { statusColor = '#cc3333'; statusLabel = '🔴 Short'; }
+    else if (par > 0 && net !== null && net < par) { statusColor = '#c87a00'; statusLabel = '⚠ Low'; }
+    else if (count > 0) { statusColor = '#4a9c6e'; statusLabel = '✓'; }
+  }
+
+  const countDisplay = count !== null
+    ? `<span style="font-size:16px;font-weight:700;color:var(--text)">${count}</span>`
+    : `<span style="color:var(--muted);font-size:14px">—</span>`;
+
+  const parInput = canEdit && authCanAccess('Baker')
+    ? `<input type="number" value="${par || ''}" min="0" placeholder="—"
+        style="width:52px;padding:4px 6px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"
+        onchange="freezerSetPar('${freezerId}','${name.replace(/'/g,"\\'")}',this.value);renderFreezerPage()"
+        onclick="event.stopPropagation()">`
+    : `<span style="color:${par ? 'var(--text)' : 'var(--muted)'}">${par || '—'}</span>`;
+
+  const pullDisplay = pull > 0
+    ? `<span style="font-weight:600;color:var(--text)">${pull}</span>`
+    : `<span style="color:var(--border)">—</span>`;
+
+  const netColor = net === null ? 'var(--muted)' : net < 0 ? '#cc3333' : (par > 0 && net < par) ? '#c87a00' : 'var(--text)';
+  const netDisplay = net !== null
+    ? `<span style="font-weight:700;color:${netColor}">${net}</span>`
+    : `<span style="color:var(--muted)">—</span>`;
+
+  const updatedStr = entry.updatedBy
+    ? `<div style="font-size:11px;color:var(--muted)">${entry.updatedBy}</div>
+       <div style="font-size:10px;color:var(--border)">${new Date(entry.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>`
+    : `<span style="color:var(--border);font-size:11px">—</span>`;
+
+  const addBtn = canEdit
+    ? `<button onclick="freezerShowAdd('${freezerId}','${name.replace(/'/g,"\\'")}',${count !== null ? count : 0})"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer">+ Add</button>`
     : '';
-
-  const safeKey = CSS.escape(key);
-  const counter = canEdit
-    ? `<div style="display:flex;align-items:center">
-        <button onclick="freezerAdjust('${freezerId}','${name.replace(/'/g,"\\'")}', -1)"
-          style="width:48px;height:48px;border-radius:4px 0 0 8px;border:1px solid var(--border);
-                 background:var(--surface2);font-size:22px;cursor:pointer;color:var(--text);touch-action:manipulation">−</button>
-        <input type="number" id="fz-${safeKey}" value="${count !== null ? count : ''}" placeholder="—" min="0"
-          style="width:64px;height:48px;text-align:center;border:1px solid var(--border);border-left:none;border-right:none;
-                 background:var(--surface);color:var(--text);font-size:18px;font-weight:700;transition:border-color 0.3s"
-          oninput="freezerSetVal('${freezerId}','${name.replace(/'/g,"\\'")}',this.value);freezerFlashSaved(this)">
-        <button onclick="freezerAdjust('${freezerId}','${name.replace(/'/g,"\\'")}', 1)"
-          style="width:48px;height:48px;border-radius:0 8px 8px 0;border:1px solid var(--border);
-                 background:var(--surface2);font-size:22px;cursor:pointer;color:var(--text);touch-action:manipulation">+</button>
-      </div>`
-    : `<div style="font-size:22px;font-weight:700;color:var(--text);min-width:50px;text-align:right">${count !== null ? count : '—'}</div>`;
 
   const removeBtn = canEdit
-    ? `<button onclick="freezerRemoveItem('${freezerId}','${name.replace(/'/g,"\\'")}') "title="Remove item"
-        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px;flex-shrink:0">✕</button>`
+    ? `<button onclick="freezerRemoveItem('${freezerId}','${name.replace(/'/g,"\\'")}') "
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:3px 6px;margin-left:2px" title="Remove">✕</button>`
     : '';
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;
-               padding:14px 16px;display:flex;align-items:center;gap:12px">
-    <div style="width:10px;height:10px;border-radius:50%;background:${statusColor};flex-shrink:0"></div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:17px;font-weight:700;color:var(--text)">${name}</div>
-      <div id="fz-meta-${freezerHtmlId(key)}" style="margin-top:4px">${statusDot}${updatedLine}</div>
-    </div>
-    ${counter}
-    ${removeBtn}
-  </div>`;
+  return `<tr id="fz-row-${freezerHtmlId(key)}" style="border-bottom:1px solid var(--border)20">
+    <td style="padding:10px">
+      <span style="font-size:14px;font-weight:600;color:var(--text)">${name}</span>
+      ${statusLabel ? `<span style="font-size:11px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>` : ''}
+      <div id="fz-meta-${freezerHtmlId(key)}" style="display:none"></div>
+    </td>
+    <td style="padding:10px;text-align:center">${countDisplay}</td>
+    <td style="padding:10px;text-align:center">${parInput}</td>
+    <td style="padding:10px;text-align:center">${pullDisplay}</td>
+    <td style="padding:10px;text-align:center">${netDisplay}</td>
+    <td style="padding:10px">${updatedStr}</td>
+    <td style="padding:10px;text-align:right;white-space:nowrap">${addBtn}${removeBtn}</td>
+  </tr>`;
 }
 
 function freezerAdjust(freezerId, name, delta) {
@@ -14308,6 +14384,116 @@ function freezerAdjust(freezerId, name, delta) {
   freezerSetVal(freezerId, name, newVal);
   const input = document.getElementById('fz-' + CSS.escape(key));
   if (input) input.value = newVal;
+}
+
+// ---- Freezer Pars ----
+const FREEZER_PARS_KEY = 'bk_freezer_pars';
+function freezerGetPars() { try { return JSON.parse(localStorage.getItem(FREEZER_PARS_KEY) || '{}'); } catch { return {}; } }
+function freezerSavePars(d) { localStorage.setItem(FREEZER_PARS_KEY, JSON.stringify(d)); }
+function freezerGetPar(freezerId, name) { return freezerGetPars()[freezerKey(freezerId, name)] || 0; }
+function freezerSetPar(freezerId, name, val) {
+  if (!authCanAccess('Baker')) return;
+  const p = freezerGetPars(), k = freezerKey(freezerId, name), v = parseInt(val);
+  if (!isNaN(v) && v > 0) p[k] = v; else delete p[k];
+  freezerSavePars(p);
+}
+
+// ---- Today's Pull (from channel pars) ----
+function freezerGetTodayPull(itemName) {
+  const todayKey = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  const q = itemName.toLowerCase().trim();
+  let total = 0;
+  (channels || []).forEach(ch => {
+    (ch.orderLines || []).forEach(line => {
+      if (!line.product) return;
+      const p = line.product.toLowerCase().trim();
+      if (p === q || p.includes(q) || q.includes(p)) {
+        const qty = (line.days && line.days[todayKey]) || 0;
+        const unitsEach = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
+        total += qty * unitsEach;
+      }
+    });
+  });
+  return total;
+}
+
+// Badge: count of items below par (after today's pull) in a freezer
+function freezerBadgeCount(freezerId) {
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === freezerId);
+  if (!freezer) return 0;
+  const data = freezerGetData();
+  let lowCount = 0;
+  freezer.items.forEach(name => {
+    const entry = data[freezerKey(freezerId, name)] || {};
+    const count = (entry.count !== null && entry.count !== undefined) ? entry.count : null;
+    if (count === null) return;
+    const par = freezerGetPar(freezerId, name);
+    if (!par) return;
+    const net = count - freezerGetTodayPull(name);
+    if (net < par) lowCount++;
+  });
+  return lowCount;
+}
+
+// ---- Pull from Freezer (BOD system pull) ----
+function freezerPullFromFreezer(freezerId) {
+  if (!freezerCanEdit(freezerId)) return;
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === freezerId);
+  if (!freezer) return;
+  const data = freezerGetData();
+  const pulls = [];
+  freezer.items.forEach(name => {
+    const pull = freezerGetTodayPull(name);
+    if (pull <= 0) return;
+    const entry = data[freezerKey(freezerId, name)] || {};
+    const count = (entry.count !== null && entry.count !== undefined) ? entry.count : 0;
+    pulls.push({ name, pull, count, newCount: Math.max(0, count - pull) });
+  });
+  if (pulls.length === 0) { alert('No channel quantities found for today.'); return; }
+  const summary = pulls.map(p => `• ${p.name}: ${p.count} → ${p.newCount}  (−${p.pull})`).join('\n');
+  if (!confirm(`Pull from ${freezer.name} for today's channels?\n\n${summary}\n\nConfirm?`)) return;
+  const session = authGetSession();
+  const by = (session ? session.name : 'Staff') + ' (BOD Pull)';
+  const at = new Date().toISOString();
+  pulls.forEach(({ name, newCount }) => {
+    const key = freezerKey(freezerId, name);
+    data[key] = { ...(data[key] || {}), count: newCount, updatedBy: by, updatedAt: at };
+  });
+  freezerSaveData(data);
+  renderFreezerPage();
+}
+
+// ---- Add Stock Modal ----
+let _fzAddFreezerId = null, _fzAddName = null, _fzAddCurrent = 0;
+
+function freezerShowAdd(freezerId, name, currentCount) {
+  _fzAddFreezerId = freezerId;
+  _fzAddName = name;
+  _fzAddCurrent = currentCount || 0;
+  const modal = document.getElementById('fz-add-modal');
+  document.getElementById('fz-add-modal-title').textContent = `Add to ${name}`;
+  const inp = document.getElementById('fz-add-modal-input');
+  inp.value = '';
+  document.getElementById('fz-add-modal-preview').textContent = `Current stock: ${_fzAddCurrent}`;
+  modal.style.display = 'flex';
+  setTimeout(() => inp.focus(), 100);
+}
+
+function freezerCloseAdd() {
+  const modal = document.getElementById('fz-add-modal');
+  if (modal) modal.style.display = 'none';
+  _fzAddFreezerId = null; _fzAddName = null;
+}
+
+function freezerConfirmAdd() {
+  if (!_fzAddFreezerId || !_fzAddName) return;
+  const qty = parseInt(document.getElementById('fz-add-modal-input').value);
+  if (isNaN(qty) || qty <= 0) { alert('Enter a positive quantity.'); return; }
+  freezerSetVal(_fzAddFreezerId, _fzAddName, _fzAddCurrent + qty);
+  freezerCloseAdd();
+  renderFreezerPage();
 }
 
 function freezerHtmlId(key) { return key.replace(/[^a-zA-Z0-9]/g, '_'); }
@@ -20245,7 +20431,7 @@ function wpPrintBakerChecklists(dayData, dateStr) {
 }
 
 // SOURCE: sync.js
-const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board","bk_restock_requests"]);
+const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_pars","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board","bk_restock_requests"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
 const secureBases = {}, secureStops = [];
@@ -23329,6 +23515,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.66': ['❄️ Freezer Stock redesign — replaced card grid with per-freezer tab + sortable table (Item | Stock | Par | Today\'s Pull | Net | Updated); tabs are now compact with red badge = items below par; Par column: Baker+ can set per-item par directly in-table (stored in bk_freezer_pars, cloud-synced); Today\'s Pull = auto-calculated from all channels\' day pars via fuzzy name match; Net = Stock − Pull, color-coded (red = short, amber = below par, green = ok); "🧊 Pull from Freezer" button performs BOD system pull (confirms list of items + quantities, then decrements); "+ Add" button opens modal to add stock (staff-only input direction); staff can no longer manually subtract — reductions are system-driven; bk_freezer_pars added to FB_SYNC_KEYS and server KEYS whitelist'],
+  '2.4.65': ['📊 Weekly Demand Summary — larger font (12→14px product names, 11→13px day cells, 14px week total); increased row padding (6→9px) for better readability; header row font 10→11px; category headers 9→10px; product column min-width 160→180px'],
   '2.4.64': ['📤 Square Inventory Workflow — eliminates dependency on ProArt computer for Square updates; (1) squareEODPush Firebase Function reads channel pars for tomorrow from Firestore and sets PHYSICAL_COUNT in Square (replaces nightly Claude scheduled task); (2) squareRestockDelivered Firebase Function posts ADJUSTMENT +qty when kitchen delivers a restock; (3) Intraday Restock Requests on Today\'s Board: FOH taps "+ Request Restock", picks product + qty → ticket syncs to Firestore; kitchen sees pending tickets with Accept/Reject buttons; accepted tickets show "🍞 Baked & Delivered" button which fires Square ADJUSTMENT; (4) "📤 Push to Square" Owner button in Supply Board header triggers EOD push manually; bk_restock_requests added to FB_SYNC_KEYS and server whitelist'],
   '2.4.63': ['📷 Receipt Scan in Raw Material Prices — 📷 Scan Receipt button in price panel header; file input with camera capture; image downscaled client-side then sent to parseReceipt Firebase Function; fuzzy matching (exact → contains → 60% token overlap) maps receipt items to price library entries; unit conversion (lb/oz/kg/case) to $/gram; confirmation modal shows matched items with old→new $/lb and % change, unmatched items greyed with reason; approve/uncheck individual rows; Apply writes pricePerGram updates and triggers cloud save'],
   '2.4.62': ['📋 Production Plan on Today\'s Board — Phase 1C: buildBoardFromFallback() now calls buildWeeklyPlan() and injects unconfirmed today-triggered items into the BAKING section; 🔥 Bake items for recipes/products whose stock dips below par, ❄️ Pull from freezer items for stage-prep products; sorted to the top of BAKING with "📋 Plan" time label; try/catch keeps the board non-breaking if projections fail'],
