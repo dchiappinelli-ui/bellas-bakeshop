@@ -2943,7 +2943,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.74';
+const APP_VERSION      = '2.4.76';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -17407,62 +17407,80 @@ function hubRenderPackCard(ch, canBaker, canBarista, canOwner) {
   const meta = HUB_META[st];
   const typeInfo = CH_TYPES[ch.type] || CH_TYPES.retail;
   const esc = ch.id.replace(/'/g,"\\'");
+  const curIdx = HUB_CHAIN.indexOf(st);
 
-  // Progress steps
-  const steps = HUB_CHAIN.map((s, i) => {
-    const sm = HUB_META[s];
-    const curIdx = HUB_CHAIN.indexOf(st);
-    const done = i <= curIdx;
-    const current = s === st;
-    const connector = i < HUB_CHAIN.length-1
-      ? `<div style="flex:1;height:2px;background:${i<curIdx?sm.color:'var(--border)'};min-width:6px;margin-top:12px;align-self:flex-start"></div>` : '';
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:46px">
-      <div style="width:24px;height:24px;border-radius:50%;border:2px solid ${done?sm.color:'var(--border)'};background:${current?sm.color:done?sm.color+'22':'var(--surface2)'};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">
-        ${current?sm.icon:done?`<span style="color:${sm.color};font-size:9px;font-weight:900">✓</span>`:''}
-      </div>
-      <div style="font-size:9px;color:${done?sm.color:'var(--muted)'};font-weight:${current?'700':'400'};text-align:center;line-height:1.1;max-width:46px">${sm.shortLabel}</div>
-    </div>${connector}`;
-  });
+  // Compact progress bar — small dots + connecting line
+  const progressBar = `<div style="display:flex;align-items:center;width:100%;gap:0;overflow-x:auto">
+    ${HUB_CHAIN.map((s, i) => {
+      const sm = HUB_META[s];
+      const done = i <= curIdx;
+      const current = s === st;
+      const dot = `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:40px">
+        <div style="width:${current?'20px':'14px'};height:${current?'20px':'14px'};border-radius:50%;
+          border:2px solid ${done?sm.color:'var(--border)'};
+          background:${current?sm.color:done?sm.color+'33':'var(--surface)'};
+          display:flex;align-items:center;justify-content:center;font-size:8px;transition:all .2s">
+          ${current?`<span style="font-size:9px">${sm.icon}</span>`:done?`<span style="color:${sm.color};font-size:8px;font-weight:900">✓</span>`:''}
+        </div>
+        <div style="font-size:8px;color:${current?sm.color:done?sm.color:'var(--muted)'};font-weight:${current?'700':'400'};text-align:center;line-height:1;white-space:nowrap">${sm.shortLabel}</div>
+      </div>`;
+      const line = i < HUB_CHAIN.length-1
+        ? `<div style="flex:1;height:2px;background:${i<curIdx?HUB_META[HUB_CHAIN[i]].color:'var(--border)'};margin-bottom:12px;min-width:4px"></div>` : '';
+      return dot + line;
+    }).join('')}
+  </div>`;
 
-  const itemRows = items.map(item => `<div style="display:flex;align-items:baseline;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)22">
-    <div style="font-weight:600;font-size:13px;flex:1">${item.product}</div>
-    ${item.variation&&item.variation!=='individual'&&item.variation!=='custom'?`<div style="font-size:11px;color:var(--muted)">${item.variation}</div>`:''}
-    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">×${item.qty}</div>
-    <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);min-width:38px;text-align:right">${item.totalUnits}u</div>
-  </div>`).join('');
-
+  // CTA button
   const canAct = meta.advanceRole === 'Baker' ? canBaker : canBarista;
-  const ctaHtml = !meta.advanceLabel
-    ? `<div style="font-size:13px;color:#2a7d4f;font-weight:700">✓ Complete</div>`
+  const ctaHtml = st === 'picked_up'
+    ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#2a7d4f18;border:1px solid #2a7d4f44;border-radius:6px;font-size:13px;font-weight:700;color:#2a7d4f">✓ Picked Up</div>`
     : canAct
-      ? `<button onclick="hubAdvanceStatus('${esc}')" style="padding:9px 20px;background:${meta.ctaColor};color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700">${meta.advanceLabel}</button>`
-      : `<div style="font-size:12px;color:var(--muted);font-style:italic">Waiting for ${meta.advanceRole==='Baker'?'kitchen':'FOH'}…</div>`;
+      ? `<button onclick="hubAdvanceStatus('${esc}')" style="padding:10px 22px;background:${meta.ctaColor};color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:14px;font-weight:700;box-shadow:0 2px 8px ${meta.ctaColor}44;white-space:nowrap">${meta.advanceLabel}</button>`
+      : `<div style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);font-style:italic">Waiting for ${meta.advanceRole==='Baker'?'kitchen':'FOH'}…</div>`;
 
-  const lastLog = entry.log.length ? entry.log[entry.log.length-1] : null;
-  const logHtml = lastLog ? `<span style="font-size:11px;color:var(--muted);font-style:italic">${lastLog.by} · ${new Date(lastLog.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>` : '';
-
+  // Pickup time
   const ptVal = ch.pickupTime||'';
   const ptDisplay = ptVal ? (() => { try { const [h,m]=ptVal.split(':'),d=new Date(); d.setHours(+h,+m); return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); } catch{return ptVal;} })() : '';
 
-  return `<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid ${typeInfo.color};border-radius:8px;padding:16px 18px;margin-bottom:12px">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:16px;font-weight:700;color:var(--text)">${ch.name}</span>
-          <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${typeInfo.color}18;color:${typeInfo.color};font-weight:600">${typeInfo.label}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
-          ${ptDisplay ? `<span style="font-size:12px;color:var(--muted)">🕐 <strong style="color:var(--text)">${ptDisplay}</strong> pickup</span>` : '<span style="font-size:11px;color:var(--muted);font-style:italic">No pickup time set</span>'}
-          ${canOwner ? `<input type="time" value="${ptVal}" onchange="hubSetPickupTime('${esc}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text)" title="Set pickup time">` : ''}
-        </div>
+  // Last action
+  const lastLog = entry.log.length ? entry.log[entry.log.length-1] : null;
+  const logText = lastLog ? `${lastLog.by} · ${new Date(lastLog.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : '';
+
+  // Items — 2-col grid for compact display
+  const itemRows = items.map(item => `
+    <div style="display:contents">
+      <div style="font-weight:600;font-size:12px;color:var(--text);padding:3px 0;border-bottom:1px solid var(--border)11;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.product}${item.variation&&item.variation!=='individual'&&item.variation!=='custom'?`<span style="font-size:10px;color:var(--muted);font-weight:400"> · ${item.variation}</span>`:''}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);text-align:right;padding:3px 0;border-bottom:1px solid var(--border)11;white-space:nowrap">${item.totalUnits}u <span style="font-size:10px;color:var(--muted);font-weight:400">×${item.qty}</span></div>
+    </div>`).join('');
+
+  return `<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid ${typeInfo.color};border-radius:8px;overflow:hidden;margin-bottom:10px">
+    <!-- TOP: CTA + header info -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 10px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0">
+        <span style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap">${ch.name}</span>
+        <span style="font-size:10px;padding:2px 7px;border-radius:4px;background:${typeInfo.color}18;color:${typeInfo.color};font-weight:600;white-space:nowrap">${typeInfo.label}</span>
+        ${ptDisplay
+          ? `<span style="font-size:11px;color:var(--muted);white-space:nowrap">🕐 <strong style="color:var(--text)">${ptDisplay}</strong></span>`
+          : `<span style="font-size:11px;color:var(--muted);font-style:italic">no pickup time</span>`}
+        ${canOwner ? `<input type="time" value="${ptVal}" onchange="hubSetPickupTime('${esc}',this.value)" style="font-size:10px;padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text)" title="Set pickup time">` : ''}
       </div>
-      ${canBaker&&st!=='pending' ? `<button onclick="hubRevertStatus('${esc}')" style="padding:5px 10px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--muted);font-size:11px">↩ Undo</button>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${canBaker&&st!=='pending'&&st!=='picked_up' ? `<button onclick="hubRevertStatus('${esc}')" style="padding:4px 9px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--muted);font-size:11px">↩ Undo</button>` : ''}
+        ${ctaHtml}
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:0;margin-bottom:14px;overflow-x:auto;padding-bottom:4px">${steps.join('')}</div>
-    <div style="margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:6px">${itemRows||'<div style="color:var(--muted);font-size:12px">No items</div>'}</div>
-    <textarea placeholder="Notes for this order…" onchange="hubSaveNotes('${esc}',this.value)"
-      style="width:100%;min-height:40px;resize:vertical;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;box-sizing:border-box;margin-bottom:10px">${entry.notes||''}</textarea>
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">${ctaHtml}${logHtml}</div>
+    <!-- PROGRESS BAR -->
+    <div style="padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border)">${progressBar}</div>
+    <!-- ITEMS -->
+    <div style="display:grid;grid-template-columns:1fr auto;gap:0 12px;padding:8px 14px">
+      ${itemRows||'<div style="color:var(--muted);font-size:12px;grid-column:1/-1">No items</div>'}
+    </div>
+    <!-- NOTES + LOG -->
+    <div style="padding:6px 14px 10px;display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--border)">
+      <textarea placeholder="Notes…" onchange="hubSaveNotes('${esc}',this.value)"
+        style="flex:1;min-height:30px;resize:vertical;font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;box-sizing:border-box">${entry.notes||''}</textarea>
+      ${logText ? `<div style="font-size:10px;color:var(--muted);white-space:nowrap;padding-top:6px;font-style:italic">${logText}</div>` : ''}
+    </div>
   </div>`;
 }
 
@@ -17495,7 +17513,7 @@ function renderHubPage() {
   let content = '';
   if (_hubActiveTab === 'packing') {
     const packChannels = channels
-      .filter(ch => ch.activeThisWeek && (ch.activeDays||[]).includes(dow) && hubGetTodayItems(ch).length > 0)
+      .filter(ch => ch.activeThisWeek && ch.type !== 'retail' && (ch.activeDays||[]).includes(dow) && hubGetTodayItems(ch).length > 0)
       .sort((a,b) => (a.pickupTime||'99:99').localeCompare(b.pickupTime||'99:99'));
     content = packChannels.length === 0
       ? '<div style="text-align:center;padding:48px 20px;color:var(--muted)"><div style="font-size:36px;margin-bottom:12px">📦</div><div style="font-size:14px">No channel orders active for today.</div></div>'
@@ -23895,6 +23913,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.76': ['🏠 Hub Packing Board redesign — CTA action button moved to top-right of each card so the next step is immediately visible; card uses a compact sectioned layout (header+CTA / progress bar / items grid / notes+log) with no blank padding between sections; progress bar uses smaller dots that grow on current step; items rendered as a 2-col CSS grid (product | qty); notes + last-action log share one bottom strip'],
+  '2.4.75': ['🏠 Hub Packing Board — retail channels excluded from Packing Board (packing applies to wholesale pickup orders only); Bella\'s Retail no longer appears in the packing flow'],
   '2.4.74': ['🏠 Operations Hub — replaced Staff Board tab with a full Operations Hub (3 sub-tabs): 📦 Packing Board auto-pulls today\'s active channel orders sorted by pickup time, with a 6-step status flow (Ordered → Kitchen Producing → Delivered to FOH → FOH Packing → Ready for Pickup → Picked Up), role-gated CTA buttons (Baker+ advances kitchen steps; Barista+ advances FOH steps), Undo button for Baker+, per-order notes, and Owner-editable pickup time per channel; 🔁 Requests tab brings the existing intraday restock request system into Hub with + New Request button for Barista+; 💬 Notes tab carries over the full staff board (compose, type selector, pin, delete, morning task check-off, urgent alert for Owner); bk_hub_state added to FB_SYNC_KEYS and functions/access.js for Firestore sync; renderStaffBoard() is now an alias for renderHubPage() so all existing call sites work'],
   '2.4.73': ['↕ Channel order lines — drag-and-drop reordering within each category now works in every channel\'s order table (same ⠿ handle + dashed orange highlight on drop target); order is stored directly in the orderLines array and persisted to Firestore via saveChannels(); within-category sort is now array-order (insertion/drag order) instead of alphabetical; cross-category drags are blocked'],
   '2.4.72': ['↕ Weekly Demand Summary — drag-and-drop row reordering within each category; ⠿ handle on every product row; dragging to a different category is blocked; custom order persisted to localStorage (bk_ws_demand_order); new products default to alphabetical within their category, then slot in after any manually positioned items; order resets to alpha if localStorage is cleared'],
