@@ -983,7 +983,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
   <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
   <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <button class="nav-btn" onclick="showPage('staffboard')">💬 Staff Board</button>
+  <button class="nav-btn" onclick="showPage('staffboard')">🏠 Hub</button>
   <button class="nav-btn" onclick="showPage('opening')">📋 Checklists</button>
   <button class="nav-btn" onclick="showPage('stationguide')">📋 Station Guide</button>
 </div>
@@ -2214,46 +2214,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <div class="page staff-page" id="page-staffboard">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
-    <div>
-      <h2 style="margin:0">💬 Staff Message Board</h2>
-      <p class="subtitle" style="margin:4px 0 0">Messages, shift notes, and morning tasks — visible to everyone</p>
-    </div>
-    <button onclick="forceSaveKeys(['bk_staff_board'])"
-      style="background:#2a7d4f;color:#fff;border:none;border-radius:4px;
-             padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Save to cloud now">☁ Save</button>
-  </div>
-
-  <!-- Compose box -->
-  <div style="background:var(--surface);border:2px solid var(--border);border-radius:4px;padding:20px;margin-bottom:28px">
-    <textarea id="sb-compose-text" placeholder="Write a message, close note, or morning task…"
-      style="width:100%;min-height:80px;resize:vertical;font-size:16px;padding:12px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;margin-bottom:14px"></textarea>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
-        <button id="sb-type-general"  onclick="sbSetType('general')"  style="padding:10px 16px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:4px">💬 General</button>
-        <button id="sb-type-morning"  onclick="sbSetType('morning')"  style="padding:10px 16px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-radius:4px">🌅 For Morning</button>
-        <button id="sb-type-close"    onclick="sbSetType('close')"    style="padding:10px 16px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-radius:4px">🌙 Close Note</button>
-      </div>
-      <button onclick="sbPost()" style="padding:12px 28px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap">Post →</button>
-    </div>
-  </div>
-
-  <!-- Alert sender — Head Baker / Owner only; shown via renderStaffBoard() -->
-  <div id="sb-alert-sender" style="display:none;background:#fff3cd;border:2px solid #e6a817;border-radius:4px;padding:16px 20px;margin-bottom:20px">
-    <div style="font-size:13px;font-weight:700;color:#7a5600;margin-bottom:10px">🚨 Send Urgent Alert — instantly pops up on all open devices</div>
-    <textarea id="sb-alert-text" placeholder="Short urgent message…"
-      style="width:100%;min-height:56px;resize:vertical;font-size:16px;padding:10px;border:1px solid #e6a817;border-radius:4px;background:#fff;color:#333;font-family:'Inter',sans-serif;margin-bottom:10px"></textarea>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:600;color:#7a5600">To:</span>
-      <button id="sb-alert-target-all"     onclick="sbSetAlertTarget('all')"     style="padding:8px 14px;border:2px solid #7a5600;background:#7a5600;color:#fff;font-size:13px;font-weight:700;cursor:pointer;border-radius:4px">Everyone</button>
-      <button id="sb-alert-target-kitchen" onclick="sbSetAlertTarget('kitchen')" style="padding:8px 14px;border:2px solid #7a5600;background:transparent;color:#7a5600;font-size:13px;font-weight:600;cursor:pointer;border-radius:4px">🍳 Kitchen</button>
-      <button id="sb-alert-target-foh"     onclick="sbSetAlertTarget('foh')"     style="padding:8px 14px;border:2px solid #7a5600;background:transparent;color:#7a5600;font-size:13px;font-weight:600;cursor:pointer;border-radius:4px">☕ FOH</button>
-      <button onclick="sbSendAlert()" style="margin-left:auto;padding:10px 24px;background:#dc3545;color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer">🚨 Send Alert</button>
-    </div>
-  </div>
-
-  <!-- Feed -->
-  <div id="sb-feed"></div>
+  <div id="hub-root"></div>
 </div>
 
 <div class="page staff-page" id="page-eod">
@@ -2982,7 +2943,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.72';
+const APP_VERSION      = '2.4.74';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3082,6 +3043,7 @@ function wsDragStart(product) { _wsDragProduct = product; }
 function wsDragOver(e, el) { e.preventDefault(); el.style.outline = '2px dashed var(--accent)'; }
 function wsDragLeave(el) { el.style.outline = ''; }
 function wsDrop(e, targetProduct) {
+  // shared outline clear is handled per-caller
   e.target.closest('tr').style.outline = '';
   if (!_wsDragProduct || _wsDragProduct === targetProduct) { _wsDragProduct = null; return; }
   if (getProductCategory(_wsDragProduct) !== getProductCategory(targetProduct)) { _wsDragProduct = null; return; }
@@ -3101,6 +3063,30 @@ function wsDrop(e, targetProduct) {
   saveWsDemandOrder();
   _wsDragProduct = null;
   renderWeeklySummary();
+}
+
+// Channel order-line drag-and-drop (reorders the actual orderLines array within same category)
+let _chLineDrag = null; // { chId, lineId }
+function chLineDragStart(chId, lineId) { _chLineDrag = { chId, lineId }; }
+function chLineDragOver(e, el) { e.preventDefault(); el.style.outline = '2px dashed var(--accent)'; }
+function chLineDragLeave(el) { el.style.outline = ''; }
+function chLineDrop(e, chId, lineId) {
+  if (e.target.closest) e.target.closest('tr').style.outline = '';
+  if (!_chLineDrag || (chId === _chLineDrag.chId && lineId === _chLineDrag.lineId)) { _chLineDrag = null; return; }
+  if (chId !== _chLineDrag.chId) { _chLineDrag = null; return; } // only within same channel
+  const ch = channels.find(c => c.id === chId);
+  if (!ch) { _chLineDrag = null; return; }
+  const fromLine = ch.orderLines.find(l => l.id === _chLineDrag.lineId);
+  const toLine   = ch.orderLines.find(l => l.id === lineId);
+  if (!fromLine || !toLine) { _chLineDrag = null; return; }
+  if (getProductCategory(fromLine.product) !== getProductCategory(toLine.product)) { _chLineDrag = null; return; }
+  const fromIdx = ch.orderLines.indexOf(fromLine);
+  const toIdx   = ch.orderLines.indexOf(toLine);
+  ch.orderLines.splice(fromIdx, 1);
+  ch.orderLines.splice(toIdx, 0, fromLine);
+  _chLineDrag = null;
+  saveChannels();
+  renderChannelsPage();
 }
 
 // Runtime product→recipe links: persisted in localStorage so links added via the prompt survive reloads.
@@ -10326,13 +10312,12 @@ function renderChannelsPage() {
           </thead>
           <tbody>
             ${(()=>{
-              // Sort lines by category order then alphabetically within category
+              // Sort lines by category order only — within-category order follows the array (user-draggable)
               const catOrder = recipeCategories.map(c => c.name);
               const sorted = [...orderLines].sort((a, b) => {
                 const ca = catOrder.indexOf(getProductCategory(a.product));
                 const cb = catOrder.indexOf(getProductCategory(b.product));
-                if (ca !== cb) return (ca === -1 ? 999 : ca) - (cb === -1 ? 999 : cb);
-                return a.product.localeCompare(b.product);
+                return (ca === -1 ? 999 : ca) - (cb === -1 ? 999 : cb);
               });
               let lastCat = null;
               return sorted.map(line => {
@@ -10341,6 +10326,8 @@ function renderChannelsPage() {
                 const wkUnits   = wkOrdered * line.unitsEach;
                 const lineCat   = getProductCategory(line.product);
                 const catMeta   = getCatMeta(lineCat);
+                const escapedChId = ch.id.replace(/'/g,"\\'");
+                const escapedLineId = String(line.id).replace(/'/g,"\\'");
                 let catHeader = '';
                 if (lineCat !== lastCat) {
                   lastCat = lineCat;
@@ -10348,11 +10335,21 @@ function renderChannelsPage() {
                     <span style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${catMeta.color}">${catMeta.name}</span>
                   </td></tr>`;
                 }
-                return catHeader + `<tr style="border-bottom:1px solid var(--border)">
+                return catHeader + `<tr draggable="true"
+                  ondragstart="chLineDragStart('${escapedChId}','${escapedLineId}')"
+                  ondragover="chLineDragOver(event,this)"
+                  ondragleave="chLineDragLeave(this)"
+                  ondrop="chLineDrop(event,'${escapedChId}','${escapedLineId}')"
+                  style="border-bottom:1px solid var(--border);cursor:grab">
                   <td style="padding:5px 8px;font-size:12px;border-left:2px solid ${catMeta.color}66">
-                    <div style="font-weight:500">${line.product}</div>
-                    <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}</div>
-                    ${line.notes ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-style:italic">${line.notes}</div>` : ''}
+                    <div style="display:flex;align-items:center;gap:5px">
+                      <span style="color:var(--muted);font-size:13px;line-height:1;user-select:none;flex-shrink:0" title="Drag to reorder within category">⠿</span>
+                      <div>
+                        <div style="font-weight:500">${line.product}</div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}</div>
+                        ${line.notes ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-style:italic">${line.notes}</div>` : ''}
+                      </div>
+                    </div>
                   </td>
                   ${ALL_DAYS.map(d => {
                     const dayActive = ch.activeDays.includes(d);
@@ -17338,99 +17335,294 @@ function sbRequestNotifPermission() {
   }
 }
 
-function renderStaffBoard() {
-  const el = document.getElementById('sb-feed');
-  if (!el) return;
+// ============ OPERATIONS HUB ============
+const HUB_PACK_KEY = 'bk_hub_state';
+let _hubActiveTab = 'packing';
+let _hubPackState = {};
+try { _hubPackState = JSON.parse(localStorage.getItem(HUB_PACK_KEY) || '{}'); } catch {}
+function hubSavePackState() { localStorage.setItem(HUB_PACK_KEY, JSON.stringify(_hubPackState)); forceSaveKeys([HUB_PACK_KEY]); }
+
+const HUB_CHAIN = ['pending','producing','delivered','packing','ready','picked_up'];
+const HUB_META = {
+  pending:   { label:'Ordered',           shortLabel:'Ordered',   icon:'📋', color:'#888',    advanceRole:'Baker',   advanceLabel:'🔥 Start Producing',     ctaColor:'#e88c2a' },
+  producing: { label:'Kitchen Producing', shortLabel:'Producing', icon:'🔥', color:'#e88c2a', advanceRole:'Baker',   advanceLabel:'📬 Delivered to FOH',    ctaColor:'#6a7fa8' },
+  delivered: { label:'Delivered to FOH',  shortLabel:'Delivered', icon:'📬', color:'#6a7fa8', advanceRole:'Barista', advanceLabel:'📦 Start Packing',        ctaColor:'#c8902a' },
+  packing:   { label:'FOH Packing',       shortLabel:'Packing',   icon:'📦', color:'#c8902a', advanceRole:'Barista', advanceLabel:'✅ Mark Ready for Pickup', ctaColor:'#2a7d4f' },
+  ready:     { label:'Ready for Pickup',  shortLabel:'Ready',     icon:'✅', color:'#2a7d4f', advanceRole:'Barista', advanceLabel:'🚗 Mark Picked Up',       ctaColor:'#555'    },
+  picked_up: { label:'Picked Up',         shortLabel:'Picked Up', icon:'🚗', color:'#2a7d4f', advanceRole:null,      advanceLabel:null,                      ctaColor:null      },
+};
+
+function hubPackKey(chId) { return dateKey(0) + '::' + chId; }
+function hubGetPackEntry(chId) {
+  const k = hubPackKey(chId);
+  if (!_hubPackState[k]) _hubPackState[k] = { status:'pending', notes:'', log:[] };
+  return _hubPackState[k];
+}
+function hubGetTodayItems(ch) {
+  const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  if (!ch.activeThisWeek || !(ch.activeDays||[]).includes(dow)) return [];
+  return (ch.orderLines||[]).filter(l => (l.days[dow]||0) > 0).map(l => ({
+    product: l.product, qty: l.days[dow], variation: l.variation,
+    unitsEach: l.unitsEach||1, totalUnits: l.days[dow]*(l.unitsEach||1), notes: l.notes||''
+  }));
+}
+function hubAdvanceStatus(chId) {
+  const entry = hubGetPackEntry(chId);
+  const idx = HUB_CHAIN.indexOf(entry.status);
+  if (idx < 0 || idx >= HUB_CHAIN.length-1) return;
+  const meta = HUB_META[entry.status];
+  if (meta.advanceRole && !authCanAccess(meta.advanceRole)) return;
   const session = authGetSession();
-  const canManage = authCanAccess('Owner');
+  entry.status = HUB_CHAIN[idx+1];
+  entry.log.push({ status:entry.status, by:session?.name||'Staff', at:Date.now() });
+  hubSavePackState();
+  renderHubPage();
+}
+function hubRevertStatus(chId) {
+  if (!authCanAccess('Baker')) return;
+  const entry = hubGetPackEntry(chId);
+  const idx = HUB_CHAIN.indexOf(entry.status);
+  if (idx <= 0) return;
+  entry.status = HUB_CHAIN[idx-1];
+  const session = authGetSession();
+  entry.log.push({ status:entry.status, by:session?.name||'Staff', at:Date.now(), reverted:true });
+  hubSavePackState();
+  renderHubPage();
+}
+function hubSaveNotes(chId, notes) { hubGetPackEntry(chId).notes = notes; hubSavePackState(); }
+function hubSetPickupTime(chId, timeVal) {
+  if (!authCanAccess('Owner')) return;
+  const ch = channels.find(c => c.id === chId);
+  if (!ch) return;
+  ch.pickupTime = timeVal;
+  saveChannels();
+  renderHubPage();
+}
+function hubShowTab(tab) { _hubActiveTab = tab; renderHubPage(); }
 
-  // Show alert sender for Head Baker and Owner only
-  const alertSender = document.getElementById('sb-alert-sender');
-  if (alertSender) alertSender.style.display = canManage ? '' : 'none';
+function hubRenderPackCard(ch, canBaker, canBarista, canOwner) {
+  const items = hubGetTodayItems(ch);
+  const entry = hubGetPackEntry(ch.id);
+  const st = entry.status;
+  const meta = HUB_META[st];
+  const typeInfo = CH_TYPES[ch.type] || CH_TYPES.retail;
+  const esc = ch.id.replace(/'/g,"\\'");
 
-  // Request notification permission on first visit to staff board
-  sbRequestNotifPermission();
-
-  const posts = sbGetPosts();
-  if (!posts.length) {
-    el.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--muted);font-size:16px">No messages yet — be the first to post.</div>';
-    return;
-  }
-
-  // Pinned first, then by date desc
-  const pinned = posts.filter(p => p.pinned);
-  const rest   = posts.filter(p => !p.pinned);
-
-  // Group rest by date
-  const groups = {};
-  rest.forEach(p => {
-    if (!groups[p.date]) groups[p.date] = [];
-    groups[p.date].push(p);
+  // Progress steps
+  const steps = HUB_CHAIN.map((s, i) => {
+    const sm = HUB_META[s];
+    const curIdx = HUB_CHAIN.indexOf(st);
+    const done = i <= curIdx;
+    const current = s === st;
+    const connector = i < HUB_CHAIN.length-1
+      ? `<div style="flex:1;height:2px;background:${i<curIdx?sm.color:'var(--border)'};min-width:6px;margin-top:12px;align-self:flex-start"></div>` : '';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:46px">
+      <div style="width:24px;height:24px;border-radius:50%;border:2px solid ${done?sm.color:'var(--border)'};background:${current?sm.color:done?sm.color+'22':'var(--surface2)'};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">
+        ${current?sm.icon:done?`<span style="color:${sm.color};font-size:9px;font-weight:900">✓</span>`:''}
+      </div>
+      <div style="font-size:9px;color:${done?sm.color:'var(--muted)'};font-weight:${current?'700':'400'};text-align:center;line-height:1.1;max-width:46px">${sm.shortLabel}</div>
+    </div>${connector}`;
   });
-  const dates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
 
-  const typeStyle = {
-    general: { icon:'💬', label:'General',     bg:'var(--surface)',  border:'var(--border)',  labelColor:'var(--muted)' },
-    morning: { icon:'🌅', label:'For Morning', bg:'#fffbe6',         border:'#f0c040',        labelColor:'#8a6800' },
-    close:   { icon:'🌙', label:'Close Note',  bg:'#f0f0f8',         border:'#8888cc',        labelColor:'#444488' },
-  };
+  const itemRows = items.map(item => `<div style="display:flex;align-items:baseline;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)22">
+    <div style="font-weight:600;font-size:13px;flex:1">${item.product}</div>
+    ${item.variation&&item.variation!=='individual'&&item.variation!=='custom'?`<div style="font-size:11px;color:var(--muted)">${item.variation}</div>`:''}
+    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">×${item.qty}</div>
+    <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);min-width:38px;text-align:right">${item.totalUnits}u</div>
+  </div>`).join('');
 
-  function renderPost(p) {
-    const s = typeStyle[p.type] || typeStyle.general;
-    const time = new Date(p.at).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-    const isMine = session && session.name === p.by;
-    const canDelete = canManage || isMine;
-    const pinnedBadge = p.pinned ? `<span style="font-size:12px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-weight:700">📌 Pinned</span>` : '';
+  const canAct = meta.advanceRole === 'Baker' ? canBaker : canBarista;
+  const ctaHtml = !meta.advanceLabel
+    ? `<div style="font-size:13px;color:#2a7d4f;font-weight:700">✓ Complete</div>`
+    : canAct
+      ? `<button onclick="hubAdvanceStatus('${esc}')" style="padding:9px 20px;background:${meta.ctaColor};color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700">${meta.advanceLabel}</button>`
+      : `<div style="font-size:12px;color:var(--muted);font-style:italic">Waiting for ${meta.advanceRole==='Baker'?'kitchen':'FOH'}…</div>`;
 
-    const checkRow = p.type === 'morning' ? `
-      <div onclick="sbCheck('${p.id}')" style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 14px;
-        background:${p.checked ? '#e8f5e9' : 'var(--surface)'};border:2px solid ${p.checked ? '#4caf50' : 'var(--border)'};
-        border-radius:4px;cursor:pointer;touch-action:manipulation">
-        <div style="width:26px;height:26px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-          background:${p.checked ? '#4caf50' : 'transparent'};border:2px solid ${p.checked ? '#4caf50' : 'var(--border)'}">
-          ${p.checked ? '<span style="color:#fff;font-size:16px;font-weight:900">✓</span>' : ''}
+  const lastLog = entry.log.length ? entry.log[entry.log.length-1] : null;
+  const logHtml = lastLog ? `<span style="font-size:11px;color:var(--muted);font-style:italic">${lastLog.by} · ${new Date(lastLog.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>` : '';
+
+  const ptVal = ch.pickupTime||'';
+  const ptDisplay = ptVal ? (() => { try { const [h,m]=ptVal.split(':'),d=new Date(); d.setHours(+h,+m); return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); } catch{return ptVal;} })() : '';
+
+  return `<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid ${typeInfo.color};border-radius:8px;padding:16px 18px;margin-bottom:12px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:16px;font-weight:700;color:var(--text)">${ch.name}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${typeInfo.color}18;color:${typeInfo.color};font-weight:600">${typeInfo.label}</span>
         </div>
-        <div style="font-size:14px;color:${p.checked ? '#2e7d32' : 'var(--muted)'}">
-          ${p.checked ? `Done by ${p.checkedBy} · ${new Date(p.checkedAt).toLocaleString('en-US',{hour:'numeric',minute:'2-digit'})}` : 'Tap to mark complete'}
-        </div>
-      </div>` : '';
-
-    return `<div style="background:${s.bg};border:2px solid ${s.border};border-radius:4px;padding:18px 20px;margin-bottom:12px;position:relative">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:700;color:${s.labelColor};background:${s.border}22;padding:3px 10px;border-radius:4px">${s.icon} ${s.label}</span>
-        ${pinnedBadge}
-        <span style="font-size:13px;font-weight:700;color:var(--text);margin-left:4px">${p.by}</span>
-        <span style="font-size:12px;color:var(--muted)">${time}</span>
-        <div style="margin-left:auto;display:flex;gap:6px">
-          ${canManage ? `<button onclick="sbPin('${p.id}')" title="${p.pinned?'Unpin':'Pin'}" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--muted)">${p.pinned?'📌 Unpin':'📌 Pin'}</button>` : ''}
-          ${canDelete ? `<button onclick="sbDelete('${p.id}')" title="Delete" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--danger)">✕</button>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+          ${ptDisplay ? `<span style="font-size:12px;color:var(--muted)">🕐 <strong style="color:var(--text)">${ptDisplay}</strong> pickup</span>` : '<span style="font-size:11px;color:var(--muted);font-style:italic">No pickup time set</span>'}
+          ${canOwner ? `<input type="time" value="${ptVal}" onchange="hubSetPickupTime('${esc}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text)" title="Set pickup time">` : ''}
         </div>
       </div>
-      <div style="font-size:16px;color:var(--text);line-height:1.6;white-space:pre-wrap">${p.text}</div>
-      ${checkRow}
-    </div>`;
-  }
-
-  let html = '';
-  if (pinned.length) {
-    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px">📌 Pinned</div>`;
-    html += pinned.map(renderPost).join('');
-    html += `<div style="border-top:2px solid var(--border);margin:20px 0"></div>`;
-  }
-  dates.forEach(date => {
-    const label = (() => {
-      const today = new Date().toISOString().slice(0,10);
-      const yest  = new Date(Date.now()-86400000).toISOString().slice(0,10);
-      if (date === today) return 'Today';
-      if (date === yest)  return 'Yesterday';
-      return new Date(date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-    })();
-    html += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:20px 0 10px">${label}</div>`;
-    html += groups[date].map(renderPost).join('');
-  });
-
-  el.innerHTML = html;
+      ${canBaker&&st!=='pending' ? `<button onclick="hubRevertStatus('${esc}')" style="padding:5px 10px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--muted);font-size:11px">↩ Undo</button>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:14px;overflow-x:auto;padding-bottom:4px">${steps.join('')}</div>
+    <div style="margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:6px">${itemRows||'<div style="color:var(--muted);font-size:12px">No items</div>'}</div>
+    <textarea placeholder="Notes for this order…" onchange="hubSaveNotes('${esc}',this.value)"
+      style="width:100%;min-height:40px;resize:vertical;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;box-sizing:border-box;margin-bottom:10px">${entry.notes||''}</textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">${ctaHtml}${logHtml}</div>
+  </div>`;
 }
+
+function renderHubPage() {
+  const el = document.getElementById('hub-root');
+  if (!el) return;
+  sbRequestNotifPermission();
+  const session = authGetSession();
+  const canBaker = authCanAccess('Baker');
+  const canBarista = authCanAccess('Barista');
+  const canOwner = authCanAccess('Owner');
+  const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  const todayStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  const rrList = rrLoad();
+  const openReqs = rrList.filter(r => r.status==='pending'||r.status==='accepted').length;
+  const tabs = [
+    {id:'packing', label:'📦 Packing Board'},
+    {id:'requests', label:'🔁 Requests'},
+    {id:'notes', label:'💬 Notes'},
+  ];
+  const tabBar = `<div style="display:flex;gap:2px;margin-bottom:20px;border-bottom:2px solid var(--border)">
+    ${tabs.map(t => {
+      const active = _hubActiveTab === t.id;
+      const badge = t.id==='requests'&&openReqs>0 ? `<span style="background:#cc3333;color:#fff;border-radius:9px;font-size:9px;padding:1px 5px;margin-left:4px;font-weight:700">${openReqs}</span>` : '';
+      return `<button onclick="hubShowTab('${t.id}')" style="padding:9px 18px;border:none;border-bottom:3px solid ${active?'var(--accent)':'transparent'};background:transparent;color:${active?'var(--accent)':'var(--muted)'};font-size:13px;font-weight:${active?'700':'500'};cursor:pointer;white-space:nowrap">${t.label}${badge}</button>`;
+    }).join('')}
+  </div>`;
+
+  let content = '';
+  if (_hubActiveTab === 'packing') {
+    const packChannels = channels
+      .filter(ch => ch.activeThisWeek && (ch.activeDays||[]).includes(dow) && hubGetTodayItems(ch).length > 0)
+      .sort((a,b) => (a.pickupTime||'99:99').localeCompare(b.pickupTime||'99:99'));
+    content = packChannels.length === 0
+      ? '<div style="text-align:center;padding:48px 20px;color:var(--muted)"><div style="font-size:36px;margin-bottom:12px">📦</div><div style="font-size:14px">No channel orders active for today.</div></div>'
+      : packChannels.map(ch => hubRenderPackCard(ch, canBaker, canBarista, canOwner)).join('');
+  }
+  else if (_hubActiveTab === 'requests') {
+    const today0 = dateKey(0);
+    const visible = rrList.filter(r => r.status==='pending'||r.status==='accepted'||(r.createdAt||'')>=today0);
+    const reqCards = !visible.length
+      ? '<div style="text-align:center;padding:48px 20px;color:var(--muted)"><div style="font-size:36px;margin-bottom:12px">🔁</div><div style="font-size:14px">No requests yet today.</div></div>'
+      : visible.map(r => {
+          const sc = {pending:'#e88c2a',accepted:'#2a7d4f',rejected:'#cc3333',done:'#888'}[r.status]||'#888';
+          const sl = {pending:'⏳ Pending',accepted:'✅ Accepted',rejected:'✕ Rejected',done:'✓ Done'}[r.status]||r.status;
+          const esc = r.id.replace(/'/g,"\\'");
+          const time = new Date(r.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+          let actions = '';
+          if (r.status==='pending'&&canBaker)
+            actions = `<button onclick="rrAccept('${esc}')" style="padding:6px 14px;background:#2a7d4f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">✓ Accept</button>
+              <button onclick="rrReject('${esc}')" style="padding:6px 14px;background:none;border:1px solid #cc3333;color:#cc3333;border-radius:6px;cursor:pointer;font-size:12px">✕ Reject</button>`;
+          else if (r.status==='accepted'&&canBaker)
+            actions = `<button onclick="rrBakedAndDelivered('${esc}')" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">🍞 Baked & Delivered</button>`;
+          return `<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid ${sc};border-radius:8px;padding:14px 16px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+              <span style="font-size:14px;font-weight:700;color:var(--text)">${r.product}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:700">× ${r.qty}</span>
+              <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${sc}22;color:${sc};font-weight:600;margin-left:auto">${sl}</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:${actions?'10px':'0'}">
+              ${r.requestedBy} · ${time}${r.rejectionReason?` · <span style="color:#cc3333">"${r.rejectionReason}"</span>`:''}${r.squarePushed?' · <span style="color:#2a7d4f">Square ✓</span>':''}
+            </div>
+            ${actions?`<div style="display:flex;gap:8px;flex-wrap:wrap">${actions}</div>`:''}
+          </div>`;
+        }).join('');
+    content = `${canBarista?`<button onclick="rrShowRequestModal()" style="margin-bottom:16px;padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">+ New Request</button>`:''}${reqCards}`;
+  }
+  else if (_hubActiveTab === 'notes') {
+    const canManage = canOwner;
+    const alertHtml = canManage ? `<div style="background:#fff3cd;border:2px solid #e6a817;border-radius:8px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:#7a5600;margin-bottom:8px">🚨 Send Urgent Alert — pops up on all open devices</div>
+        <textarea id="sb-alert-text" placeholder="Short urgent message…" style="width:100%;min-height:48px;resize:vertical;font-size:14px;padding:8px 10px;border:1px solid #e6a817;border-radius:6px;background:#fff;color:#333;font-family:'Inter',sans-serif;margin-bottom:8px;box-sizing:border-box"></textarea>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:#7a5600">To:</span>
+          <button id="sb-alert-target-all" onclick="sbSetAlertTarget('all')" style="padding:6px 12px;border:2px solid #7a5600;background:#7a5600;color:#fff;font-size:12px;font-weight:700;cursor:pointer;border-radius:4px">Everyone</button>
+          <button id="sb-alert-target-kitchen" onclick="sbSetAlertTarget('kitchen')" style="padding:6px 12px;border:2px solid #7a5600;background:transparent;color:#7a5600;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px">🍳 Kitchen</button>
+          <button id="sb-alert-target-foh" onclick="sbSetAlertTarget('foh')" style="padding:6px 12px;border:2px solid #7a5600;background:transparent;color:#7a5600;font-size:12px;font-weight:600;cursor:pointer;border-radius:4px">☕ FOH</button>
+          <button onclick="sbSendAlert()" style="margin-left:auto;padding:8px 20px;background:#dc3545;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🚨 Send Alert</button>
+        </div>
+      </div>` : '';
+    const composeHtml = `<div style="background:var(--surface);border:2px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">
+      <textarea id="sb-compose-text" placeholder="Write a message, close note, or morning task…" style="width:100%;min-height:68px;resize:vertical;font-size:15px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;margin-bottom:10px;box-sizing:border-box"></textarea>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;flex:1">
+          <button id="sb-type-general" onclick="sbSetType('general')" style="padding:8px 14px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;border-radius:4px">💬 General</button>
+          <button id="sb-type-morning" onclick="sbSetType('morning')" style="padding:8px 14px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;border-radius:4px">🌅 Morning</button>
+          <button id="sb-type-close" onclick="sbSetType('close')" style="padding:8px 14px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;border-radius:4px">🌙 Close</button>
+        </div>
+        <button onclick="sbPost()" style="padding:9px 24px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Post →</button>
+      </div>
+    </div>`;
+    const posts = sbGetPosts();
+    const typeStyle = {
+      general:{icon:'💬',label:'General',bg:'var(--surface)',border:'var(--border)',lc:'var(--muted)'},
+      morning:{icon:'🌅',label:'For Morning',bg:'#fffbe6',border:'#f0c040',lc:'#8a6800'},
+      close:{icon:'🌙',label:'Close Note',bg:'#f0f0f8',border:'#8888cc',lc:'#444488'},
+    };
+    function renderPost(p) {
+      const s = typeStyle[p.type]||typeStyle.general;
+      const time = new Date(p.at).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+      const esc = p.id.replace(/'/g,"\\'");
+      return `<div style="background:${s.bg};border:2px solid ${s.border};border-radius:6px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700;color:${s.lc};background:${s.border}22;padding:2px 8px;border-radius:4px">${s.icon} ${s.label}</span>
+          ${p.pinned?'<span style="font-size:11px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-weight:700">📌 Pinned</span>':''}
+          <span style="font-size:12px;font-weight:700;color:var(--text)">${p.by}</span>
+          <span style="font-size:11px;color:var(--muted)">${time}</span>
+          <div style="margin-left:auto;display:flex;gap:4px">
+            ${canManage?`<button onclick="sbPin('${esc}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 7px;cursor:pointer;font-size:12px;color:var(--muted)">${p.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
+            ${(canManage||(session&&session.name===p.by))?`<button onclick="sbDelete('${esc}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 7px;cursor:pointer;font-size:12px;color:var(--danger)">✕</button>`:''}
+          </div>
+        </div>
+        <div style="font-size:15px;color:var(--text);line-height:1.6;white-space:pre-wrap">${p.text}</div>
+        ${p.type==='morning'?`<div onclick="sbCheck('${esc}')" style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 12px;background:${p.checked?'#e8f5e9':'var(--surface)'};border:2px solid ${p.checked?'#4caf50':'var(--border)'};border-radius:4px;cursor:pointer">
+          <div style="width:22px;height:22px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${p.checked?'#4caf50':'transparent'};border:2px solid ${p.checked?'#4caf50':'var(--border)'}">
+            ${p.checked?'<span style="color:#fff;font-size:14px;font-weight:900">✓</span>':''}
+          </div>
+          <div style="font-size:13px;color:${p.checked?'#2e7d32':'var(--muted)'}">${p.checked?`Done by ${p.checkedBy} · ${new Date(p.checkedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`:'Tap to mark complete'}</div>
+        </div>`:''}
+      </div>`;
+    }
+    let feedHtml = '';
+    if (!posts.length) {
+      feedHtml = '<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:14px">No messages yet — be the first to post.</div>';
+    } else {
+      const pinned = posts.filter(p=>p.pinned);
+      const rest = posts.filter(p=>!p.pinned);
+      const groups = {};
+      rest.forEach(p => { if(!groups[p.date]) groups[p.date]=[]; groups[p.date].push(p); });
+      const dates = Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+      if (pinned.length) {
+        feedHtml += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px">📌 Pinned</div>`;
+        feedHtml += pinned.map(renderPost).join('');
+        feedHtml += `<div style="border-top:2px solid var(--border);margin:16px 0"></div>`;
+      }
+      dates.forEach(date => {
+        const t0 = new Date().toISOString().slice(0,10);
+        const t1 = new Date(Date.now()-86400000).toISOString().slice(0,10);
+        const label = date===t0?'Today':date===t1?'Yesterday':new Date(date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+        feedHtml += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:16px 0 8px">${label}</div>`;
+        feedHtml += groups[date].map(renderPost).join('');
+      });
+    }
+    content = alertHtml + composeHtml + `<div id="sb-feed">${feedHtml}</div>`;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--text)">Operations Hub</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${todayStr}</div>
+      </div>
+      <button onclick="forceSaveKeys(['bk_hub_state','bk_restock_requests','bk_staff_board'])" style="background:#2a7d4f;color:#fff;border:none;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">☁ Save</button>
+    </div>
+    ${tabBar}
+    <div>${content}</div>`;
+}
+
+function renderStaffBoard() { renderHubPage(); }
 
 const SIDE_TASK_DEFAULTS = [
   { id:'st1',  name:'Clean sandwich station',       cat:'Cleaning' },
@@ -20616,7 +20808,7 @@ function wpPrintBakerChecklists(dayData, dateStr) {
 }
 
 // SOURCE: sync.js
-const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_pars","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board","bk_restock_requests"]);
+const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_pars","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board","bk_restock_requests","bk_hub_state"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
 const secureBases = {}, secureStops = [];
@@ -23224,6 +23416,7 @@ function rrAccept(id) {
   t.updatedAt = new Date().toISOString();
   rrSave(list);
   renderTodaysBoard();
+  renderHubPage();
 }
 
 function rrReject(id) {
@@ -23237,6 +23430,7 @@ function rrReject(id) {
   t.updatedAt = new Date().toISOString();
   rrSave(list);
   renderTodaysBoard();
+  renderHubPage();
 }
 
 async function rrBakedAndDelivered(id) {
@@ -23254,6 +23448,7 @@ async function rrBakedAndDelivered(id) {
     t.updatedAt = new Date().toISOString();
     rrSave(list);
     renderTodaysBoard();
+    renderHubPage();
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = '🍞 Baked & Delivered'; }
     alert('Square update failed: ' + (e.message || e));
@@ -23700,6 +23895,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.74': ['🏠 Operations Hub — replaced Staff Board tab with a full Operations Hub (3 sub-tabs): 📦 Packing Board auto-pulls today\'s active channel orders sorted by pickup time, with a 6-step status flow (Ordered → Kitchen Producing → Delivered to FOH → FOH Packing → Ready for Pickup → Picked Up), role-gated CTA buttons (Baker+ advances kitchen steps; Barista+ advances FOH steps), Undo button for Baker+, per-order notes, and Owner-editable pickup time per channel; 🔁 Requests tab brings the existing intraday restock request system into Hub with + New Request button for Barista+; 💬 Notes tab carries over the full staff board (compose, type selector, pin, delete, morning task check-off, urgent alert for Owner); bk_hub_state added to FB_SYNC_KEYS and functions/access.js for Firestore sync; renderStaffBoard() is now an alias for renderHubPage() so all existing call sites work'],
+  '2.4.73': ['↕ Channel order lines — drag-and-drop reordering within each category now works in every channel\'s order table (same ⠿ handle + dashed orange highlight on drop target); order is stored directly in the orderLines array and persisted to Firestore via saveChannels(); within-category sort is now array-order (insertion/drag order) instead of alphabetical; cross-category drags are blocked'],
   '2.4.72': ['↕ Weekly Demand Summary — drag-and-drop row reordering within each category; ⠿ handle on every product row; dragging to a different category is blocked; custom order persisted to localStorage (bk_ws_demand_order); new products default to alphabetical within their category, then slot in after any manually positioned items; order resets to alpha if localStorage is cleared'],
   '2.4.71': ['✏️ Edit Order Line — added Linked Recipe select to the edit modal; shows all active recipes sorted alphabetically with current link pre-selected (falls back to "— unlinked —"); saving updates _productRecipeLinks so production planning, Today\'s Board, and batch roll-up all pick up the corrected link immediately; if the product name is also changed, the link migrates to the new name automatically'],
   '2.4.70': ['🏭 Batch yield calculation — Production Base roll-up now detects the "source dough recipe" (tagged with productionBase but with no channel products linked) and uses its yield field for batch math; getProductionBaseRollup() stores batchYield per base; Weekly Summary Production Needs table shows qty + batch count per day (e.g. "75 · 2×") with "yield N/batch" label in the base row and "X× wk" week total; Today\'s Board Production Bases section shows "→ N batches (Y/batch)" inline when a dough recipe supplies the yield; falls back gracefully to units-only when no source recipe is configured'],
