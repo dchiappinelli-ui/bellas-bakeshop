@@ -2982,7 +2982,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.66';
+const APP_VERSION      = '2.4.69';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4563,6 +4563,7 @@ function renderRecipes() {
             ${r.name}
             ${(()=>{ const m=getCatMeta(r.category||'Other'); return `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:${m.color};border:1px solid ${m.color}66;border-radius:12px;padding:1px 8px;flex-shrink:0">${m.name}</span>`; })()}
             ${(r.notes || '').startsWith('⚠️ Placeholder') ? `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:#3a2800;color:#e8a045;border:1px solid #6b4700;border-radius:4px;padding:1px 7px;flex-shrink:0">Placeholder</span>` : ''}
+            ${r.productionBase ? `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6a7fa8;border:1px solid #6a7fa855;border-radius:12px;padding:1px 8px;flex-shrink:0">🏭 ${r.productionBase}</span>` : ''}
           </div>
           <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.yield || '?'} ${r.notes && !(r.notes || '').startsWith('⚠️ Placeholder') ? '· '+r.notes : ''}</div>
         </div>
@@ -4635,6 +4636,14 @@ function renderRecipes() {
               <label>Notes</label>
               <input type="text" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Any notes..."
                 onchange="updateRecipe(${r.id},'notes',this.value)">
+            </div>
+            <div class="form-group" style="flex:2">
+              <label title="Recipes sharing a base are rolled up in production planning — e.g. 'Laminated Round' groups Croissant + Everything Round + Caramel Apple Cider Round">Production Base <span style="color:var(--muted);font-size:10px;font-weight:400">(optional)</span></label>
+              <input type="text" list="prod-base-list-${r.id}" value="${(r.productionBase||'').replace(/"/g,'&quot;')}" placeholder="e.g. Laminated Round"
+                onchange="updateRecipe(${r.id},'productionBase',this.value.trim())">
+              <datalist id="prod-base-list-${r.id}">
+                ${[...new Set(recipes.filter(rx => rx.productionBase && rx.id !== r.id).map(rx => rx.productionBase))].map(b => `<option value="${b.replace(/"/g,'&quot;')}">`).join('')}
+              </datalist>
             </div>
             ${prepToggleHtml}
           </div>
@@ -6157,9 +6166,41 @@ function renderTodaysBoard() {
     html += `<div class="empty-state">Nothing on the board yet. Generate today's schedule in the Daily Planner, or confirm batches in the Weekly Schedule tab.</div>`;
   }
 
+  html += renderProductionBaseSummary();
   html += renderRestockSection();
 
   el.innerHTML = html;
+}
+
+function renderProductionBaseSummary() {
+  const rollup = getProductionBaseRollup();
+  const entries = Object.entries(rollup);
+  if (!entries.length) return '';
+
+  const todayKey = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+  const todayEntries = entries.filter(([, data]) => (data[todayKey] || 0) > 0);
+  if (!todayEntries.length) return '';
+
+  const rows = todayEntries.map(([base, data]) => {
+    const qty = data[todayKey];
+    const uniqueProducts = [...new Set(data.products)];
+    return `<div style="display:flex;align-items:center;gap:14px;padding:10px 8px;border-bottom:1px solid var(--border)33">
+      <div style="width:20px;height:20px;border-radius:4px;border:2px solid #6a7fa8;flex-shrink:0"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);min-width:90px;flex-shrink:0">Today</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">🏭 ${base} — <span style="color:#6a7fa8">${qty} units</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${uniqueProducts.join(' · ')}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div style="margin-top:24px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #6a7fa8">
+      <span style="font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6a7fa8">Production Bases</span>
+      <span style="font-size:10px;color:var(--muted)">total units to produce today across shared bases</span>
+    </div>
+    <div style="display:flex;flex-direction:column">${rows}</div>
+  </div>`;
 }
 
 function printTodaysBoard() {
@@ -9502,6 +9543,35 @@ function getWeeklyDemand() {
   return totals;
 }
 
+// Production base roll-up: groups recipes sharing a productionBase and sums their channel demand
+function getProductionBaseRollup() {
+  const result = {};
+  recipes.forEach(r => {
+    if (!r.productionBase || r.active === false) return;
+    const base = r.productionBase;
+    if (!result[base]) {
+      result[base] = { weekTotal: 0, products: [] };
+      DAYS_SHORT.forEach(d => { result[base][d] = 0; });
+    }
+    const products = getProductsForRecipe(r.id);
+    if (!products.length) return;
+    result[base].products.push(...products);
+    channels.forEach(ch => {
+      if (!ch.activeThisWeek) return;
+      (ch.orderLines || []).forEach(line => {
+        if (!products.some(p => p.toUpperCase() === line.product.toUpperCase())) return;
+        DAYS_SHORT.forEach(d => {
+          if (!ch.activeDays || !ch.activeDays.includes(d)) return;
+          const qty = (line.days[d] || 0) * line.unitsEach;
+          result[base][d] += qty;
+          result[base].weekTotal += qty;
+        });
+      });
+    });
+  });
+  return Object.fromEntries(Object.entries(result).filter(([, v]) => v.weekTotal > 0));
+}
+
 // Helper: total production units from ch.orderLines for a given product+day (with ch.orders fallback for unmigrted data)
 function chLineUnits(ch, productName, day) {
   if (ch.orderLines) {
@@ -9889,33 +9959,72 @@ function renderWeeklySummary() {
       </td></tr>`;
     }
     return catHeaderRow + `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:9px 10px;border-left:2px solid ${catMeta.color}66">
-        <div style="font-weight:600;font-size:14px">${product}</div>
-        ${meta.unitsPerPack>1?`<div style="font-size:11px;color:var(--muted)">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
+      <td style="padding:10px 10px;border-left:2px solid ${catMeta.color}66">
+        <div style="font-weight:700;font-size:16px">${product}</div>
+        ${meta.unitsPerPack>1?`<div style="font-size:12px;color:var(--muted)">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
         ${meta.deliveryLead>0?`<div style="font-size:11px;color:var(--warn)">⏱ bake & pack day before</div>`:''}
       </td>
-      ${DAYS_SHORT.map(d => {
+      ${DAYS_SHORT.map((d,i) => {
         const units = byDay[d][product] || 0;
-        return `<td style="padding:9px 6px;text-align:center;font-size:13px;color:${units>0?'var(--text)':'var(--border)'}">
-          ${units>0 ? `<div style="font-family:'DM Mono',monospace;font-weight:600">${units}</div>` : '—'}
+        const colBg = i%2===1 ? 'background:rgba(128,128,128,0.06)' : '';
+        return `<td style="padding:10px 6px;text-align:center;font-size:15px;color:${units>0?'var(--text)':'var(--border)'};${colBg}">
+          ${units>0 ? `<span style="font-family:'DM Mono',monospace;font-weight:700">${units}</span>` : '—'}
         </td>`;
       }).join('')}
-      <td style="padding:9px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--accent)">${weekUnits}</td>
+      <td style="padding:10px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:16px;color:var(--accent)">${weekUnits}</td>
     </tr>`;
   }).join('');
+
+  // Production base roll-up table
+  const _baseRollup = getProductionBaseRollup();
+  const _baseEntries = Object.entries(_baseRollup);
+  const productionRollupHtml = _baseEntries.length > 0 ? `
+    <div style="margin-top:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">🏭 Production Needs</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Total units per shared production base — rollup of all products made from the same base</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
+          <thead>
+            <tr style="border-bottom:2px solid #6a7fa855">
+              <th style="text-align:left;padding:8px 10px;color:#6a7fa8;font-size:11px;text-transform:uppercase;min-width:180px">Base</th>
+              ${DAYS_SHORT.map((d,i) => `<th style="padding:8px 10px;text-align:center;color:var(--muted);font-size:11px;text-transform:uppercase;${i%2===1?'background:rgba(128,128,128,0.06)':''}">${d}</th>`).join('')}
+              <th style="padding:8px 10px;text-align:center;color:#6a7fa8;font-size:11px;text-transform:uppercase">Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${_baseEntries.map(([base, data]) => {
+              const uniqueProducts = [...new Set(data.products)];
+              return `<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:10px 10px;border-left:3px solid #6a7fa888">
+                  <div style="font-weight:700;font-size:16px;color:var(--text)">${base}</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">${uniqueProducts.join(' · ')}</div>
+                </td>
+                ${DAYS_SHORT.map((d,i) => {
+                  const qty = data[d] || 0;
+                  return `<td style="padding:10px 6px;text-align:center;font-size:15px;color:${qty>0?'var(--text)':'var(--border)'};${i%2===1?'background:rgba(128,128,128,0.06)':''}">
+                    ${qty>0 ? `<span style="font-family:'DM Mono',monospace;font-weight:700">${qty}</span>` : '—'}
+                  </td>`;
+                }).join('')}
+                <td style="padding:10px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:16px;color:#6a7fa8">${data.weekTotal}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : '';
 
   el.innerHTML = catDropdown + `<div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
       <thead>
         <tr style="border-bottom:2px solid var(--border)">
           <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;text-transform:uppercase;min-width:180px">Product</th>
-          ${DAYS_SHORT.map(d => `<th style="padding:8px 6px;text-align:center;color:var(--muted);font-size:11px;text-transform:uppercase">${d}</th>`).join('')}
-          <th style="padding:8px 6px;text-align:center;color:var(--accent);font-size:11px;text-transform:uppercase">Week Units</th>
+          ${DAYS_SHORT.map((d,i) => `<th style="padding:8px 10px;text-align:center;color:var(--muted);font-size:11px;text-transform:uppercase;${i%2===1?'background:rgba(128,128,128,0.06)':''}">${d}</th>`).join('')}
+          <th style="padding:8px 10px;text-align:center;color:var(--accent);font-size:11px;text-transform:uppercase">Week Units</th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
     </table>
-  </div>
+  </div>` + productionRollupHtml + `
 
   <!-- Forward-look: what to bake today for tomorrow's packs -->
   <div style="margin-top:16px;padding:12px 14px;background:rgba(232,160,69,0.06);border:1px solid rgba(232,160,69,0.2);border-radius:6px">
@@ -14407,7 +14516,7 @@ function freezerGetTodayPull(itemName) {
     (ch.orderLines || []).forEach(line => {
       if (!line.product) return;
       const p = line.product.toLowerCase().trim();
-      if (p === q || p.includes(q) || q.includes(p)) {
+      if (p === q) {
         const qty = (line.days && line.days[todayKey]) || 0;
         const unitsEach = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
         total += qty * unitsEach;
@@ -23515,6 +23624,9 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.69': ['🏭 Production Base roll-up — recipes now have an optional "Production Base" field (e.g. "Laminated Round") that groups products sharing the same base production step; Weekly Summary adds a "Production Needs" table showing daily + weekly totals per base (sum of all constituent products); Today\'s Board adds a "Production Bases" section showing today\'s total units per base; recipe card headers badge the base when set; datalist autocomplete in the editor shows existing bases; getProductionBaseRollup() is the shared compute function'],
+  '2.4.68': ['❄️ Freezer Today\'s Pull — fixed over-counting bug: fuzzy name match was summing all channel products that contained the item name as a substring (e.g. "Croissant" was matching ALMOND CROISSANT + CHOCOLATE CROISSANT + CROISSANT CINNAMON BUN etc.); changed to exact case-insensitive match only so "Croissant" matches only the CROISSANT channel row'],
+  '2.4.67': ['📊 Weekly Demand Summary — alternating column shading (every other day column tinted) for readability; product name 14→16px bold; day cells 13→15px bold monospace; week total 14→16px; header cells padding widened'],
   '2.4.66': ['❄️ Freezer Stock redesign — replaced card grid with per-freezer tab + sortable table (Item | Stock | Par | Today\'s Pull | Net | Updated); tabs are now compact with red badge = items below par; Par column: Baker+ can set per-item par directly in-table (stored in bk_freezer_pars, cloud-synced); Today\'s Pull = auto-calculated from all channels\' day pars via fuzzy name match; Net = Stock − Pull, color-coded (red = short, amber = below par, green = ok); "🧊 Pull from Freezer" button performs BOD system pull (confirms list of items + quantities, then decrements); "+ Add" button opens modal to add stock (staff-only input direction); staff can no longer manually subtract — reductions are system-driven; bk_freezer_pars added to FB_SYNC_KEYS and server KEYS whitelist'],
   '2.4.65': ['📊 Weekly Demand Summary — larger font (12→14px product names, 11→13px day cells, 14px week total); increased row padding (6→9px) for better readability; header row font 10→11px; category headers 9→10px; product column min-width 160→180px'],
   '2.4.64': ['📤 Square Inventory Workflow — eliminates dependency on ProArt computer for Square updates; (1) squareEODPush Firebase Function reads channel pars for tomorrow from Firestore and sets PHYSICAL_COUNT in Square (replaces nightly Claude scheduled task); (2) squareRestockDelivered Firebase Function posts ADJUSTMENT +qty when kitchen delivers a restock; (3) Intraday Restock Requests on Today\'s Board: FOH taps "+ Request Restock", picks product + qty → ticket syncs to Firestore; kitchen sees pending tickets with Accept/Reject buttons; accepted tickets show "🍞 Baked & Delivered" button which fires Square ADJUSTMENT; (4) "📤 Push to Square" Owner button in Supply Board header triggers EOD push manually; bk_restock_requests added to FB_SYNC_KEYS and server whitelist'],
