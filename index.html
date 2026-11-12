@@ -2982,7 +2982,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.69';
+const APP_VERSION      = '2.4.70';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -6184,11 +6184,13 @@ function renderProductionBaseSummary() {
   const rows = todayEntries.map(([base, data]) => {
     const qty = data[todayKey];
     const uniqueProducts = [...new Set(data.products)];
+    const by = data.batchYield || 0;
+    const batches = by > 0 ? Math.ceil(qty / by) : 0;
     return `<div style="display:flex;align-items:center;gap:14px;padding:10px 8px;border-bottom:1px solid var(--border)33">
       <div style="width:20px;height:20px;border-radius:4px;border:2px solid #6a7fa8;flex-shrink:0"></div>
       <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);min-width:90px;flex-shrink:0">Today</div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">🏭 ${base} — <span style="color:#6a7fa8">${qty} units</span></div>
+        <div style="font-size:14px;font-weight:700;color:var(--text)">🏭 ${base} — <span style="color:#6a7fa8">${qty} units</span>${batches > 0 ? ` <span style="font-size:12px;color:#6a7fa8;font-weight:600">→ ${batches} batch${batches > 1 ? 'es' : ''}</span> <span style="font-size:10px;color:var(--muted)">(${by}/batch)</span>` : ''}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${uniqueProducts.join(' · ')}</div>
       </div>
     </div>`;
@@ -9543,18 +9545,24 @@ function getWeeklyDemand() {
   return totals;
 }
 
-// Production base roll-up: groups recipes sharing a productionBase and sums their channel demand
+// Production base roll-up: groups recipes sharing a productionBase and sums their channel demand.
+// Recipes with no channel products are treated as the base dough recipe — their yield is used for batch count.
 function getProductionBaseRollup() {
   const result = {};
   recipes.forEach(r => {
     if (!r.productionBase || r.active === false) return;
     const base = r.productionBase;
     if (!result[base]) {
-      result[base] = { weekTotal: 0, products: [] };
+      result[base] = { weekTotal: 0, products: [], batchYield: 0 };
       DAYS_SHORT.forEach(d => { result[base][d] = 0; });
     }
     const products = getProductsForRecipe(r.id);
-    if (!products.length) return;
+    if (!products.length) {
+      // No channel products → this is the base dough recipe; harvest its yield for batch math
+      const y = parseYield(r.yield);
+      if (y > 0 && y > result[base].batchYield) result[base].batchYield = y;
+      return;
+    }
     result[base].products.push(...products);
     channels.forEach(ch => {
       if (!ch.activeThisWeek) return;
@@ -9994,18 +10002,24 @@ function renderWeeklySummary() {
           <tbody>
             ${_baseEntries.map(([base, data]) => {
               const uniqueProducts = [...new Set(data.products)];
+              const by = data.batchYield || 0;
               return `<tr style="border-bottom:1px solid var(--border)">
                 <td style="padding:10px 10px;border-left:3px solid #6a7fa888">
                   <div style="font-weight:700;font-size:16px;color:var(--text)">${base}</div>
                   <div style="font-size:11px;color:var(--muted);margin-top:2px">${uniqueProducts.join(' · ')}</div>
+                  ${by > 0 ? `<div style="font-size:10px;color:#6a7fa8;margin-top:3px">yield ${by}/batch</div>` : ''}
                 </td>
                 ${DAYS_SHORT.map((d,i) => {
                   const qty = data[d] || 0;
-                  return `<td style="padding:10px 6px;text-align:center;font-size:15px;color:${qty>0?'var(--text)':'var(--border)'};${i%2===1?'background:rgba(128,128,128,0.06)':''}">
-                    ${qty>0 ? `<span style="font-family:'DM Mono',monospace;font-weight:700">${qty}</span>` : '—'}
+                  const batches = by > 0 && qty > 0 ? Math.ceil(qty / by) : 0;
+                  return `<td style="padding:8px 6px;text-align:center;${i%2===1?'background:rgba(128,128,128,0.06)':''}">
+                    ${qty > 0 ? `<div style="font-family:'DM Mono',monospace;font-weight:700;font-size:15px;color:var(--text)">${qty}</div>${batches > 0 ? `<div style="font-size:10px;color:#6a7fa8;line-height:1.2">${batches}×</div>` : ''}` : `<span style="color:var(--border)">—</span>`}
                   </td>`;
                 }).join('')}
-                <td style="padding:10px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:16px;color:#6a7fa8">${data.weekTotal}</td>
+                <td style="padding:8px 6px;text-align:center">
+                  <div style="font-family:'DM Mono',monospace;font-weight:700;font-size:16px;color:#6a7fa8">${data.weekTotal}</div>
+                  ${by > 0 && data.weekTotal > 0 ? `<div style="font-size:10px;color:#6a7fa888">${Math.ceil(data.weekTotal/by)}× wk</div>` : ''}
+                </td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -23624,6 +23638,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.70': ['🏭 Batch yield calculation — Production Base roll-up now detects the "source dough recipe" (tagged with productionBase but with no channel products linked) and uses its yield field for batch math; getProductionBaseRollup() stores batchYield per base; Weekly Summary Production Needs table shows qty + batch count per day (e.g. "75 · 2×") with "yield N/batch" label in the base row and "X× wk" week total; Today\'s Board Production Bases section shows "→ N batches (Y/batch)" inline when a dough recipe supplies the yield; falls back gracefully to units-only when no source recipe is configured'],
   '2.4.69': ['🏭 Production Base roll-up — recipes now have an optional "Production Base" field (e.g. "Laminated Round") that groups products sharing the same base production step; Weekly Summary adds a "Production Needs" table showing daily + weekly totals per base (sum of all constituent products); Today\'s Board adds a "Production Bases" section showing today\'s total units per base; recipe card headers badge the base when set; datalist autocomplete in the editor shows existing bases; getProductionBaseRollup() is the shared compute function'],
   '2.4.68': ['❄️ Freezer Today\'s Pull — fixed over-counting bug: fuzzy name match was summing all channel products that contained the item name as a substring (e.g. "Croissant" was matching ALMOND CROISSANT + CHOCOLATE CROISSANT + CROISSANT CINNAMON BUN etc.); changed to exact case-insensitive match only so "Croissant" matches only the CROISSANT channel row'],
   '2.4.67': ['📊 Weekly Demand Summary — alternating column shading (every other day column tinted) for readability; product name 14→16px bold; day cells 13→15px bold monospace; week total 14→16px; header cells padding widened'],
