@@ -2982,7 +2982,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.70';
+const APP_VERSION      = '2.4.71';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -9886,6 +9886,18 @@ function openEditLineModal(chId, lineId) {
   else { const opt = document.createElement('option'); opt.value = line.variation; opt.textContent = line.variation; varSel.appendChild(opt); varSel.value = line.variation; }
   document.getElementById('el-units').value = line.unitsEach;
   document.getElementById('el-notes').value = line.notes || '';
+  // Populate recipe select with active recipes
+  const recSel = document.getElementById('el-recipe-link');
+  recSel.innerHTML = '<option value="">— unlinked —</option>';
+  const sortedRecipes = [...recipes].filter(r => r.active !== false).sort((a, b) => a.name.localeCompare(b.name));
+  sortedRecipes.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.name + (r.category ? ` (${r.category})` : '');
+    recSel.appendChild(opt);
+  });
+  const currentLink = resolveRecipeId(line.product.toUpperCase());
+  recSel.value = currentLink !== null ? String(currentLink) : '';
   document.getElementById('ch-edit-line-modal').style.display = 'block';
 }
 function closeEditLineModal() {
@@ -9898,11 +9910,22 @@ function saveEditLine() {
   if (!ch) return;
   const line = (ch.orderLines || []).find(l => l.id === _editLineCtx.lineId);
   if (!line) return;
-  line.product = document.getElementById('el-product').value.trim().toUpperCase() || line.product;
+  const newProduct = document.getElementById('el-product').value.trim().toUpperCase() || line.product;
+  // If product name changed, migrate the recipe link to the new name
+  if (newProduct !== line.product) {
+    const oldLink = _productRecipeLinks[line.product];
+    if (oldLink !== undefined) { _productRecipeLinks[newProduct] = oldLink; delete _productRecipeLinks[line.product]; }
+  }
+  line.product = newProduct;
   line.variation = document.getElementById('el-variation').value;
   line.unitsEach = parseInt(document.getElementById('el-units').value, 10) || 1;
   const notes = document.getElementById('el-notes').value.trim();
   if (notes) line.notes = notes; else delete line.notes;
+  // Save recipe link (write to runtime map; hardcoded PRODUCT_TO_RECIPE links are read-only)
+  const chosenRecipeId = document.getElementById('el-recipe-link').value;
+  if (chosenRecipeId) _productRecipeLinks[line.product] = parseInt(chosenRecipeId, 10);
+  else delete _productRecipeLinks[line.product];
+  saveProductRecipeLinks();
   saveChannels();
   closeEditLineModal();
   renderChannelsPage();
@@ -23638,6 +23661,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.71': ['✏️ Edit Order Line — added Linked Recipe select to the edit modal; shows all active recipes sorted alphabetically with current link pre-selected (falls back to "— unlinked —"); saving updates _productRecipeLinks so production planning, Today\'s Board, and batch roll-up all pick up the corrected link immediately; if the product name is also changed, the link migrates to the new name automatically'],
   '2.4.70': ['🏭 Batch yield calculation — Production Base roll-up now detects the "source dough recipe" (tagged with productionBase but with no channel products linked) and uses its yield field for batch math; getProductionBaseRollup() stores batchYield per base; Weekly Summary Production Needs table shows qty + batch count per day (e.g. "75 · 2×") with "yield N/batch" label in the base row and "X× wk" week total; Today\'s Board Production Bases section shows "→ N batches (Y/batch)" inline when a dough recipe supplies the yield; falls back gracefully to units-only when no source recipe is configured'],
   '2.4.69': ['🏭 Production Base roll-up — recipes now have an optional "Production Base" field (e.g. "Laminated Round") that groups products sharing the same base production step; Weekly Summary adds a "Production Needs" table showing daily + weekly totals per base (sum of all constituent products); Today\'s Board adds a "Production Bases" section showing today\'s total units per base; recipe card headers badge the base when set; datalist autocomplete in the editor shows existing bases; getProductionBaseRollup() is the shared compute function'],
   '2.4.68': ['❄️ Freezer Today\'s Pull — fixed over-counting bug: fuzzy name match was summing all channel products that contained the item name as a substring (e.g. "Croissant" was matching ALMOND CROISSANT + CHOCOLATE CROISSANT + CROISSANT CINNAMON BUN etc.); changed to exact case-insensitive match only so "Croissant" matches only the CROISSANT channel row'],
@@ -24373,6 +24397,11 @@ async function _loadFirebase() {
           <input id="el-units" type="number" min="1" style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace">
         </label>
       </div>
+      <label style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px">Linked Recipe <span style="font-weight:400">(used for production planning)</span>
+        <select id="el-recipe-link" style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px">
+          <option value="">— unlinked —</option>
+        </select>
+      </label>
       <label style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px">Notes <span style="font-weight:400">(shown under product name)</span>
         <input id="el-notes" type="text" placeholder="e.g. allergen note, packaging detail…" style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px">
       </label>
