@@ -983,6 +983,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
   <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
   <button class="nav-btn" onclick="showPage('staffboard')">🏠 Hub</button>
+  <button class="nav-btn" onclick="showPage('doughplan')">🥐 Dough Plan</button>
   <button class="nav-btn" onclick="showPage('opening')">📋 Checklists</button>
   <button class="nav-btn" onclick="showPage('stationguide')">📋 Station Guide</button>
 </div>
@@ -2198,6 +2199,10 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="hub-root"></div>
 </div>
 
+<div class="page staff-page" id="page-doughplan">
+  <div id="doughplan-root" style="overflow-y:auto;height:100%"></div>
+</div>
+
 <div class="page staff-page" id="page-eod">
   <div id="ds-banner-eod" style="margin-bottom:0"></div>
   <div style="padding:4px 0">
@@ -2774,6 +2779,56 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- ======== RECEIVE MODAL ======== -->
+<div id="sb-receive-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:center;justify-content:center" onclick="if(event.target===this)sbCloseReceiveModal()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(440px,94vw);max-height:90vh;overflow-y:auto;padding:24px 22px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">📦 Received</div>
+        <div id="sb-recv-name" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--text)"></div>
+        <div id="sb-recv-meta" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button onclick="sbCloseReceiveModal()" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0;line-height:1;margin-left:16px;flex-shrink:0">✕</button>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">How much did you receive?</div>
+    <div style="display:flex;gap:8px;margin-bottom:18px">
+      <input id="sb-recv-qty" type="text" placeholder="e.g. 15" autocomplete="off"
+        style="width:90px;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;font-weight:700">
+      <input id="sb-recv-unit" type="text" placeholder="doz, lbs, bags, cases…" autocomplete="off"
+        style="flex:1;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Price paid <span style="font-weight:400;text-transform:none;font-size:10px">(optional — updates price library)</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+      <span style="color:var(--muted)">$</span>
+      <input id="sb-recv-price" type="number" min="0" step="0.01" placeholder="0.00"
+        style="width:90px;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+      <span style="font-size:13px;color:var(--muted)">per lb</span>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Package size <span style="font-weight:400;text-transform:none;font-size:10px">(optional — lbs per bag / case / unit · enables stock weeks tracking)</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+      <input id="sb-recv-pkg" type="number" min="0" step="0.01" placeholder="4.5"
+        style="width:90px;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+      <span style="font-size:13px;color:var(--muted)">lbs per unit</span>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Expiration date <span style="font-weight:400;text-transform:none;font-size:10px">(optional)</span></div>
+    <input id="sb-recv-expiry" type="date"
+      style="width:100%;box-sizing:border-box;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:18px">
+
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Notes <span style="font-weight:400;text-transform:none;font-size:10px">(optional)</span></div>
+    <input id="sb-recv-notes" type="text" placeholder="supplier, batch #, notes…" autocomplete="off"
+      style="width:100%;box-sizing:border-box;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:22px">
+
+    <div style="display:flex;gap:10px">
+      <button onclick="sbCloseReceiveModal()" style="flex:1;padding:13px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Cancel</button>
+      <button onclick="sbConfirmReceive()" style="flex:2;padding:13px;background:#2a7d4f;border:none;color:#fff;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">✓ Received → In Stock</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SCRIPT ======== -->
 <script>
 
@@ -2924,7 +2979,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.80';
+const APP_VERSION      = '2.4.85';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3780,6 +3835,7 @@ function showPageDirect(page) {
   if (page === 'stationguide') renderStationGuide();
   if (page === 'displaystock') renderDisplayStock();
   if (page === 'pricelib') renderSupplyBoard();
+  if (page === 'doughplan') renderDoughPlanPage();
 }
 
 function showPage(page) {
@@ -3809,6 +3865,7 @@ function showPage(page) {
   if (page === 'stationguide') renderStationGuide();
   if (page === 'dayview') renderDayView();
   if (page === 'displaystock') renderDisplayStock();
+  if (page === 'doughplan') renderDoughPlanPage();
   renderStatusBanners(page);
 }
 
@@ -4573,11 +4630,38 @@ function renderRecipes() {
       </div>
       <div class="recipe-body" id="recipe-body-${r.id}" style="display:none">
 
+        ${(()=>{
+          const catM = getCatMeta(r.category || 'Other');
+          const synNote = r.notes && !r.notes.startsWith('⚠️ Placeholder') ? r.notes : '';
+          const stageFlow = (() => {
+            if (!r.stages.length) return '';
+            if (multiDay) {
+              const groups = {};
+              r.stages.forEach(s => { const d = s.day || 1; if (!groups[d]) groups[d] = []; groups[d].push(s.name.split(/[,·—]/)[0].trim()); });
+              return Object.entries(groups).sort(([a],[b])=>+a-+b)
+                .map(([d,ns])=>`<span style="font-weight:600;color:var(--text)">Day ${d}:</span> ${ns.join(' · ')}`)
+                .join('<span style="color:var(--border)"> &nbsp;/&nbsp; </span>');
+            }
+            return r.stages.map(s => s.name.split(',')[0].trim()).join(' → ');
+          })();
+          return `
+          <div style="border-left:3px solid ${catM.color};background:${catM.color}0d;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:${synNote||stageFlow?'7px':'0'}">
+              <span style="font-size:15px;font-weight:700;color:var(--text)">${r.name}</span>
+              <span style="font-size:11px;font-weight:700;color:${catM.color}">${catM.name}</span>
+              ${r.yield ? `<span style="font-size:12px;color:var(--muted)">· ${r.yield}</span>` : ''}
+              <span style="font-size:12px;color:var(--muted);margin-left:auto">${totalLabel}</span>
+            </div>
+            ${synNote ? `<div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:${stageFlow?'7px':'0'}">${synNote}</div>` : ''}
+            ${stageFlow ? `<div style="font-size:11px;color:var(--muted);line-height:1.7">${stageFlow}</div>` : ''}
+          </div>`;
+        })()}
+
         <!-- Recipe-level editable fields -->
         <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;align-items:center;gap:10px">
-              <div class="section-label">Recipe Details</div>
+              <div class="section-label">Edit Recipe</div>
               <span id="recipe-saved-${r.id}" style="display:none;font-size:11px;font-weight:600;color:#4a9c6e;background:#1e3a2f;border-radius:3px;padding:1px 7px">✓ saved</span>
             </div>
             <button onclick="sendRecipeToDoughTimer(${r.id})"
@@ -4585,26 +4669,32 @@ function renderRecipes() {
                 padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
               ⏱ Send to Dough Timer</button>
           </div>
-          <div class="form-row">
-            <div class="form-group" style="flex:2">
+
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Recipe</div>
+          <div class="form-row" style="margin-bottom:14px">
+            <div class="form-group" style="flex:3">
               <label>Name</label>
               <input type="text" value="${r.name.replace(/"/g,'&quot;')}"
                 onchange="updateRecipe(${r.id},'name',this.value);this.closest('.recipe-card').querySelector('.recipe-name').textContent=this.value"
                 style="font-weight:600">
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width:130px">
               <label>Category</label>
               <select onchange="updateRecipe(${r.id},'category',this.value)">
                 ${CATS.map(c => `<option ${c===r.category?'selected':''}>${c}</option>`).join('')}
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width:150px">
               <label>Yield / Batch Size</label>
               <input type="text" value="${(r.yield||'').replace(/"/g,'&quot;')}" placeholder="e.g. 24 loaves"
                 onchange="updateRecipe(${r.id},'yield',this.value)">
             </div>
+          </div>
+
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;border-top:1px solid var(--border);padding-top:10px">Production</div>
+          <div class="form-row" style="margin-bottom:14px">
             <div class="form-group">
-              <label>Lead Time (days)</label>
+              <label>Lead Time</label>
               <select onchange="updateRecipe(${r.id},'leadDays',this.value)">
                 <option value="0" ${(r.leadDays||0)==0?'selected':''}>Same day</option>
                 <option value="1" ${(r.leadDays||0)==1?'selected':''}>1 day ahead</option>
@@ -4616,8 +4706,20 @@ function renderRecipes() {
               <input type="number" min="0" step="1" value="${r.batchCapacity || 0}" placeholder="0 = unlimited"
                 onchange="updateRecipe(${r.id},'batchCapacity',parseInt(this.value)||0)" style="width:80px">
             </div>
+            <div class="form-group" style="flex:2">
+              <label title="Recipes sharing a base are rolled up in production planning">Production Base <span style="color:var(--muted);font-size:10px;font-weight:400">(optional)</span></label>
+              <input type="text" list="prod-base-list-${r.id}" value="${(r.productionBase||'').replace(/"/g,'&quot;')}" placeholder="e.g. Laminated Round"
+                onchange="updateRecipe(${r.id},'productionBase',this.value.trim())">
+              <datalist id="prod-base-list-${r.id}">
+                ${[...new Set(recipes.filter(rx => rx.productionBase && rx.id !== r.id).map(rx => rx.productionBase))].map(b => `<option value="${b.replace(/"/g,'&quot;')}">`).join('')}
+              </datalist>
+            </div>
+          </div>
+
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;border-top:1px solid var(--border);padding-top:10px">Pricing & Notes</div>
+          <div class="form-row">
             <div class="form-group">
-              <label title="Retail sale price per unit (e.g. per loaf, per dozen)">Retail price / unit ($)</label>
+              <label title="Retail sale price per unit">Retail price / unit ($)</label>
               <input type="number" min="0" step="0.25" value="${r.retailPrice || ''}" placeholder="0.00"
                 onchange="updateRecipe(${r.id},'retailPrice',parseFloat(this.value)||0)" style="width:80px">
             </div>
@@ -4626,19 +4728,13 @@ function renderRecipes() {
               <input type="number" min="0" step="1" value="${r.yieldQty || ''}" placeholder="e.g. 12"
                 onchange="updateRecipe(${r.id},'yieldQty',parseInt(this.value)||0)" style="width:70px">
             </div>
-            <div class="form-group" style="flex:2">
-              <label>Notes</label>
-              <input type="text" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Any notes..."
+            <div class="form-group" style="flex:3">
+              <label>Notes / Description</label>
+              <input type="text" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Describe the process, key steps, or any notes…"
                 onchange="updateRecipe(${r.id},'notes',this.value)">
             </div>
-            <div class="form-group" style="flex:2">
-              <label title="Recipes sharing a base are rolled up in production planning — e.g. 'Laminated Round' groups Croissant + Everything Round + Caramel Apple Cider Round">Production Base <span style="color:var(--muted);font-size:10px;font-weight:400">(optional)</span></label>
-              <input type="text" list="prod-base-list-${r.id}" value="${(r.productionBase||'').replace(/"/g,'&quot;')}" placeholder="e.g. Laminated Round"
-                onchange="updateRecipe(${r.id},'productionBase',this.value.trim())">
-              <datalist id="prod-base-list-${r.id}">
-                ${[...new Set(recipes.filter(rx => rx.productionBase && rx.id !== r.id).map(rx => rx.productionBase))].map(b => `<option value="${b.replace(/"/g,'&quot;')}">`).join('')}
-              </datalist>
-            </div>
+          </div>
+          <div class="form-row" style="margin-top:4px">
             ${prepToggleHtml}
           </div>
         </div>
@@ -17797,6 +17893,225 @@ function renderHubPage() {
 
 function renderStaffBoard() { renderHubPage(); }
 
+// ======== DOUGH PLAN ========
+
+const DOUGH_VARIETIES = [
+  { id:'cinnamon',  label:'Cinnamon Bun', icon:'🌀', yieldPerDough:90, freezerItem:'Cinnamon Buns',       freezerId:'f-cc', products:['Croissant Cinnamon Bun','Cinnamon Bun Croissant','Cinnamon Bun'] },
+  { id:'chocolate', label:'Chocolate',    icon:'🍫', yieldPerDough:80, freezerItem:'Chocolate Croissant', freezerId:'f-cc', products:['Chocolate Croissant','Pain au Chocolat'] },
+  { id:'round',     label:'Round',        icon:'⭕', yieldPerDough:78, freezerItem:'Round Croissants',    freezerId:'f-cc', products:['Round Croissant','Everything Round Croissant'] },
+  { id:'plain',     label:'Plain',        icon:'🥐', yieldPerDough:74, freezerItem:'Croissant',           freezerId:'f-cc', products:['Croissant','CROBEC'] },
+];
+
+const DP_PROD_DAYS   = new Set([1, 3, 5]); // Mon, Wed, Fri
+const DP_SHEET_CAP   = 70;
+const DP_SHEETS_MAX  = 7;
+const DP_FREEZER_MAX = DP_SHEET_CAP * DP_SHEETS_MAX; // 490
+const DP_EXCESS_G    = 750;  // avg excess dough per batch → pull-aparts
+const DP_PULLAPART_G = 1200; // g per dozen
+
+let _dpCount = 2;
+let _dpOverride = null;
+
+function dpNextProdDay(fromDate) {
+  const d = new Date(fromDate);
+  for (let i = 1; i <= 7; i++) {
+    d.setDate(d.getDate() + i);
+    if (DP_PROD_DAYS.has(d.getDay())) return new Date(d);
+  }
+  return null;
+}
+
+function dpCoverageEnd(fromDate) {
+  const next = dpNextProdDay(fromDate);
+  if (!next) return fromDate;
+  const end = new Date(next);
+  end.setDate(end.getDate() - 1);
+  return end;
+}
+
+function dpDemand(products, startDate, endDate) {
+  const DAY_MAP = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let total = 0;
+  const d = new Date(startDate);
+  d.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 0);
+  while (d <= end) {
+    const dow = DAY_MAP[d.getDay()];
+    (channels || []).forEach(ch => {
+      if (!ch.activeThisWeek) return;
+      if (!ch.activeDays || !ch.activeDays.includes(dow)) return;
+      (ch.orderLines || []).forEach(line => {
+        if (!products.some(p => p.toLowerCase() === (line.product || '').toLowerCase())) return;
+        total += (line.days[dow] || 0) * (line.unitsEach || 1);
+      });
+    });
+    d.setDate(d.getDate() + 1);
+  }
+  return total;
+}
+
+function dpFreezerStock(freezerId, itemName) {
+  const data = freezerGetData();
+  const entry = data[freezerKey(freezerId, itemName)];
+  if (!entry || entry.count == null) return null;
+  return Math.max(0, Number(entry.count) || 0);
+}
+
+function dpRecommend(varieties, count, demands, stocks) {
+  const deficits = varieties.map(v => ({
+    id: v.id,
+    deficit: Math.max(0, (demands[v.id] || 0) - (stocks[v.id] || 0)),
+    yieldPerDough: v.yieldPerDough
+  })).sort((a, b) => b.deficit - a.deficit);
+  const alloc = {};
+  varieties.forEach(v => alloc[v.id] = 0);
+  let rem = count;
+  for (const item of deficits) {
+    if (rem <= 0) break;
+    if (item.deficit > 0) {
+      alloc[item.id] = Math.min(Math.ceil(item.deficit / item.yieldPerDough), rem);
+      rem -= alloc[item.id];
+    }
+  }
+  if (rem > 0 && deficits.length) alloc[deficits[0].id] += rem;
+  return alloc;
+}
+
+function renderDoughPlanPage() {
+  const root = document.getElementById('doughplan-root');
+  if (!root) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const coverageEnd = dpCoverageEnd(today);
+  const nextProd = dpNextProdDay(today);
+  const FULL_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const fmtDate = d => `${FULL_DAYS[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}`;
+  const coverageLabel = today.getTime() === coverageEnd.getTime()
+    ? fmtDate(today)
+    : `${FULL_DAYS[today.getDay()]} – ${FULL_DAYS[coverageEnd.getDay()]}`;
+
+  const demands = {}, stocks = {};
+  DOUGH_VARIETIES.forEach(v => {
+    demands[v.id] = dpDemand(v.products, today, coverageEnd);
+    stocks[v.id]  = dpFreezerStock(v.freezerId, v.freezerItem);
+  });
+
+  const alloc = _dpOverride || dpRecommend(DOUGH_VARIETIES, _dpCount, demands, stocks);
+
+  const totalFreezer  = DOUGH_VARIETIES.reduce((s, v) => s + (stocks[v.id] || 0), 0);
+  const totalProduced = DOUGH_VARIETIES.reduce((s, v) => s + (alloc[v.id] || 0) * v.yieldPerDough, 0);
+  const afterProd     = totalFreezer + totalProduced;
+  const overflow      = afterProd > DP_FREEZER_MAX;
+  const pullApartDozen = (_dpCount * DP_EXCESS_G / DP_PULLAPART_G).toFixed(1);
+
+  const isProdDay = DP_PROD_DAYS.has(today.getDay());
+  const todayBadge = isProdDay
+    ? `<span style="display:inline-block;background:#2a7d4f22;color:#2a7d4f;border:1px solid #2a7d4f55;border-radius:12px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:8px">Production day ✓</span>`
+    : nextProd
+      ? `<span style="font-size:12px;color:var(--muted);margin-left:8px">Next production: ${fmtDate(nextProd)}</span>`
+      : '';
+
+  const varietyRows = DOUGH_VARIETIES.map(v => {
+    const stock     = stocks[v.id];
+    const demand    = demands[v.id];
+    const shortfall = demand > 0 ? Math.max(0, demand - (stock || 0)) : 0;
+    const doughs    = alloc[v.id] || 0;
+    const willProd  = doughs * v.yieldPerDough;
+    const unknown   = stock === null;
+
+    const allocBadge = doughs > 0
+      ? `<span style="display:inline-block;background:#2a7d4f;color:#fff;border-radius:16px;padding:3px 10px;font-size:13px;font-weight:700">${doughs} dough${doughs>1?'s':''} → ${willProd}</span>`
+      : shortfall > 0
+        ? `<span style="color:#c0392b;font-size:13px;font-weight:600">Not covered</span>`
+        : `<span style="color:var(--muted);font-size:13px">No demand</span>`;
+
+    return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">${v.icon}</span>
+          <div>
+            <div style="font-weight:700;font-size:16px;color:var(--text)">${v.label}</div>
+            <div style="font-size:11px;color:var(--muted)">${v.yieldPerDough} units per dough</div>
+          </div>
+        </div>
+        <div>${allocBadge}</div>
+      </div>
+      <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:13px;text-align:center">
+        <div style="flex:1;padding:8px 4px;border-right:1px solid var(--border)">
+          <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">In Freezer</div>
+          <div style="font-weight:700;color:${unknown ? 'var(--muted)' : 'var(--text)'}">${unknown ? '?' : (stock || 0)}</div>
+        </div>
+        <div style="flex:1;padding:8px 4px;border-right:1px solid var(--border)">
+          <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Demand</div>
+          <div style="font-weight:700;color:${demand > 0 ? 'var(--text)' : 'var(--muted)'}">${demand > 0 ? demand : '—'}</div>
+        </div>
+        <div style="flex:1;padding:8px 4px">
+          <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Shortfall</div>
+          <div style="font-weight:700;color:${unknown ? 'var(--muted)' : shortfall > 0 ? '#c0392b' : '#2a7d4f'}">${unknown ? '?' : (shortfall > 0 ? '−'+shortfall : (demand > 0 ? '✓' : '—'))}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const pct = Math.min(100, Math.round(afterProd / DP_FREEZER_MAX * 100));
+  const barColor = overflow ? '#c0392b' : afterProd > DP_FREEZER_MAX * 0.85 ? '#e88c2a' : '#2a7d4f';
+  const freezerBar = `
+  <div style="background:var(--surface);border:1px solid ${overflow ? '#c0392b55' : 'var(--border)'};border-radius:12px;padding:14px 16px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-weight:600;font-size:14px;color:var(--text)">❄️ Freezer after production</div>
+      <div style="font-size:13px;font-weight:700;color:${barColor}">${afterProd} / ${DP_FREEZER_MAX}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px"></div>
+    </div>
+    ${overflow ? '<div style="color:#c0392b;font-size:12px;font-weight:600;margin-top:6px">⚠️ Over capacity — reduce dough count or verify stock counts</div>' : ''}
+  </div>`;
+
+  root.innerHTML = `
+  <div style="max-width:600px;margin:0 auto;padding:20px 16px 40px">
+    <div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+        <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--text)">🥐 Dough Plan</div>
+        ${todayBadge}
+      </div>
+      <div style="font-size:13px;color:var(--muted)">Demand window: ${coverageLabel}</div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:600">Doughs today</div>
+      <div style="display:flex;gap:10px">
+        ${[2,3].map(n => `
+        <button onclick="_dpCount=${n};_dpOverride=null;renderDoughPlanPage()" style="
+          flex:1;padding:14px;border-radius:10px;
+          border:2px solid ${_dpCount===n ? 'var(--accent)' : 'var(--border)'};
+          background:${_dpCount===n ? 'var(--accent)' : 'transparent'};
+          color:${_dpCount===n ? '#fff' : 'var(--text)'};
+          font-size:22px;font-weight:700;cursor:pointer">
+          ${n}
+        </button>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">40qt mixer · 3 = full batch · 2 = multitask day</div>
+    </div>
+
+    ${varietyRows}
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:22px;flex-shrink:0">🍎</span>
+      <div>
+        <div style="font-weight:600;font-size:14px;color:var(--text)">Pull-apart byproduct</div>
+        <div style="font-size:13px;color:var(--muted)">${_dpCount} dough${_dpCount>1?'s':''} × ~${DP_EXCESS_G}g excess = <strong style="color:var(--text)">${pullApartDozen} doz</strong> apple cinnamon pull-aparts</div>
+      </div>
+    </div>
+
+    ${freezerBar}
+  </div>`;
+}
+
+// ======== END DOUGH PLAN ========
+
 const SIDE_TASK_DEFAULTS = [
   { id:'st1',  name:'Clean sandwich station',       cat:'Cleaning' },
   { id:'st2',  name:'Clean dishes',                 cat:'Cleaning' },
@@ -23213,6 +23528,7 @@ var _sbActiveFilters = new Set();
 var _sbSelectMode = false;
 var _sbSelected = new Set();
 var _sbUsageCache = null;
+var _sbConsumCache = null;
 var _sbDragGest = null;
 var _sbDragGhost = null;
 
@@ -23297,6 +23613,49 @@ function sbGetUsageCount(item) {
   return _sbUsageCache[String(item.id)] || 0;
 }
 
+function sbGetOnHandGrams(item, entry) {
+  if (!entry || entry.onHandQty === undefined || entry.onHandQty === '') return null;
+  var qty = parseFloat(entry.onHandQty);
+  if (isNaN(qty) || qty <= 0) return null;
+  var unit = (entry.onHandUnit || '').toLowerCase().trim();
+  if (!unit || unit === 'g' || unit === 'gram' || unit === 'grams') return qty;
+  if (unit === 'kg') return qty * 1000;
+  if (unit === 'lbs' || unit === 'lb' || unit === 'pound' || unit === 'pounds') return qty * 453.592;
+  if (unit === 'oz' || unit === 'ounce' || unit === 'ounces') return qty * 28.3495;
+  var cwg = parseFloat(item.caseWeightGrams) || 0;
+  if (cwg > 0) return qty * cwg;
+  return null;
+}
+
+function sbGetWeeklyGrams(itemId) {
+  if (!_sbConsumCache) {
+    _sbConsumCache = {};
+    var rollup = getProductionBaseRollup();
+    recipes.forEach(function(r) {
+      if (!r.productionBase || r.active === false) return;
+      var rb = rollup[r.productionBase];
+      if (!rb || !rb.weekTotal || !rb.batchYield) return;
+      var weeklyBatches = rb.weekTotal / rb.batchYield;
+      (r.ingredients || []).forEach(function(ing) {
+        var lib = plLookupByName(ing.name);
+        if (!lib) return;
+        var qty = parseFloat(ing.quantity) || 0;
+        if (!qty) return;
+        var unit = (ing.unit || 'g').toLowerCase().trim();
+        var grams;
+        if (!unit || unit === 'g' || unit === 'gram' || unit === 'grams') grams = qty;
+        else if (unit === 'kg') grams = qty * 1000;
+        else if (unit === 'lbs' || unit === 'lb') grams = qty * 453.592;
+        else if (unit === 'oz') grams = qty * 28.3495;
+        else grams = qty;
+        var k = String(lib.id);
+        _sbConsumCache[k] = (_sbConsumCache[k] || 0) + grams * weeklyBatches;
+      });
+    });
+  }
+  return _sbConsumCache[String(itemId)] || 0;
+}
+
 function sbToggleFilter(f) {
   if (_sbActiveFilters.has(f)) _sbActiveFilters.delete(f);
   else _sbActiveFilters.add(f);
@@ -23347,6 +23706,76 @@ function sbQuickMove(itemId, status) {
 
 function sbReturnToStock(itemId) {
   sbSetEntry(itemId, { status: 'in_stock' });
+  renderSupplyBoard();
+}
+
+var _sbReceiveItemId = null;
+var _sbLastTap = { id: null, t: 0 };
+
+function sbOpenReceiveModal(itemId) {
+  event && event.stopPropagation && event.stopPropagation();
+  _sbReceiveItemId = String(itemId);
+  var all = plGetAll();
+  var item = all.find(function(e) { return String(e.id) === String(itemId); });
+  if (!item) return;
+  var data = sbLoad();
+  var entry = data[String(itemId)] || {};
+  var nameEl = document.getElementById('sb-recv-name');
+  if (nameEl) nameEl.textContent = item.name;
+  var metaEl = document.getElementById('sb-recv-meta');
+  if (metaEl) metaEl.textContent = item.cat + (item.pricePerGram > 0 ? ' · currently $' + (item.pricePerGram * 453.592).toFixed(2) + '/lb' : '');
+  var qtyEl = document.getElementById('sb-recv-qty');
+  if (qtyEl) qtyEl.value = entry.onHandQty || '';
+  var unitEl = document.getElementById('sb-recv-unit');
+  if (unitEl) unitEl.value = entry.onHandUnit || '';
+  var priceEl = document.getElementById('sb-recv-price');
+  if (priceEl) priceEl.value = item.pricePerGram > 0 ? (item.pricePerGram * 453.592).toFixed(2) : '';
+  var expiryEl = document.getElementById('sb-recv-expiry');
+  if (expiryEl) expiryEl.value = entry.expiry || '';
+  var notesEl = document.getElementById('sb-recv-notes');
+  if (notesEl) notesEl.value = entry.note || '';
+  var pkgEl = document.getElementById('sb-recv-pkg');
+  if (pkgEl) pkgEl.value = item.caseWeightGrams > 0 ? (item.caseWeightGrams / 453.592).toFixed(2) : '';
+  var modal = document.getElementById('sb-receive-modal');
+  if (modal) modal.style.display = 'flex';
+  setTimeout(function() { var e = document.getElementById('sb-recv-qty'); if (e) e.focus(); }, 60);
+}
+
+function sbCloseReceiveModal() {
+  var modal = document.getElementById('sb-receive-modal');
+  if (modal) modal.style.display = 'none';
+  _sbReceiveItemId = null;
+}
+
+function sbConfirmReceive() {
+  if (!_sbReceiveItemId) return;
+  var id = _sbReceiveItemId;
+  var qty    = ((document.getElementById('sb-recv-qty')    || {}).value || '').trim();
+  var unit   = ((document.getElementById('sb-recv-unit')   || {}).value || '').trim();
+  var price  = parseFloat((document.getElementById('sb-recv-price')  || {}).value || '');
+  var expiry = ((document.getElementById('sb-recv-expiry') || {}).value || '');
+  var note   = ((document.getElementById('sb-recv-notes')  || {}).value || '').trim();
+  if (!isNaN(price) && price > 0) {
+    plUpdateField(Number(id), 'pricePerGram', price / 453.592);
+  }
+  var pkg = parseFloat((document.getElementById('sb-recv-pkg') || {}).value || '');
+  if (!isNaN(pkg) && pkg > 0) {
+    plUpdateField(Number(id), 'caseWeightGrams', pkg * 453.592);
+  }
+  var data = sbLoad();
+  var key = String(id);
+  var existing = data[key] || {};
+  var newEntry = {};
+  if (existing.par !== undefined && existing.par !== '') newEntry.par = existing.par;
+  if (qty)    newEntry.onHandQty  = qty;
+  if (unit)   newEntry.onHandUnit = unit;
+  if (expiry) newEntry.expiry     = expiry;
+  if (note)   newEntry.note       = note;
+  if (Object.keys(newEntry).length) data[key] = newEntry;
+  else delete data[key];
+  sbSave(data);
+  forceSaveKeys(['bk_supply_board', 'bk_price_lib']);
+  sbCloseReceiveModal();
   renderSupplyBoard();
 }
 
@@ -23435,6 +23864,7 @@ function sbConfirmQuickAdd() {
   if (parEl)   parEl.value   = '';
   nameEl.focus();
   _sbUsageCache = null;
+  _sbConsumCache = null;
   renderSupplyBoard();
 }
 
@@ -23719,6 +24149,7 @@ async function sqEODPush() {
 
 function renderSupplyBoard() {
   _sbUsageCache = null;
+  _sbConsumCache = null;
   var inStockBody = document.getElementById('sb-body-in_stock');
   var soonBody    = document.getElementById('sb-body-order_soon');
   var nowBody     = document.getElementById('sb-body-order_now');
@@ -23832,42 +24263,63 @@ function sbRenderStockCard(item) {
   var ppg      = item.pricePerGram || 0;
   var costStr  = ppg > 0 ? ' · $' + (ppg * 453.592).toFixed(2) + '/lb' : '';
   var expBadge = sbExpiryBadge(entry.expiry);
+  var onHandG  = sbGetOnHandGrams(item, entry);
+  var weeklyG  = sbGetWeeklyGrams(item.id);
+  var stockBadge = '';
+  if (onHandG !== null && weeklyG > 0) {
+    var weeksLeft = onHandG / weeklyG;
+    var sc = weeksLeft >= 3 ? '#4a9c6e' : weeksLeft >= 1 ? '#c87a00' : '#cc4444';
+    var wkLabel = weeksLeft >= 100 ? '>99' : weeksLeft.toFixed(1);
+    stockBadge = '<div style="font-size:10px;font-weight:700;color:' + sc + ';margin-top:4px;margin-left:12px">📊 ~' + wkLabel + ' wks stock remaining</div>';
+  } else if (onHandG === null && qtyVal && unitVal) {
+    var stdU = ['lbs','lb','kg','g','oz','gram','grams','ounce','ounces','pound','pounds'];
+    if (stdU.indexOf(unitVal.toLowerCase().trim()) < 0) {
+      stockBadge = '<div style="font-size:10px;color:var(--muted);margin-top:4px;margin-left:12px">Set pkg size in Receive modal to track stock weeks</div>';
+    }
+  }
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="in_stock"' +
-    ' style="padding:10px 9px;margin-bottom:5px;border-radius:6px;' +
+    ' style="padding:10px 9px;margin-bottom:6px;border-radius:8px;' +
     'border:1px solid var(--border);background:var(--surface);cursor:grab;touch-action:pan-y;user-select:none;' +
     (isSel ? 'outline:2px solid #e8a045;' : '') + '">' +
-    '<div style="display:flex;align-items:center;gap:8px">' +
-      '<div style="width:4px;height:38px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
-      (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:#e8a045">' : '') +
+    '<div style="display:flex;align-items:flex-start;gap:8px">' +
+      '<div style="width:4px;border-radius:2px;background:' + cc + ';flex-shrink:0;align-self:stretch;min-height:36px"></div>' +
+      (_sbSelectMode ? '<input type="checkbox"' + (isSel ? ' checked' : '') + ' onclick="event.stopPropagation();sbToggleSelect(' + item.id + ')" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:#e8a045;margin-top:2px">' : '') +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + costStr + '</div>' +
+        '<div style="font-size:15px;font-weight:700;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;line-height:1.3">' + item.name + expBadge + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.cat + (tagStr ? ' · ' + tagStr : '') + (usage > 0 ? ' · ×' + usage : '') + costStr + '</div>' +
       '</div>' +
-      (!_sbSelectMode ? '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">⏰</button>' +
-      '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:10px;font-weight:900;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">🚨</button>' +
-      '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">✎</button>' : '') +
-      '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>' +
+      (!_sbSelectMode ? '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">' +
+        '<div style="display:flex;gap:3px">' +
+          '<button onclick="sbQuickMove(' + item.id + ',\'order_soon\')" title="Order Soon" style="background:none;border:1px solid #c87a00;border-radius:3px;color:#c87a00;cursor:pointer;font-size:11px;font-weight:900;padding:4px 6px;touch-action:manipulation;line-height:1">⏰</button>' +
+          '<button onclick="sbQuickMove(' + item.id + ',\'order_now\')" title="Order Now!" style="background:none;border:1px solid #cc4444;border-radius:3px;color:#cc4444;cursor:pointer;font-size:11px;font-weight:900;padding:4px 6px;touch-action:manipulation;line-height:1">🚨</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:3px;justify-content:flex-end">' +
+          '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:12px;padding:4px 6px;touch-action:manipulation;line-height:1">✎</button>' +
+          '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:4px 3px;touch-action:none;letter-spacing:-1px;line-height:1">⠿</div>' +
+        '</div>' +
+      '</div>' : '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:0 1px;flex-shrink:0;touch-action:none;letter-spacing:-1px">⠿</div>') +
     '</div>' +
-    '<div style="display:flex;gap:5px;margin-top:7px;margin-left:12px" onclick="event.stopPropagation()">' +
-      '<input type="number" value="' + qtyVal + '" placeholder="On hand #" min="0" step="any"' +
-        ' style="width:76px;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-weight:700' + (hasQty ? ';border-color:#2a7d4f' : '') + '"' +
+    '<div style="display:flex;gap:6px;margin-top:8px;margin-left:12px" onclick="event.stopPropagation()">' +
+      '<input type="number" value="' + qtyVal + '" placeholder="On hand" min="0" step="any"' +
+        ' style="width:80px;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;font-weight:700' + (hasQty ? ';border-color:#2a7d4f' : '') + '"' +
         ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandQty\',this.value)" touch-action="manipulation">' +
-      '<input type="text" value="' + unitVal + '" placeholder="unit (bags, lbs…)"' +
-        ' style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (unitVal ? ';border-color:#2a7d4f' : '') + '"' +
+      '<input type="text" value="' + unitVal + '" placeholder="bags, lbs, doz…"' +
+        ' style="flex:1;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px' + (unitVal ? ';border-color:#2a7d4f' : '') + '"' +
         ' oninput="sbUpdateOrderField(' + item.id + ',\'onHandUnit\',this.value)" touch-action="manipulation">' +
     '</div>' +
-    '<div style="display:flex;gap:5px;margin-top:4px;margin-left:12px" onclick="event.stopPropagation()">' +
-      '<input type="number" value="' + parVal + '" placeholder="Par level" min="0" step="any"' +
+    '<div style="display:flex;gap:6px;margin-top:5px;margin-left:12px" onclick="event.stopPropagation()">' +
+      '<input type="number" value="' + parVal + '" placeholder="Par" min="0" step="any"' +
         ' title="Par level — flags Order Soon when on-hand falls below this"' +
-        ' style="width:76px;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (parVal ? ';border-color:#5588cc' : '') + '"' +
+        ' style="width:80px;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px' + (parVal ? ';border-color:#5588cc' : '') + '"' +
         ' oninput="sbUpdatePar(' + item.id + ',this.value)" touch-action="manipulation">' +
       '<label style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">' +
-        '<span style="font-size:10px;color:var(--muted);white-space:nowrap">Exp:</span>' +
+        '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Exp:</span>' +
         '<input type="date" value="' + expiryVal + '"' +
-          ' style="flex:1;min-width:0;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (expiryVal ? ';border-color:#888' : '') + '"' +
+          ' style="flex:1;min-width:0;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px' + (expiryVal ? ';border-color:#888' : '') + '"' +
           ' onchange="sbUpdateExpiry(' + item.id + ',this.value)" touch-action="manipulation">' +
       '</label>' +
     '</div>' +
+    stockBadge +
     '</div>';
 }
 
@@ -23884,24 +24336,30 @@ function sbRenderOrderCard(item, col) {
   var expBadge = sbExpiryBadge(entry.expiry);
   var expiryVal = (entry.expiry || '').replace(/"/g, '&quot;');
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="' + col + '"' +
-    ' style="padding:10px 10px;margin-bottom:6px;border-radius:6px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:pan-y;user-select:none">' +
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-      '<div style="width:4px;height:38px;border-radius:2px;background:' + cc + ';flex-shrink:0"></div>' +
+    ' style="padding:10px 10px;margin-bottom:6px;border-radius:8px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:pan-y;user-select:none">' +
+    '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' +
+      '<div style="width:4px;border-radius:2px;background:' + cc + ';flex-shrink:0;align-self:stretch;min-height:36px"></div>' +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + expBadge + '</div>' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + item.cat + (timeStr ? ' · ' + timeStr : '') + costStr + '</div>' +
+        '<div style="font-size:15px;font-weight:700;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;line-height:1.3">' + item.name + expBadge + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.cat + (timeStr ? ' · ' + timeStr : '') + costStr + '</div>' +
       '</div>' +
-      '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 5px;flex-shrink:0;touch-action:manipulation;line-height:1">✎</button>' +
-      '<button onclick="sbReturnToStock(' + item.id + ')" title="Back to In Stock" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0;touch-action:manipulation;line-height:1">↩</button>' +
+      '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:flex-end">' +
+        '<button onclick="event.stopPropagation();sbOpenReceiveModal(' + item.id + ')" title="Mark as received" style="background:#2a7d4f;border:none;color:#fff;cursor:pointer;font-size:12px;font-weight:700;padding:6px 10px;border-radius:5px;touch-action:manipulation;line-height:1;white-space:nowrap">📦 Receive</button>' +
+        '<div style="display:flex;gap:3px">' +
+          '<button onclick="event.stopPropagation();sbEditItem(' + item.id + ')" title="Edit item details" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);cursor:pointer;font-size:12px;padding:4px 6px;touch-action:manipulation;line-height:1">✎</button>' +
+          '<button onclick="sbReturnToStock(' + item.id + ')" title="Back to In Stock" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 5px;touch-action:manipulation;line-height:1">↩</button>' +
+          '<div class="sb-drag-handle" style="font-size:14px;color:var(--muted);padding:4px 3px;touch-action:none;letter-spacing:-1px;line-height:1">⠿</div>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
-    '<div style="display:flex;gap:5px;margin-bottom:5px">' +
-      '<input type="text" value="' + qtyVal + '" placeholder="Qty…" style="flex:1;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'qty\',this.value)" onclick="event.stopPropagation()">' +
-      '<input type="text" value="' + noteVal + '" placeholder="Note…" style="flex:2;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'note\',this.value)" onclick="event.stopPropagation()">' +
+    '<div style="display:flex;gap:6px;margin-bottom:6px">' +
+      '<input type="text" value="' + qtyVal + '" placeholder="Qty…" style="flex:1;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'qty\',this.value)" onclick="event.stopPropagation()">' +
+      '<input type="text" value="' + noteVal + '" placeholder="Note…" style="flex:2;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;min-width:0" oninput="sbUpdateOrderField(' + item.id + ',\'note\',this.value)" onclick="event.stopPropagation()">' +
     '</div>' +
     '<div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">' +
-      '<span style="font-size:10px;color:var(--muted);white-space:nowrap">Exp:</span>' +
+      '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Exp:</span>' +
       '<input type="date" value="' + expiryVal + '"' +
-        ' style="flex:1;padding:5px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px' + (expiryVal ? ';border-color:#888' : '') + '"' +
+        ' style="flex:1;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px' + (expiryVal ? ';border-color:#888' : '') + '"' +
         ' onchange="sbUpdateExpiry(' + item.id + ',this.value)">' +
     '</div>' +
     '</div>';
@@ -23923,6 +24381,16 @@ function sbDragDown(e) {
   if (!item) return;
   if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
   if (_sbSelectMode) { sbToggleSelect(item.dataset.itemId); return; }
+  // Double-tap on Order Now / Order Soon card → open receive modal
+  var tapId = item.dataset.itemId;
+  var tapNow = Date.now();
+  if (tapId === _sbLastTap.id && tapNow - _sbLastTap.t < 350 && item.dataset.col !== 'in_stock') {
+    _sbLastTap = { id: null, t: 0 };
+    _sbDragGest = null;
+    sbOpenReceiveModal(tapId);
+    return;
+  }
+  _sbLastTap = { id: tapId, t: tapNow };
   // Only prevent default and capture pointer when starting on the drag handle —
   // otherwise the browser can handle vertical scroll on the card body (touch-action:pan-y)
   var onHandle = e.target.closest('.sb-drag-handle');
@@ -24068,6 +24536,11 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.85': ['📱 Supply Board — Mobile readability: In Stock card names now wrap to 2 lines (was single-line "C…" truncation); meta line (category/price) uses nowrap+ellipsis to prevent mid-word stray "." wrapping; color bar stretches to full card height; ⏰ 🚨 buttons moved to a 2-row vertical group so name gets full column width; ✎ and ⠿ in second row; Order Soon/Now cards same name + meta fixes; inputs enlarged (12→13px, more padding); border-radius 6→8px on all cards'],
+  '2.4.84': ['📊 Supply Board — Ingredient consumption tracking: Receive modal now has a "Package size" field (lbs per bag/case/unit) that saves to price library as caseWeightGrams; In Stock cards show a color-coded "~X wks stock remaining" badge (green ≥3 wks, amber 1–3 wks, red <1 wk) for any ingredient with both on-hand quantity and recipe usage linked through production plan; standard weight units (lbs, kg, g, oz) convert directly; bag/case units divide by caseWeightGrams; cards with unconvertible units show a "Set pkg size" nudge; weekly consumption computed from recipe ingredient grams × weekly batches derived from getProductionBaseRollup()'],
+  '2.4.83': ['📦 Supply Board — Receive modal: each Order Now / Order Soon card has a green "📦 Receive" button; double-tap the card also opens it; modal has 4 guided fields (how much + unit, price paid per lb, expiry date, notes); confirming moves item to In Stock in one tap, saves qty/unit/expiry/notes, and updates the price library if a price is entered; existing par level is preserved; forceSave syncs supply board + price library'],
+  '2.4.82': ['📖 Recipe Library — expanded recipe cards now open with a synopsis panel (category color accent, notes/description, stage flow for single-day or day-by-day breakdown for multi-day); form fields reorganized from one flat grid into 3 labeled groups: Recipe (name/category/yield), Production (lead time/max batches/production base), Pricing & Notes (retail price/units per batch/notes)'],
+  '2.4.81': ['🥐 Dough Plan — new tab; baker picks 2 or 3 doughs → system shows recommended variety split (cinnamon 90/dough, chocolate 80, round 78, plain 74) based on channel demand through the next production day (Mon/Wed/Fri rhythm); per-variety card shows freezer stock vs demand vs shortfall; pull-apart byproduct line (~0.75kg excess per dough); freezer capacity bar (7 sheets × 70 = 490 formed slots); recommendation auto-allocates doughs to varieties with the largest shortfalls first'],
   '2.4.80': ['❄️ Freezer — Tomorrow\'s Pull column (🌙 day name) now shows next-day channel demand per item so you can see what needs to move to the walk-in tonight; 🌙 Overnight Pull button appears when there are items needed tomorrow — one tap shows the move list (item, current count → new count), confirms, deducts from freezer and logs "Overnight Pull"; system-calculated from channels, no manual math needed'],
   '2.4.79': ['❄️ Freezer — "📋 Count & Confirm" button opens a bottom-sheet with every item pre-filled with the app\'s expected count (last count − today\'s pull); baker scans down, adjusts any number that doesn\'t match what they see, taps "Confirm All Counts"; items with a today\'s pull show the expected post-pull value as a sanity check; one tap saves all and toasts a count of items confirmed'],
   '2.4.78': ['❄️ Freezer stock — count is now directly editable inline; tap the number, type the new count, tap away or press Enter to save (sets absolute value, like the whiteboard); no modal, no Add button needed for count updates; + Add button remains for adding a production delta; unset counts show a highlighted underline to invite first entry'],
