@@ -2979,7 +2979,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.90';
+const APP_VERSION      = '2.4.91';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -19728,7 +19728,30 @@ function wpGetWeek(mondayStr) {
   const all = wpGetAllPlan();
   if (!all[mondayStr]) all[mondayStr] = {};
   WP_DAYS.forEach(day => { if (!all[mondayStr][day]) all[mondayStr][day] = { bakers:[], items:[] }; });
-  return all[mondayStr];
+  const weekData = all[mondayStr];
+
+  // Embed recurring items into each day's items array so the full column is freely reorderable.
+  // Uses the template's own rec_... ID so existing modal/menu code that checks startsWith('rec_') still works.
+  const recurring = wpGetRecurring();
+  const recurringById = Object.fromEntries(recurring.map(r => [r.id, r]));
+  let changed = false;
+  WP_DAYS.forEach(day => {
+    const dayData = weekData[day];
+    const existingRecIds = new Set(dayData.items.filter(i => i._recurringId).map(i => i._recurringId));
+    // Inject any missing recurring items for this day at the top
+    const toEmbed = recurring.filter(r => r.days && r.days.includes(day) && !existingRecIds.has(r.id));
+    if (toEmbed.length) {
+      dayData.items = [...toEmbed.map(r => ({ ...r, _recurringId: r.id })), ...dayData.items];
+      changed = true;
+    }
+    // Remove orphaned embedded recurring items (template deleted)
+    const before = dayData.items.length;
+    dayData.items = dayData.items.filter(i => !i._recurringId || recurringById[i._recurringId]);
+    if (dayData.items.length !== before) changed = true;
+  });
+  if (changed) { all[mondayStr] = weekData; wpSaveAllPlan(all); }
+
+  return weekData;
 }
 
 function wpSaveWeek(mondayStr, weekData) {
@@ -19765,7 +19788,9 @@ function wpCopyToNext() {
   all[nextStr]     = JSON.parse(JSON.stringify(curWeek));
   WP_DAYS.forEach(day => {
     all[nextStr][day].items = all[nextStr][day].items.map(item => ({
-      ...item, id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2)
+      // Keep the rec_... ID for embedded recurring items so modal/menu routing still works;
+      // generate a fresh ID only for manual items.
+      ...item, id: item._recurringId ? item.id : ('wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2))
     }));
   });
   wpSaveAllPlan(all);
@@ -19819,11 +19844,14 @@ function renderWeekPlan() {
         }).join('')
       : `<span style="font-size:11px;color:#bbb;font-style:italic">None assigned</span>`;
 
-    // Inject recurring templates for this day
-    const recurringItems = wpGetRecurring()
-      .filter(r => r.days && r.days.includes(day))
-      .map(r => ({ ...r, _isRecurring: true }));
-    const allDayItems = [...recurringItems, ...dayData.items];
+    // Unified item list: recurring items are now embedded in dayData.items (auto-injected by wpGetWeek).
+    // Refresh display fields from templates in case the template was edited.
+    const recurringMap = Object.fromEntries(wpGetRecurring().map(r => [r.id, r]));
+    const allDayItems = dayData.items.map(item => {
+      if (!item._recurringId) return item;
+      const tpl = recurringMap[item._recurringId];
+      return tpl ? { ...tpl, id: item.id, _recurringId: item._recurringId, _isRecurring: true } : { ...item, _isRecurring: true };
+    });
 
     // Render items in user-controlled order. Items with .parallel=true are shown
     // side-by-side with the item before them (consecutive parallel flags form one row).
@@ -19840,7 +19868,7 @@ function renderWeekPlan() {
       const isMulti = group.length > 1;
       const cardsHtml = group.map(item => {
         const iIdx = globalIdx++;
-        const thisDIdx = item._isRecurring ? -1 : _wpDIdx++;
+        const thisDIdx = _wpDIdx++; // ALL items (recurring + manual) are freely reorderable
         const isFirst = iIdx === 0;
         const isParallelMember = item.parallel && isMulti;
         const isOrderItem   = item.phase === 'orders';
@@ -19892,17 +19920,16 @@ function renderWeekPlan() {
               })()}
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
-              ${item._isRecurring ? '' : `
-                <button onclick="event.stopPropagation();wpMoveItem('${day}','${item.id}',-1)"
-                  title="Move up" ${thisDIdx<=0?'disabled':''}
-                  style="background:none;border:none;color:${thisDIdx<=0?'#ddd':'#999'};cursor:${thisDIdx<=0?'default':'pointer'};font-size:13px;padding:3px 4px;line-height:1;touch-action:manipulation">↑</button>
-                <button onclick="event.stopPropagation();wpMoveItem('${day}','${item.id}',1)"
-                  title="Move down" ${thisDIdx>=_wpDLen-1?'disabled':''}
-                  style="background:none;border:none;color:${thisDIdx>=_wpDLen-1?'#ddd':'#999'};cursor:${thisDIdx>=_wpDLen-1?'default':'pointer'};font-size:13px;padding:3px 4px;line-height:1;touch-action:manipulation">↓</button>
-                <button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
-                  title="Copy to other days"
-                  style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
-                         padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
+              <button onclick="event.stopPropagation();wpMoveItem('${day}','${item.id}',-1)"
+                title="Move up" ${thisDIdx===0?'disabled':''}
+                style="background:none;border:none;color:${thisDIdx===0?'#ddd':'#999'};cursor:${thisDIdx===0?'default':'pointer'};font-size:13px;padding:3px 4px;line-height:1;touch-action:manipulation">↑</button>
+              <button onclick="event.stopPropagation();wpMoveItem('${day}','${item.id}',1)"
+                title="Move down" ${thisDIdx>=_wpDLen-1?'disabled':''}
+                style="background:none;border:none;color:${thisDIdx>=_wpDLen-1?'#ddd':'#999'};cursor:${thisDIdx>=_wpDLen-1?'default':'pointer'};font-size:13px;padding:3px 4px;line-height:1;touch-action:manipulation">↓</button>
+              ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+                title="Copy to other days"
+                style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
+                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
               <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
             </div>
           </div>
@@ -20052,8 +20079,12 @@ function wpShowTimeline(day) {
   const mondayStr = wpMondayStr(_wpWeekMonday);
   const weekData  = wpGetWeek(mondayStr);
   const dayData   = weekData[day];
-  const recurringItems = wpGetRecurring().filter(r => r.days && r.days.includes(day)).map(r => ({...r, _isRecurring:true}));
-  const allDayItems = [...recurringItems, ...dayData.items];
+  const recurMapTl = Object.fromEntries(wpGetRecurring().map(r => [r.id, r]));
+  const allDayItems = dayData.items.map(item => {
+    if (!item._recurringId) return item;
+    const tpl = recurMapTl[item._recurringId];
+    return tpl ? { ...tpl, id: item.id, _recurringId: item._recurringId } : item;
+  });
 
   const DAY_START_H = 5; // 5:00 AM
   const DAY_START   = DAY_START_H * 60;
@@ -20843,7 +20874,6 @@ function _wpGestLongPress() {
 
 function _wpGestStartDrag() {
   if (!_wpGest || _wpGest.state !== 'pressing') return;
-  if (_wpGest.isRecurring) { clearTimeout(_wpGest.dragTimer); return; } // recurring items don't drag
   clearTimeout(_wpGest.lpTimer);
   _wpGest.state = 'dragging';
   const wrap = _wpGest.wrap;
@@ -24712,6 +24742,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.91': ['📋 Week Plan — fixed move-button roadblock: recurring template cards (MORNING ROUTINE etc.) are now embedded directly into the per-day item array instead of being prepended in display-only; all items in a column — recurring and manual alike — share the same ordered list, so ↑/↓ works across the full column with no invisible ceiling; first item in the column disables ↑, last item disables ↓, everything in between can move freely; existing weeks auto-migrate on first open (recurring items injected at top, then freely reorderable); recurring items can also be drag-reordered; swipe-to-delete still blocked on recurring items to prevent accidental template removal'],
   '2.4.90': ['🏷 Supply Board — Attribution: every status change (flag, move, return to stock) now records who made it and their area (FOH / Kitchen / Owner); Order Soon and Order Now cards show "👤 Name · FOH/Kitchen · time" at the bottom in area-colored text (blue = FOH, green = Kitchen, amber = Owner); card background picks up a subtle area tint so at a glance you can tell which team flagged each ingredient; In Stock cards show who last returned the item to stock; attribution survives drags, batch-moves, and receive confirmations'],
   '2.4.89': ['📋 Channels — Wk Units now updates live as you type: changed qty input event from "change" (fires on blur) to "input" (fires on every keystroke); Wk Units cell updates in-place with a green flash confirming the save, no full re-render needed; fixed a secondary bug where Wk Units never reflected saves at all (renderWeeklySummary was called but not the channel table)'],
   '2.4.88': ['📋 Week Plan — added ↑/↓ move buttons to each task card in the day columns; ↑ disabled on the first item, ↓ disabled on the last; tap either to shift a card one slot instantly without drag-and-drop; recurring template cards (↻) have no move buttons since they are position-fixed by the template; drag-and-drop still works alongside'],
