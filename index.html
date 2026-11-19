@@ -2979,7 +2979,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.89';
+const APP_VERSION      = '2.4.90';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -23571,22 +23571,27 @@ function sbExpiryBadge(expiry) {
 function sbSetEntry(itemId, fields) {
   const data = sbLoad();
   const key = String(itemId);
+  const user = sbGetCurrentUser();
   if (fields.status === 'in_stock') {
-    // Preserve permanent per-item settings even when returning to In Stock
+    // Preserve permanent per-item settings and record who returned it
     const ex = data[key] || {};
-    const keep = {};
+    const keep = { returnBy: user.name, returnRole: user.role, returnAt: Date.now() };
     ['par','expiry','onHandQty','onHandUnit'].forEach(function(f) { if (ex[f] !== undefined && ex[f] !== '') keep[f] = ex[f]; });
-    if (Object.keys(keep).length) data[key] = keep;
-    else delete data[key];
+    data[key] = keep;
   } else {
     const existing = data[key] || {};
     const wasInStock = !existing.status || existing.status === 'in_stock';
     data[key] = {
-      status: fields.status !== undefined ? fields.status : (existing.status || 'in_stock'),
-      qty:    fields.qty    !== undefined ? fields.qty    : (existing.qty   || ''),
-      note:   fields.note   !== undefined ? fields.note   : (existing.note  || ''),
-      at:     (wasInStock || !existing.at) ? Date.now() : existing.at
+      status:    fields.status !== undefined ? fields.status : (existing.status || 'in_stock'),
+      qty:       fields.qty    !== undefined ? fields.qty    : (existing.qty   || ''),
+      note:      fields.note   !== undefined ? fields.note   : (existing.note  || ''),
+      at:        (wasInStock || !existing.at) ? Date.now() : existing.at,
+      by:        user.name,
+      byRole:    user.role,
+      updatedAt: Date.now()
     };
+    // Preserve permanent per-item settings that may already be set
+    ['par','expiry','onHandQty','onHandUnit'].forEach(function(f) { if (existing[f] !== undefined && existing[f] !== '') data[key][f] = existing[f]; });
   }
   sbSave(data);
 }
@@ -24067,6 +24072,34 @@ function sbFmtTime(ts) {
   return (h > 12 ? h - 12 : h || 12) + ':' + String(m).padStart(2, '0') + (h >= 12 ? 'pm' : 'am');
 }
 
+function sbFmtAttr(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var yesterday = new Date(today.getTime() - 86400000);
+  var dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var h = d.getHours(), mn = d.getMinutes();
+  var t = (h > 12 ? h - 12 : h || 12) + ':' + String(mn).padStart(2,'0') + (h >= 12 ? 'pm' : 'am');
+  if (dDay >= today) return t;
+  if (dDay >= yesterday) return 'Yesterday ' + t;
+  return (d.getMonth()+1) + '/' + d.getDate() + ' ' + t;
+}
+
+function sbGetCurrentUser() {
+  var s = authGetSession();
+  if (!s) return { name: 'Unknown', role: '' };
+  return { name: s.name || 'Unknown', role: s.role || '' };
+}
+
+function sbRoleArea(role) {
+  if (!role) return 'unknown';
+  var r = role.toLowerCase();
+  if (r === 'barista') return 'foh';
+  if (r === 'owner') return 'owner';
+  return 'kitchen';
+}
+
 // ============================================================
 // RESTOCK REQUESTS  (bk_restock_requests)
 // ============================================================
@@ -24430,6 +24463,16 @@ function sbRenderStockCard(item) {
       '</label>' +
     '</div>' +
     stockBadge +
+    (function() {
+      if (!entry.returnBy) return '';
+      var area = sbRoleArea(entry.returnRole || '');
+      var rc = area === 'foh' ? '#5588dd' : area === 'kitchen' ? '#4a9c6e' : area === 'owner' ? '#c87a00' : 'var(--muted)';
+      var rl = area === 'foh' ? 'FOH' : area === 'kitchen' ? 'Kitchen' : area === 'owner' ? 'Owner' : '';
+      var rt = sbFmtAttr(entry.returnAt);
+      return '<div style="font-size:10px;color:' + rc + ';margin-top:4px;margin-left:12px;opacity:0.9;line-height:1.4">' +
+        '↩ ' + entry.returnBy + (rl ? ' · ' + rl : '') + (rt ? ' · ' + rt : '') +
+      '</div>';
+    })() +
     '</div>';
 }
 
@@ -24437,14 +24480,36 @@ function sbRenderOrderCard(item, col) {
   var cc       = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
   var entry    = item._entry || {};
   var timeStr  = entry.at ? sbFmtTime(entry.at) : '';
-  var bgTint   = col === 'order_now' ? 'rgba(200,50,50,0.08)' : 'rgba(232,160,69,0.08)';
-  var borderC  = col === 'order_now' ? 'rgba(200,50,50,0.35)' : 'rgba(232,160,69,0.35)';
   var qtyVal   = (entry.qty  || '').replace(/"/g, '&quot;');
   var noteVal  = (entry.note || '').replace(/"/g, '&quot;');
   var ppg      = item.pricePerGram || 0;
   var costStr  = ppg > 0 ? ' · $' + (ppg * 453.592).toFixed(2) + '/lb' : '';
   var expBadge = sbExpiryBadge(entry.expiry);
   var expiryVal = (entry.expiry || '').replace(/"/g, '&quot;');
+
+  // Attribution
+  var attrStr = '';
+  var roleTint = '';
+  var borderC = col === 'order_now' ? 'rgba(200,50,50,0.35)' : 'rgba(232,160,69,0.35)';
+  var bgBase  = col === 'order_now' ? 'rgba(200,50,50,0.08)' : 'rgba(232,160,69,0.08)';
+  if (entry.by) {
+    var area = sbRoleArea(entry.byRole || '');
+    var attrColor, areaLabel, areaTint;
+    if (area === 'foh')          { attrColor = '#5588dd'; areaLabel = 'FOH';     areaTint = 'rgba(50,100,220,0.10)'; }
+    else if (area === 'kitchen') { attrColor = '#4a9c6e'; areaLabel = 'Kitchen'; areaTint = 'rgba(50,160,80,0.10)'; }
+    else if (area === 'owner')   { attrColor = '#c87a00'; areaLabel = 'Owner';   areaTint = 'rgba(200,160,0,0.08)'; }
+    else                         { attrColor = 'var(--muted)'; areaLabel = '';   areaTint = ''; }
+    roleTint = areaTint;
+    var updStr = sbFmtAttr(entry.updatedAt || entry.at);
+    attrStr = '<div style="margin-top:6px;font-size:10px;color:' + attrColor + ';text-align:right;line-height:1.4">' +
+      '👤 ' + (entry.by) + (areaLabel ? ' · ' + areaLabel : '') + (updStr ? ' · ' + updStr : '') +
+    '</div>';
+  }
+  // Layer role tint on top of column tint using two gradient layers
+  var bgTint = roleTint
+    ? 'linear-gradient(' + roleTint + ',' + roleTint + '),linear-gradient(' + bgBase + ',' + bgBase + ')'
+    : bgBase;
+
   return '<div class="sb-item" data-item-id="' + item.id + '" data-col="' + col + '"' +
     ' style="padding:10px 10px;margin-bottom:6px;border-radius:8px;border:1px solid ' + borderC + ';background:' + bgTint + ';cursor:grab;touch-action:pan-y;user-select:none">' +
     '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">' +
@@ -24472,6 +24537,7 @@ function sbRenderOrderCard(item, col) {
         ' style="flex:1;padding:7px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px' + (expiryVal ? ';border-color:#888' : '') + '"' +
         ' onchange="sbUpdateExpiry(' + item.id + ',this.value)">' +
     '</div>' +
+    attrStr +
     '</div>';
 }
 
@@ -24646,6 +24712,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.90': ['🏷 Supply Board — Attribution: every status change (flag, move, return to stock) now records who made it and their area (FOH / Kitchen / Owner); Order Soon and Order Now cards show "👤 Name · FOH/Kitchen · time" at the bottom in area-colored text (blue = FOH, green = Kitchen, amber = Owner); card background picks up a subtle area tint so at a glance you can tell which team flagged each ingredient; In Stock cards show who last returned the item to stock; attribution survives drags, batch-moves, and receive confirmations'],
   '2.4.89': ['📋 Channels — Wk Units now updates live as you type: changed qty input event from "change" (fires on blur) to "input" (fires on every keystroke); Wk Units cell updates in-place with a green flash confirming the save, no full re-render needed; fixed a secondary bug where Wk Units never reflected saves at all (renderWeeklySummary was called but not the channel table)'],
   '2.4.88': ['📋 Week Plan — added ↑/↓ move buttons to each task card in the day columns; ↑ disabled on the first item, ↓ disabled on the last; tap either to shift a card one slot instantly without drag-and-drop; recurring template cards (↻) have no move buttons since they are position-fixed by the template; drag-and-drop still works alongside'],
   '2.4.87': ['🧠 Supply Board — Smart receive modal: single natural-language quantity field replaces separate qty + unit inputs; type "15 bags 4.5 lbs", "6 gallons", "35 lbs", "3 doz", or "2 cases 50 kg" and the system parses it instantly; compound entries auto-fill pkg size and show total weight in the preview; price label adapts to the detected unit (per gallon, per dozen, per lb, etc.) and $/gram conversion uses the right formula per unit type (gallons÷3785, doz÷672, lbs÷453.592)'],
