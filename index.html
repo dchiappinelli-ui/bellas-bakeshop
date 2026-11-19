@@ -2792,19 +2792,19 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 
     <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">How much did you receive?</div>
-    <div style="display:flex;gap:8px;margin-bottom:18px">
-      <input id="sb-recv-qty" type="text" placeholder="e.g. 15" autocomplete="off"
-        style="width:90px;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;font-weight:700">
-      <input id="sb-recv-unit" type="text" placeholder="doz, lbs, bags, cases…" autocomplete="off"
-        style="flex:1;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-    </div>
+    <input id="sb-recv-smart" type="text" placeholder="6 gallons · 35 lbs · 15 bags · 15 bags 4.5 lbs" autocomplete="off"
+      oninput="sbSmartQtyInput()"
+      style="width:100%;box-sizing:border-box;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;margin-bottom:5px">
+    <div id="sb-recv-smart-preview" style="font-size:11px;color:#4a9c6e;min-height:16px;margin-bottom:14px;padding-left:2px"></div>
+    <input id="sb-recv-qty" type="hidden">
+    <input id="sb-recv-unit" type="hidden">
 
     <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Price paid <span style="font-weight:400;text-transform:none;font-size:10px">(optional — updates price library)</span></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
       <span style="color:var(--muted)">$</span>
       <input id="sb-recv-price" type="number" min="0" step="0.01" placeholder="0.00"
         style="width:90px;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-      <span style="font-size:13px;color:var(--muted)">per lb</span>
+      <span id="sb-recv-price-unit-label" style="font-size:13px;color:var(--muted)">per lb</span>
     </div>
 
     <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Package size <span style="font-weight:400;text-transform:none;font-size:10px">(optional — lbs per bag / case / unit · enables stock weeks tracking)</span></div>
@@ -2979,7 +2979,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.86';
+const APP_VERSION      = '2.4.89';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -9775,11 +9775,21 @@ function toggleChannelWeek(id, on) {
 function updateOrderQty(chId, lineId, day, val) {
   const ch = channels.find(c => c.id === chId);
   if (!ch) return;
-  const line = (ch.orderLines || []).find(l => l.id === lineId);
+  const line = (ch.orderLines || []).find(l => String(l.id) === String(lineId));
   if (!line) return;
   line.days[day] = parseInt(val) || 0;
   saveChannels();
   renderWeeklySummary();
+  // Update Wk Units cell in-place with a green flash
+  const safeChId   = chId.replace(/[^a-z0-9]/gi,'_');
+  const safeLineId = String(lineId).replace(/[^a-z0-9]/gi,'_');
+  const tdEl = document.getElementById('wku-' + safeChId + '-' + safeLineId);
+  if (tdEl) {
+    const wkOrdered = Object.values(line.days).reduce((s,q) => s+q, 0);
+    const wkUnits   = wkOrdered * line.unitsEach;
+    tdEl.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--success);transition:color 0.6s">${wkUnits}</div>${line.unitsEach>1?`<div style="font-size:10px;color:var(--muted)">${wkOrdered} ordered</div>`:''}`;
+    setTimeout(() => { const d = tdEl.querySelector('div'); if (d) d.style.color = 'var(--accent)'; }, 700);
+  }
 }
 
 var _chPickerProducts = {}; // {chId: productName} — set by chUpdatePicker, read by confirmAddOrderLine
@@ -10436,7 +10446,7 @@ function renderChannelsPage() {
                         style="width:48px;text-align:center;padding:3px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:11px;font-family:'DM Mono',monospace">
                     </td>`;
                   }).join('')}
-                  <td style="padding:5px;text-align:center">
+                  <td id="wku-${ch.id.replace(/[^a-z0-9]/gi,'_')}-${String(line.id).replace(/[^a-z0-9]/gi,'_')}" style="padding:5px;text-align:center">
                     <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">${wkUnits}</div>
                     ${line.unitsEach>1?`<div style="font-size:10px;color:var(--muted)">${wkOrdered} ordered</div>`:''}
                   </td>
@@ -10494,7 +10504,7 @@ function renderChannelsPage() {
 
   // Wire events after render
   document.querySelectorAll('.order-qty-input').forEach(inp => {
-    inp.addEventListener('change', () => updateOrderQty(inp.dataset.ch, inp.dataset.line, inp.dataset.day, inp.value));
+    inp.addEventListener('input', () => updateOrderQty(inp.dataset.ch, inp.dataset.line, inp.dataset.day, inp.value));
   });
   document.querySelectorAll('.rm-order-btn').forEach(btn => {
     btn.addEventListener('click', () => removeOrderLine(btn.dataset.ch, btn.dataset.line));
@@ -19824,10 +19834,13 @@ function renderWeekPlan() {
       else { _wpCg = [item]; _wpGroups.push(_wpCg); }
     });
     let globalIdx = 0;
+    let _wpDIdx = 0;
+    const _wpDLen = dayData.items.length;
     const itemCards = _wpGroups.map(group => {
       const isMulti = group.length > 1;
       const cardsHtml = group.map(item => {
         const iIdx = globalIdx++;
+        const thisDIdx = item._isRecurring ? -1 : _wpDIdx++;
         const isFirst = iIdx === 0;
         const isParallelMember = item.parallel && isMulti;
         const isOrderItem   = item.phase === 'orders';
@@ -19878,11 +19891,18 @@ function renderWeekPlan() {
                 return badges.length ? `<div style="display:flex;gap:3px;margin-top:4px">${badges.join('')}</div>` : '';
               })()}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
-              ${item._isRecurring ? '' : `<button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
-                title="Copy to other days"
-                style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
-                       padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+              ${item._isRecurring ? '' : `
+                <button onclick="event.stopPropagation();wpMoveItem('${day}','${item.id}',-1)"
+                  title="Move up" ${thisDIdx<=0?'disabled':''}
+                  style="background:none;border:none;color:${thisDIdx<=0?'#ddd':'#999'};cursor:${thisDIdx<=0?'default':'pointer'};font-size:13px;padding:3px 4px;line-height:1;touch-action:manipulation">↑</button>
+                <button onclick="event.stopPropagation();wpMoveItem('${day}','${item.id}',1)"
+                  title="Move down" ${thisDIdx>=_wpDLen-1?'disabled':''}
+                  style="background:none;border:none;color:${thisDIdx>=_wpDLen-1?'#ddd':'#999'};cursor:${thisDIdx>=_wpDLen-1?'default':'pointer'};font-size:13px;padding:3px 4px;line-height:1;touch-action:manipulation">↓</button>
+                <button onclick="event.stopPropagation();wpOpenCopyModal('${day}','${item.id}')"
+                  title="Copy to other days"
+                  style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;
+                         padding:2px 3px;line-height:1;touch-action:manipulation">⧉</button>`}
               <div style="font-size:13px;color:#ccc;padding:0 2px;letter-spacing:-1px">⠿</div>
             </div>
           </div>
@@ -23712,6 +23732,80 @@ function sbReturnToStock(itemId) {
 var _sbReceiveItemId = null;
 var _sbLastTap = { id: null, t: 0 };
 
+var _sbWtUnits = {lbs:453.592,lb:453.592,pound:453.592,pounds:453.592,kg:1000,kilogram:1000,kilograms:1000,oz:28.3495,ounce:28.3495,ounces:28.3495,g:1,gram:1,grams:1};
+var _sbVolUnits = {gal:3785,gallon:3785,gallons:3785,qt:946,quart:946,quarts:946,l:1000,liter:1000,liters:1000,ml:1};
+var _sbCntUnits = {doz:672,dozen:672,dozens:672};
+var _sbSingular = {bags:'bag',cases:'case',boxes:'box',jugs:'jug',bottles:'bottle',cans:'can',tubs:'tub',blocks:'block',units:'unit',packs:'pack',bundles:'bundle',jars:'jar',buckets:'bucket',gallons:'gallon',quarts:'quart',liters:'liter',ounces:'ounce',pounds:'pound',grams:'gram',kilograms:'kilogram',dozens:'dozen'};
+
+function sbParseQtyText(raw) {
+  if (!raw) return null;
+  var t = raw.trim();
+  // "15 bags of 4.5 lbs" / "15 bags 4.5 lb" / "2 cases 50 kg"
+  var m = t.match(/^(\d+\.?\d*)\s+(bags?|cases?|boxes?|containers?|jugs?|bottles?|cans?|tubs?|blocks?|units?|packs?|bundles?|jars?|buckets?)\s+(?:of\s+|@\s*)?(\d+\.?\d*)\s*-?\s*(lbs?|pounds?|kg|kilograms?|oz|ounces?|g|grams?)\b/i);
+  if (m) {
+    var pg = parseFloat(m[3]) * (_sbWtUnits[m[4].toLowerCase()] || 453.592);
+    return { qty: +m[1], unit: m[2].toLowerCase(), pkgLbs: pg / 453.592, pkgGrams: pg };
+  }
+  // "15 × 4.5 lb bags"
+  m = t.match(/^(\d+\.?\d*)\s*[×xX*]\s*(\d+\.?\d*)\s*(lbs?|pounds?|kg|oz|g)\s+(bags?|cases?|boxes?|units?)/i);
+  if (m) {
+    var pg2 = parseFloat(m[2]) * (_sbWtUnits[m[3].toLowerCase()] || 453.592);
+    return { qty: +m[1], unit: m[4].toLowerCase(), pkgLbs: pg2 / 453.592, pkgGrams: pg2 };
+  }
+  // "6 gallons" / "35 lbs" / "15 bags" / "3 doz"
+  m = t.match(/^(\d+\.?\d*)\s+([a-zA-Z]+\.?)/);
+  if (m) return { qty: +m[1], unit: m[2].toLowerCase().replace(/\.$/,''), pkgLbs: null, pkgGrams: null };
+  // just a number
+  m = t.match(/^(\d+\.?\d*)$/);
+  if (m) return { qty: +m[1], unit: '', pkgLbs: null, pkgGrams: null };
+  return null;
+}
+
+function sbRecvUnitInfo(unit, pkgLbs, existingCwg) {
+  var u = (unit || '').toLowerCase().trim();
+  var sing = _sbSingular[u] || u;
+  if (_sbWtUnits[u]) return { priceLabel: 'per lb', priceToPGram: function(p){return p/453.592;} };
+  var vf = _sbVolUnits[u]; if (vf) { var vf2=vf; return { priceLabel: 'per '+sing, priceToPGram: function(p){return p/vf2;} }; }
+  var cf = _sbCntUnits[u]; if (cf) { var cf2=cf; return { priceLabel: 'per '+sing, priceToPGram: function(p){return p/cf2;} }; }
+  var cwg = pkgLbs ? pkgLbs * 453.592 : (existingCwg || 0);
+  if (cwg > 0) return { priceLabel: 'per lb', priceToPGram: function(p){return p/453.592;} };
+  return { priceLabel: 'per '+(sing||'unit'), priceToPGram: function(){return 0;} };
+}
+
+function sbSmartQtyInput() {
+  var smartEl = document.getElementById('sb-recv-smart');
+  var previewEl = document.getElementById('sb-recv-smart-preview');
+  var pkgEl = document.getElementById('sb-recv-pkg');
+  var labelEl = document.getElementById('sb-recv-price-unit-label');
+  if (!smartEl) return;
+  var raw = smartEl.value;
+  var parsed = sbParseQtyText(raw);
+  var qtyEl = document.getElementById('sb-recv-qty');
+  var unitEl = document.getElementById('sb-recv-unit');
+  if (qtyEl) qtyEl.value = parsed ? String(parsed.qty) : '';
+  if (unitEl) unitEl.value = parsed ? (parsed.unit || '') : '';
+  if (pkgEl && parsed && parsed.pkgLbs !== null) pkgEl.value = parsed.pkgLbs.toFixed(2);
+  var cwg = pkgEl ? parseFloat(pkgEl.value || 0) * 453.592 : 0;
+  var uInfo = parsed ? sbRecvUnitInfo(parsed.unit, parsed.pkgLbs, cwg) : null;
+  if (labelEl) labelEl.textContent = uInfo ? uInfo.priceLabel : 'per lb';
+  if (!previewEl) return;
+  if (!parsed || !raw.trim()) { previewEl.textContent = ''; return; }
+  var preview = parsed.qty + (parsed.unit ? ' ' + parsed.unit : '');
+  if (parsed.pkgLbs !== null) {
+    var totalLbs = parsed.qty * parsed.pkgLbs;
+    preview += ' · ' + parsed.pkgLbs.toFixed(1) + ' lbs each · ' + totalLbs.toFixed(1) + ' lbs total';
+  } else {
+    var u2 = (parsed.unit || '').toLowerCase();
+    if (_sbWtUnits[u2]) {
+      var grams = parsed.qty * _sbWtUnits[u2];
+      preview += ' → ' + (grams / 1000).toFixed(2) + ' kg';
+    } else if (_sbVolUnits[u2]) {
+      preview += ' → ~' + (_sbVolUnits[u2] * parsed.qty / 1000).toFixed(1) + 'L';
+    }
+  }
+  previewEl.textContent = '→ ' + preview;
+}
+
 function sbOpenReceiveModal(itemId) {
   event && event.stopPropagation && event.stopPropagation();
   _sbReceiveItemId = String(itemId);
@@ -23727,6 +23821,11 @@ function sbOpenReceiveModal(itemId) {
   if (nameEl) nameEl.textContent = item.name;
   var metaEl = document.getElementById('sb-recv-meta');
   if (metaEl) metaEl.textContent = item.cat + (item.pricePerGram > 0 ? ' · currently $' + (item.pricePerGram * 453.592).toFixed(2) + '/lb' : '');
+  var smartEl = document.getElementById('sb-recv-smart');
+  if (smartEl) {
+    var sv = entry.onHandQty ? (entry.onHandQty + (entry.onHandUnit ? ' ' + entry.onHandUnit : '')) : '';
+    smartEl.value = sv;
+  }
   var qtyEl = document.getElementById('sb-recv-qty');
   if (qtyEl) qtyEl.value = entry.onHandQty || '';
   var unitEl = document.getElementById('sb-recv-unit');
@@ -23741,9 +23840,10 @@ function sbOpenReceiveModal(itemId) {
   if (pkgEl) pkgEl.value = item.caseWeightGrams > 0 ? (item.caseWeightGrams / 453.592).toFixed(2) : '';
   var confirmBtn = document.getElementById('sb-recv-confirm');
   if (confirmBtn) confirmBtn.textContent = isInStock ? '✓ Save Changes' : '✓ Received → In Stock';
+  sbSmartQtyInput();
   var modal = document.getElementById('sb-receive-modal');
   if (modal) modal.style.display = 'flex';
-  setTimeout(function() { var e = document.getElementById('sb-recv-qty'); if (e) e.focus(); }, 60);
+  setTimeout(function() { var e = document.getElementById('sb-recv-smart'); if (e) e.focus(); }, 60);
 }
 
 function sbCloseReceiveModal() {
@@ -23755,18 +23855,23 @@ function sbCloseReceiveModal() {
 function sbConfirmReceive() {
   if (!_sbReceiveItemId) return;
   var id = _sbReceiveItemId;
-  var qty    = ((document.getElementById('sb-recv-qty')    || {}).value || '').trim();
-  var unit   = ((document.getElementById('sb-recv-unit')   || {}).value || '').trim();
-  var price  = parseFloat((document.getElementById('sb-recv-price')  || {}).value || '');
+  var smartRaw = ((document.getElementById('sb-recv-smart') || {}).value || '').trim();
+  var parsed = sbParseQtyText(smartRaw);
+  var qty  = parsed ? String(parsed.qty) : ((document.getElementById('sb-recv-qty') || {}).value || '').trim();
+  var unit = parsed ? (parsed.unit || '') : ((document.getElementById('sb-recv-unit') || {}).value || '').trim();
+  // pkg size from smart parse, or from the pkg field
+  var pkgLbs = parsed && parsed.pkgLbs !== null ? parsed.pkgLbs : parseFloat((document.getElementById('sb-recv-pkg') || {}).value || '');
+  if (!isNaN(pkgLbs) && pkgLbs > 0) plUpdateField(Number(id), 'caseWeightGrams', pkgLbs * 453.592);
+  // unit-aware price → $/gram conversion
+  var priceVal = parseFloat((document.getElementById('sb-recv-price') || {}).value || '');
+  if (!isNaN(priceVal) && priceVal > 0) {
+    var cwg = !isNaN(pkgLbs) && pkgLbs > 0 ? pkgLbs * 453.592 : 0;
+    var uInfo = sbRecvUnitInfo(unit, parsed ? parsed.pkgLbs : null, cwg);
+    var ppg = uInfo.priceToPGram(priceVal);
+    if (ppg > 0) plUpdateField(Number(id), 'pricePerGram', ppg);
+  }
   var expiry = ((document.getElementById('sb-recv-expiry') || {}).value || '');
   var note   = ((document.getElementById('sb-recv-notes')  || {}).value || '').trim();
-  if (!isNaN(price) && price > 0) {
-    plUpdateField(Number(id), 'pricePerGram', price / 453.592);
-  }
-  var pkg = parseFloat((document.getElementById('sb-recv-pkg') || {}).value || '');
-  if (!isNaN(pkg) && pkg > 0) {
-    plUpdateField(Number(id), 'caseWeightGrams', pkg * 453.592);
-  }
   var data = sbLoad();
   var key = String(id);
   var existing = data[key] || {};
@@ -24541,6 +24646,9 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.4.89': ['📋 Channels — Wk Units now updates live as you type: changed qty input event from "change" (fires on blur) to "input" (fires on every keystroke); Wk Units cell updates in-place with a green flash confirming the save, no full re-render needed; fixed a secondary bug where Wk Units never reflected saves at all (renderWeeklySummary was called but not the channel table)'],
+  '2.4.88': ['📋 Week Plan — added ↑/↓ move buttons to each task card in the day columns; ↑ disabled on the first item, ↓ disabled on the last; tap either to shift a card one slot instantly without drag-and-drop; recurring template cards (↻) have no move buttons since they are position-fixed by the template; drag-and-drop still works alongside'],
+  '2.4.87': ['🧠 Supply Board — Smart receive modal: single natural-language quantity field replaces separate qty + unit inputs; type "15 bags 4.5 lbs", "6 gallons", "35 lbs", "3 doz", or "2 cases 50 kg" and the system parses it instantly; compound entries auto-fill pkg size and show total weight in the preview; price label adapts to the detected unit (per gallon, per dozen, per lb, etc.) and $/gram conversion uses the right formula per unit type (gallons÷3785, doz÷672, lbs÷453.592)'],
   '2.4.86': ['📦 Supply Board — Double-tap modal on all cards: removed in_stock column exclusion from double-tap detection so double-tapping any card (In Stock, Order Soon, Order Now) opens the receive/update modal; modal header dynamically switches between "✏️ Update" (In Stock) and "📦 Received" (order columns); confirm button switches between "✓ Save Changes" and "✓ Received → In Stock" accordingly; In Stock items save qty/unit/price/pkg/expiry/notes without changing status'],
   '2.4.85': ['📱 Supply Board — Mobile readability: In Stock card names now wrap to 2 lines (was single-line "C…" truncation); meta line (category/price) uses nowrap+ellipsis to prevent mid-word stray "." wrapping; color bar stretches to full card height; ⏰ 🚨 buttons moved to a 2-row vertical group so name gets full column width; ✎ and ⠿ in second row; Order Soon/Now cards same name + meta fixes; inputs enlarged (12→13px, more padding); border-radius 6→8px on all cards'],
   '2.4.84': ['📊 Supply Board — Ingredient consumption tracking: Receive modal now has a "Package size" field (lbs per bag/case/unit) that saves to price library as caseWeightGrams; In Stock cards show a color-coded "~X wks stock remaining" badge (green ≥3 wks, amber 1–3 wks, red <1 wk) for any ingredient with both on-hand quantity and recipe usage linked through production plan; standard weight units (lbs, kg, g, oz) convert directly; bag/case units divide by caseWeightGrams; cards with unconvertible units show a "Set pkg size" nudge; weekly consumption computed from recipe ingredient grams × weekly batches derived from getProductionBaseRollup()'],
