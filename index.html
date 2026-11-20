@@ -40,20 +40,36 @@ document.addEventListener('DOMContentLoaded', function() {
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Great+Vibes&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap');
 
   :root {
-    --bg: #f2f2f2;
-    --surface: #ffffff;
-    --surface2: #e8e8e8;
-    --border: #cccccc;
-    --accent: #e8a045;
-    --accent2: #111111;
-    --text: #111111;
-    --muted: #777777;
-    --success: #2a7a48;
-    --warn: #a06010;
-    --danger: #c0392b;
-    --brett: #2a5a8a;
-    --juan: #2a6a3a;
-    --luciana: #7a4a20;
+    --bg:       #f4f5f7;
+    --surface:  #ffffff;
+    --surface2: #f1f2f4;
+    --surface3: #e8eaed;
+    --border:   #e2e4e9;
+    --border2:  #d0d3da;
+    --accent:   #e8a045;
+    --accent2:  #0f172a;
+    --navy:     #1a3a8a;
+    --navy-dim: #1a3a8a18;
+    --text:     #0f172a;
+    --text2:    #374151;
+    --muted:    #6b7280;
+    --muted2:   #9ca3af;
+    --success:  #166534;
+    --success-bg: #f0fdf4;
+    --warn:     #92400e;
+    --warn-bg:  #fffbeb;
+    --danger:   #991b1b;
+    --danger-bg:#fef2f2;
+    --info:     #1e40af;
+    --info-bg:  #eff6ff;
+    --brett:    #1e4d8c;
+    --juan:     #166534;
+    --luciana:  #7c2d12;
+    --radius:   8px;
+    --radius-sm: 5px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow:    0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -61,14 +77,16 @@ document.addEventListener('DOMContentLoaded', function() {
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 17px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
 
   header {
     border-bottom: 1px solid var(--border);
-    padding: 20px 36px;
+    padding: 10px 24px;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -77,21 +95,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
   header h1 {
     font-family: 'Playfair Display', serif;
-    font-size: 26px;
+    font-size: 22px;
     color: var(--accent);
     letter-spacing: -0.5px;
   }
 
   header span {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     font-family: 'DM Mono', monospace;
   }
 
   .nav {
     display: flex;
-    gap: 4px;
-    padding: 14px 20px;
+    gap: 2px;
+    padding: 8px 20px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
@@ -100,109 +118,140 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   .nav::-webkit-scrollbar { display: none; }
 
-  /* Supply Board column scrollbars — wide enough to tap on iPad */
+  /* Supply Board column scrollbars */
   .sb-col-body {
     overflow-y: scroll;
     flex: 1;
     padding: 8px 8px 70px;
     scrollbar-width: thin;
-    scrollbar-color: var(--muted) transparent;
+    scrollbar-color: var(--border2) transparent;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
     overscroll-behavior: contain;
   }
-  .sb-col-body::-webkit-scrollbar { width: 10px; }
+  .sb-col-body::-webkit-scrollbar { width: 6px; }
   .sb-col-body::-webkit-scrollbar-track { background: transparent; }
   .sb-col-body::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 5px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    background: var(--border2);
+    border-radius: 3px;
   }
-  .sb-col-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  .sb-col-body::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
 
   .nav-btn {
-    padding: 13px 26px;
+    padding: 8px 16px;
     border: 1px solid transparent;
     background: none;
     color: var(--muted);
     cursor: pointer;
-    font-size: 15px;
-    font-family: 'Inter', sans-serif;
-    border-radius: 4px;
-    transition: all 0.15s;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Inter', system-ui, sans-serif;
+    border-radius: var(--radius-sm);
+    transition: all 0.12s;
     white-space: nowrap;
     touch-action: manipulation;
+    letter-spacing: 0.01em;
   }
 
   .nav-btn.active {
-    background: var(--accent);
+    background: var(--navy);
     color: #fff;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   .nav-btn:hover:not(.active) {
     color: var(--text);
-    border-color: var(--border);
     background: var(--surface2);
   }
 
-  .page { display: none; padding: 40px 48px; max-width: 1300px; margin: 0 auto; }
+  .page { display: none; padding: 32px 36px; max-width: 1300px; margin: 0 auto; }
   .page.active { display: block; }
 
   h2 {
     font-family: 'Playfair Display', serif;
-    font-size: 28px;
+    font-size: 24px;
     color: var(--accent);
-    margin-bottom: 10px;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
   }
 
-  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
 
   /* Cards */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 24px;
-    margin-bottom: 20px;
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
   }
 
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .card-title {
     font-weight: 600;
-    font-size: 16px;
+    font-size: 15px;
     color: var(--text);
   }
 
   /* Buttons */
   .btn {
-    padding: 13px 22px;
-    border-radius: 4px;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
     border: none;
     cursor: pointer;
-    font-size: 15px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    transition: all 0.15s;
+    font-size: 13px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    transition: all 0.12s;
     touch-action: manipulation;
+    letter-spacing: 0.01em;
   }
 
-  .btn-primary { background: var(--accent); color: var(--bg); }
-  .btn-primary:hover { background: #f0ad55; }
-  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-  .btn-danger:hover { background: var(--danger); color: white; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid #fca5a5; }
+  .btn-danger:hover { background: var(--danger-bg); }
   .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
-  .btn-sm { padding: 9px 16px; font-size: 14px; }
-  .btn-success { background: var(--success); color: white; }
-  .btn-success:hover { background: #6aae7f; }
+  .btn-ghost:hover { color: var(--text2); border-color: var(--border2); background: var(--surface2); }
+  .btn-sm { padding: 7px 13px; font-size: 12px; }
+  .btn-success { background: var(--success); color: #fff; border: none; }
+  .btn-success:hover { filter: brightness(1.1); }
+
+  /* Status badges — refined, used across the app */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .badge-critical { background: var(--danger-bg);  color: var(--danger);  border: 1px solid #fca5a5; }
+  .badge-warn     { background: var(--warn-bg);    color: var(--warn);    border: 1px solid #fcd34d; }
+  .badge-info     { background: var(--info-bg);    color: var(--info);    border: 1px solid #93c5fd; }
+  .badge-success  { background: var(--success-bg); color: var(--success); border: 1px solid #86efac; }
+  .badge-spike    { background: #f3e8ff;            color: #6b21a8;        border: 1px solid #d8b4fe; }
+  .badge-neutral  { background: var(--surface2);   color: var(--muted);   border: 1px solid var(--border); }
+
+  /* Section dividers */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted2);
+    margin-bottom: 10px;
+  }
 
   /* Forms */
   .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -234,24 +283,14 @@ document.addEventListener('DOMContentLoaded', function() {
   select option { background: var(--surface2); }
 
   /* ====== TABLET GLOBAL ====== */
-  /* Page content: use full available width, tighter padding */
-  .page { padding: 24px 28px; max-width: none; }
-
-  /* Nav: taller touch targets */
-  .nav { padding: 10px 16px; gap: 6px; }
-  .nav-btn { padding: 16px 22px; font-size: 14px; min-height: 52px; }
-
-  /* Buttons: large enough for gloved/doughy hands */
-  .btn { padding: 16px 24px; font-size: 16px; min-height: 52px; }
-  .btn-sm { padding: 12px 18px; font-size: 15px; min-height: 44px; }
-
-  /* Inputs / selects: bigger tap zone */
-  input, select, textarea { font-size: 17px; padding: 15px 14px; }
-
-  /* Header: compact with brand gold underline */
-  header { padding: 12px 24px; border-bottom: 2px solid rgba(232,160,69,0.25); }
-  header h1 { font-size: 22px; }
-  header span { font-size: 12px; }
+  .page { padding: 20px 24px; max-width: none; }
+  .nav { padding: 8px 16px; gap: 4px; }
+  .nav-btn { padding: 12px 18px; font-size: 13px; min-height: 44px; }
+  .btn { padding: 14px 22px; font-size: 15px; min-height: 48px; }
+  .btn-sm { padding: 10px 16px; font-size: 14px; min-height: 40px; }
+  input, select, textarea { font-size: 16px; padding: 13px 14px; }
+  header { padding: 10px 20px; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 20px; }
 
   /* Enforce minimum tap target on ALL inline-styled buttons in staff pages */
   .staff-page button { min-height: 48px; }
@@ -263,45 +302,16 @@ document.addEventListener('DOMContentLoaded', function() {
   .staff-page button[style*="font-size: 10px"] { font-size: 14px !important; padding-top: 10px !important; padding-bottom: 10px !important; }
 
   /* ====== STAFF PAGE TABLET MODE ====== */
-  .staff-page { font-size: 19px; }
-
-  .staff-page h2 {
-    font-size: 32px;
-    margin-bottom: 6px;
-  }
-  .staff-page .subtitle {
-    font-size: 16px;
-    margin-bottom: 24px;
-  }
-  .staff-page .card {
-    padding: 28px;
-    margin-bottom: 24px;
-    border-width: 2px;
-  }
-  .staff-page .card-title {
-    font-size: 20px;
-  }
-  .staff-page .btn {
-    padding: 18px 28px;
-    font-size: 17px;
-    font-weight: 700;
-    border-radius: 4px;
-  }
-  .staff-page .btn-sm {
-    padding: 14px 20px;
-    font-size: 16px;
-  }
-  .staff-page input,
-  .staff-page select,
-  .staff-page textarea {
-    font-size: 18px;
-    padding: 16px 14px;
-  }
-  .staff-page .form-group label {
-    font-size: 13px;
-    font-weight: 700;
-  }
-  .staff-page .nav-btn { font-size: 17px; padding: 16px 30px; }
+  .staff-page { font-size: 17px; }
+  .staff-page h2 { font-size: 26px; margin-bottom: 4px; }
+  .staff-page .subtitle { font-size: 14px; margin-bottom: 20px; }
+  .staff-page .card { padding: 22px; margin-bottom: 18px; }
+  .staff-page .card-title { font-size: 18px; }
+  .staff-page .btn { padding: 16px 24px; font-size: 16px; font-weight: 700; }
+  .staff-page .btn-sm { padding: 12px 18px; font-size: 15px; }
+  .staff-page input, .staff-page select, .staff-page textarea { font-size: 16px; padding: 14px; }
+  .staff-page .form-group label { font-size: 12px; font-weight: 600; }
+  .staff-page .nav-btn { font-size: 15px; padding: 14px 22px; }
 
   /* Section category headers inside staff pages */
   .staff-section-label {
@@ -946,46 +956,46 @@ document.addEventListener('DOMContentLoaded', function() {
         <div id="auth-chip-name" style="font-size:15px;font-weight:800;color:var(--text);white-space:nowrap"></div>
         <div id="auth-chip-role" style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px"></div>
       </div>
-      <button onclick="authLogout()" title="Lock screen &amp; switch user"
-        style="background:var(--surface);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;margin-left:6px;padding:4px 9px;border-radius:4px;letter-spacing:0.3px"
-        onmouseover="this.style.color='#e57373';this.style.borderColor='#e57373'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">🔒 Switch User</button>
+      <button onclick="authLogout()" title="Lock screen & switch user"
+        style="background:var(--surface);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;margin-left:6px;padding:4px 10px;border-radius:var(--radius-sm);letter-spacing:0.02em;transition:all 0.12s"
+        onmouseover="this.style.color='var(--danger)';this.style.borderColor='#fca5a5'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Switch User</button>
     </div>
-    <button id="auth-login-btn" onclick="authShowModal()" class="btn btn-ghost btn-sm" style="white-space:nowrap">🔑 Sign In</button>
-    <span id="app-version-badge" style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;letter-spacing:0.5px;cursor:default;white-space:nowrap" title="App version"></span>
-    <span id="fb-sync-indicator" onclick="fbFlushNow()" title="Click to save now" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:3px 9px;cursor:pointer;white-space:nowrap">
-      <span id="fb-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;transition:background 0.4s"></span>
+    <button id="auth-login-btn" onclick="authShowModal()" class="btn btn-ghost btn-sm" style="white-space:nowrap">Sign In</button>
+    <span id="app-version-badge" style="font-size:10px;font-weight:600;color:var(--muted2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px 8px;cursor:default;white-space:nowrap;letter-spacing:0.03em" title="App version"></span>
+    <span id="fb-sync-indicator" onclick="fbFlushNow()" title="Click to save now" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;white-space:nowrap;transition:all 0.12s">
+      <span id="fb-sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--muted2);display:inline-block;transition:background 0.4s"></span>
       <span id="fb-sync-label">Connecting…</span>
     </span>
     <button id="fb-save-btn" onclick="fbFlushNow()"
-      style="display:none;background:#d4a017;color:#1a1a1a;border:none;border-radius:4px;
-             padding:3px 12px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;
+      style="display:none;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);
+             padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;
              animation:fbSavePulse 1.5s ease-in-out infinite">
-      ☁ Save Now
+      Save Now
     </button>
-    <button onclick="showDeployChecklist()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Pre-deploy checklist">🚀</button>
-    <button onclick="toggleFullscreen()" id="fs-btn" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Fullscreen (F11)">⛶</button>
-    <button onclick="exportFullBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Backup">💾</button>
-    <button onclick="triggerImportBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap" title="Restore">📂</button>
+    <button onclick="showDeployChecklist()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:7px 10px" title="Pre-deploy checklist">↗</button>
+    <button onclick="toggleFullscreen()" id="fs-btn" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:7px 10px" title="Fullscreen">⛶</button>
+    <button onclick="exportFullBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:7px 10px" title="Backup data">↓</button>
+    <button onclick="triggerImportBackup()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:7px 10px" title="Restore backup">↑</button>
     <input type="file" id="backup-import-input" accept="application/json" style="display:none" onchange="handleImportBackupFile(this)">
-    <button id="staff-mode-btn" onclick="enterStaffMode()" class="btn btn-ghost btn-sm" style="white-space:nowrap">👤 Staff Mode</button>
+    <button id="staff-mode-btn" onclick="enterStaffMode()" class="btn btn-ghost btn-sm" style="white-space:nowrap">Staff Mode</button>
   </div>
 </header>
 
 <div class="nav" id="main-nav">
   <!-- Owner only -->
   <button class="nav-btn active" data-min-role="Owner" onclick="showPage('staff')">Staff</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">🏪 Channels</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipe Library</button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">📦 Supply / Ingredients<span id="sb-nav-badge" style="display:none;margin-left:5px;background:#cc3333;color:#fff;border-radius:8px;padding:1px 5px;font-size:10px;font-weight:900;vertical-align:middle"></span></button>
-  <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">🛫 Today's Board</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('channels')">Channels</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('recipes')">Recipes</button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('pricelib')">Supply<span id="sb-nav-badge" style="display:none;margin-left:5px;background:#991b1b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;vertical-align:middle"></span></button>
+  <button class="nav-btn" data-min-role="Owner" onclick="showPage('board')">Today's Board</button>
   <!-- All staff tabs -->
-  <button class="nav-btn" onclick="showPage('doughtimer')">⏱ Dough Timer</button>
-  <button class="nav-btn" onclick="showPage('weekplan')">🗓 Bake Board</button>
-  <button class="nav-btn" onclick="showPage('freezer')">❄️ Freezer Stock</button>
-  <button class="nav-btn" onclick="showPage('staffboard')">🏠 Hub</button>
-  <button class="nav-btn" onclick="showPage('doughplan')">🥐 Dough Plan</button>
-  <button class="nav-btn" onclick="showPage('opening')">📋 Checklists</button>
-  <button class="nav-btn" onclick="showPage('stationguide')">📋 Station Guide</button>
+  <button class="nav-btn" onclick="showPage('doughtimer')">Dough Timer</button>
+  <button class="nav-btn" onclick="showPage('weekplan')">Bake Board</button>
+  <button class="nav-btn" onclick="showPage('freezer')">Freezer</button>
+  <button class="nav-btn" onclick="showPage('staffboard')">Hub</button>
+  <button class="nav-btn" onclick="showPage('doughplan')">Dough Plan</button>
+  <button class="nav-btn" onclick="showPage('opening')">Checklists</button>
+  <button class="nav-btn" onclick="showPage('stationguide')">Station Guide</button>
 </div>
 
 <div id="staff-mode-banner" style="display:none;background:var(--accent);color:#1a1209;padding:10px 20px;text-align:center;font-weight:700;font-size:13px;align-items:center;justify-content:center;gap:14px">
@@ -1280,6 +1290,24 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
     <div style="font-size:10px;color:var(--muted);margin-top:6px">Press Enter or click Add. Item stays in Price Library even if removed from the board.</div>
+  </div>
+
+  <!-- Mobile column tabs (hidden on desktop, shown via sbApplyMobileLayout) -->
+  <div id="sb-mobile-tabs" style="display:none;border:2px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;overflow:hidden;flex-shrink:0">
+    <div style="display:flex">
+      <button class="sb-mob-tab" data-tab="in_stock" onclick="sbSetMobileTab('in_stock')"
+        style="flex:1;padding:11px 6px;border:none;border-right:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;background:var(--navy);color:#fff">
+        📦 In Stock<br><span id="smt-cnt-in_stock" style="font-size:11px;font-weight:400;opacity:.8"></span>
+      </button>
+      <button class="sb-mob-tab" data-tab="order_soon" onclick="sbSetMobileTab('order_soon')"
+        style="flex:1;padding:11px 6px;border:none;border-right:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;background:var(--surface2);color:var(--muted)">
+        ⏰ Order Soon<br><span id="smt-cnt-order_soon" style="font-size:11px;font-weight:400"></span>
+      </button>
+      <button class="sb-mob-tab" data-tab="order_now" onclick="sbSetMobileTab('order_now')"
+        style="flex:1;padding:11px 6px;border:none;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;background:var(--surface2);color:var(--muted)">
+        🚨 Order Now<br><span id="smt-cnt-order_now" style="font-size:11px;font-weight:400"></span>
+      </button>
+    </div>
   </div>
 
   <!-- 3-column Kanban board -->
@@ -1849,9 +1877,29 @@ document.addEventListener('DOMContentLoaded', function() {
           white-space:nowrap" title="Print checklists">🖨 Print</button>
     </div>
   </div>
+  <!-- Tab strip -->
+  <div style="display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:20px;padding-bottom:0">
+    <button id="wp-tab-plan" onclick="wpSwitchTab('plan')"
+      style="padding:8px 18px;border:none;border-bottom:2px solid var(--navy);margin-bottom:-2px;font-size:13px;font-weight:600;
+        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--navy)">Week Plan</button>
+    <button id="wp-tab-suggest" onclick="wpSwitchTab('suggest')"
+      style="padding:8px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:13px;font-weight:500;
+        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--muted)">Needs Baking</button>
+    <button id="wp-tab-smart" onclick="wpSwitchTab('smart')"
+      style="padding:8px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:13px;font-weight:500;
+        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--muted)">Smart Plan</button>
+  </div>
+
   <div id="wp-board"
-    style="display:flex;gap:0;border:3px solid #111;border-radius:4px;overflow:hidden;
-      overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:420px"></div>
+    style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+      overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:420px;box-shadow:var(--shadow-sm)"></div>
+
+  <!-- Needs Baking suggestions panel -->
+  <div id="wp-suggestions" style="display:none"></div>
+
+  <!-- Smart Plan panel -->
+  <div id="wp-smart-plan" style="display:none"></div>
+
   <!-- Timeline panel — shown when a day's Timeline button is clicked -->
   <div id="wp-timeline-panel" style="display:none;margin-top:20px;background:#fff;border:2px solid #111;border-radius:4px;padding:20px;overflow:hidden"></div>
 </div>
@@ -2181,6 +2229,120 @@ document.addEventListener('DOMContentLoaded', function() {
         style="padding:12px 28px;background:#111;color:#fff;border:none;border-radius:4px;
           font-size:16px;font-weight:800;cursor:pointer">Done</button>
     </div>
+  </div>
+</div>
+
+<!-- Bake Board — Log to Freezer modal -->
+<div id="wp-ltf-modal"
+  style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(0,0,0,0.65);
+    align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:480px;
+              box-shadow:0 -8px 40px rgba(0,0,0,0.3)">
+    <div style="background:#111;color:#fff;padding:16px 20px;border-radius:16px 16px 0 0;
+      display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;opacity:0.6;text-transform:uppercase">❄️ Log to Freezer</div>
+        <div id="wp-ltf-item-name" style="font-size:17px;font-weight:800;margin-top:2px">Item</div>
+      </div>
+      <button onclick="wpCloseLtf()"
+        style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:26px;cursor:pointer;line-height:1;touch-action:manipulation">✕</button>
+    </div>
+    <div style="padding:16px 20px 32px">
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:6px">Freezer</div>
+        <select id="wp-ltf-freezer-sel"
+          onchange="wpLtfSelectFreezer(this.value)"
+          style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:7px;
+            font-size:14px;background:#fff;color:#111">
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:6px">Item in Freezer</div>
+        <select id="wp-ltf-item-sel"
+          style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:7px;
+            font-size:14px;background:#fff;color:#111">
+        </select>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:6px">Quantity Added</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input id="wp-ltf-qty" type="number" min="1" step="1"
+            style="width:100px;padding:10px 12px;border:2px solid #ddd;border-radius:7px;
+              font-size:22px;font-weight:700;text-align:center;color:#111">
+          <div id="wp-ltf-yield-hint" style="font-size:12px;color:#888;flex:1;line-height:1.4"></div>
+        </div>
+      </div>
+      <button onclick="wpLtfConfirm()"
+        style="width:100%;padding:14px;background:#1a7a3a;color:#fff;border:none;
+          border-radius:9px;font-size:16px;font-weight:800;cursor:pointer;touch-action:manipulation">
+        ❄️ Add to Freezer Stock
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Restock Request — Freezer deduct confirm modal -->
+<div id="rr-fz-modal"
+  style="display:none;position:fixed;inset:0;z-index:99993;background:rgba(0,0,0,0.65);
+    align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:480px;
+              box-shadow:0 -8px 40px rgba(0,0,0,0.3)">
+    <div style="background:#3a1f72;color:#fff;padding:16px 20px;border-radius:16px 16px 0 0;
+      display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;opacity:0.6;text-transform:uppercase">❄️ Pull from Freezer</div>
+        <div id="rr-fz-title" style="font-size:17px;font-weight:800;margin-top:2px">Item × qty</div>
+      </div>
+      <button onclick="rrCloseFzModal()"
+        style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:26px;cursor:pointer;line-height:1;touch-action:manipulation">✕</button>
+    </div>
+    <div style="padding:16px 20px 32px">
+      <div style="font-size:13px;color:#555;margin-bottom:16px;line-height:1.5">
+        Confirm which freezer this was pulled from before marking delivered and updating Square.
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:6px">Freezer</div>
+        <select id="rr-fz-freezer-sel"
+          onchange="rrFzSelectFreezer(this.value)"
+          style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:7px;font-size:14px;background:#fff;color:#111">
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:6px">Item in Freezer</div>
+        <select id="rr-fz-item-sel"
+          style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:7px;font-size:14px;background:#fff;color:#111">
+        </select>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#888;margin-bottom:6px">Quantity Pulled</div>
+        <input id="rr-fz-qty" type="number" min="1" step="1"
+          style="width:100px;padding:10px 12px;border:2px solid #ddd;border-radius:7px;
+            font-size:22px;font-weight:700;text-align:center;color:#111">
+      </div>
+      <button id="rr-fz-confirm-btn" onclick="rrFzConfirm()"
+        style="width:100%;padding:14px;background:#3a1f72;color:#fff;border:none;
+          border-radius:9px;font-size:16px;font-weight:800;cursor:pointer;touch-action:manipulation">
+        ❄️ Confirm Pull &amp; Mark Delivered
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== BATCH PLAN APPROVAL MODAL ======== -->
+<div id="wp-batch-plan-modal"
+  onclick="if(event.target===this)wpCloseBatchPlanModal()"
+  style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:99994;
+    align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+  <div style="background:#fff;width:100%;max-width:500px;border-radius:16px;
+    overflow:hidden;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.35)">
+    <div style="background:#1a3a8a;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.7)">Plan This Batch</div>
+        <div id="wp-bpm-title" style="font-size:18px;font-weight:800;color:#fff;margin-top:2px"></div>
+      </div>
+      <button onclick="wpCloseBatchPlanModal()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;touch-action:manipulation;flex-shrink:0">✕</button>
+    </div>
+    <div id="wp-bpm-body" style="padding:20px"></div>
   </div>
 </div>
 
@@ -2979,7 +3141,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.4.91';
+const APP_VERSION      = '2.5.4';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3112,8 +3274,8 @@ function chLineDrop(e, chId, lineId) {
   if (chId !== _chLineDrag.chId) { _chLineDrag = null; return; } // only within same channel
   const ch = channels.find(c => c.id === chId);
   if (!ch) { _chLineDrag = null; return; }
-  const fromLine = ch.orderLines.find(l => l.id === _chLineDrag.lineId);
-  const toLine   = ch.orderLines.find(l => l.id === lineId);
+  const fromLine = ch.orderLines.find(l => String(l.id) === String(_chLineDrag.lineId));
+  const toLine   = ch.orderLines.find(l => String(l.id) === String(lineId));
   if (!fromLine || !toLine) { _chLineDrag = null; return; }
   if (getProductCategory(fromLine.product) !== getProductCategory(toLine.product)) { _chLineDrag = null; return; }
   const fromIdx = ch.orderLines.indexOf(fromLine);
@@ -4065,6 +4227,25 @@ function updateRecipe(id, field, val) {
   recipeMarkSaved(id);
 }
 
+function toggleRecipeProductionDay(recipeId, day) {
+  const r = recipes.find(r => r.id === recipeId);
+  if (!r) return;
+  const days = r.productionDays ? [...r.productionDays] : [];
+  const idx = days.indexOf(day);
+  if (idx >= 0) days.splice(idx, 1); else days.push(day);
+  r.productionDays = days;
+  save();
+  recipeMarkSaved(recipeId);
+  ['mon','tue','wed','thu','fri','sat','sun'].forEach(d => {
+    const btn = document.getElementById('rpd-' + recipeId + '-' + d);
+    if (!btn) return;
+    const on = r.productionDays.includes(d);
+    btn.style.background = on ? '#1a4a8a' : '#fff';
+    btn.style.color      = on ? '#fff' : '#555';
+    btn.style.borderColor = on ? '#1a4a8a' : '#ccc';
+  });
+}
+
 function updateStage(recipeId, stageId, field, val) {
   const r = recipes.find(r => r.id === recipeId);
   if (!r) return;
@@ -4713,6 +4894,43 @@ function renderRecipes() {
               <datalist id="prod-base-list-${r.id}">
                 ${[...new Set(recipes.filter(rx => rx.productionBase && rx.id !== r.id).map(rx => rx.productionBase))].map(b => `<option value="${b.replace(/"/g,'&quot;')}">`).join('')}
               </datalist>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:4px">
+            <div class="form-group" style="flex-basis:100%">
+              <label>Allowed Production Days <span style="color:var(--muted);font-size:10px;font-weight:400">— leave blank for any day</span></label>
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
+                ${['mon','tue','wed','thu','fri','sat','sun'].map(d => {
+                  const lbl = {mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',sat:'Sat',sun:'Sun'}[d];
+                  const on  = (r.productionDays || []).includes(d);
+                  return `<button type="button" id="rpd-${r.id}-${d}"
+                    onclick="toggleRecipeProductionDay(${r.id},'${d}')"
+                    style="padding:5px 10px;border:2px solid ${on?'#1a4a8a':'#ccc'};border-radius:4px;
+                      background:${on?'#1a4a8a':'#fff'};color:${on?'#fff':'#555'};
+                      font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation">${lbl}</button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:4px">
+            <div class="form-group" style="flex-basis:100%">
+              <label title="Marks this product as a derivative — Needs Baking will suggest making the source dough instead of this item">Source Dough Recipe <span style="color:var(--muted);font-size:10px;font-weight:400">— if made from another recipe's dough (optional)</span></label>
+              <select onchange="updateRecipe(${r.id},'sourceRecipeId',this.value?parseInt(this.value):null)" style="max-width:300px">
+                <option value="">— Standalone product —</option>
+                ${(recipes||[]).filter(rx => rx.id !== r.id && rx.stages && rx.stages.length).map(rx =>
+                  `<option value="${rx.id}" ${r.sourceRecipeId == rx.id ? 'selected' : ''}>${rx.name}</option>`
+                ).join('')}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:4px">
+            <div class="form-group">
+              <label title="Max days this item can be stored unbaked in the freezer">Freezer shelf life <span style="color:var(--muted);font-size:10px;font-weight:400">days (unbaked in freezer)</span></label>
+              <input type="number" min="1" max="365" step="1" value="${r.freezerShelfDays || ''}" placeholder="e.g. 7"
+                onchange="updateRecipe(${r.id},'freezerShelfDays',parseInt(this.value)||null)" style="width:70px">
             </div>
           </div>
 
@@ -9921,7 +10139,7 @@ function getProductCategory(productName) {
 function removeOrderLine(chId, lineId) {
   const ch = channels.find(c => c.id === chId);
   if (!ch) return;
-  ch.orderLines = (ch.orderLines || []).filter(l => l.id !== lineId);
+  ch.orderLines = (ch.orderLines || []).filter(l => String(l.id) !== String(lineId));
   saveChannels();
   renderChannelsPage();
 }
@@ -9977,7 +10195,7 @@ let _editLineCtx = null;
 function openEditLineModal(chId, lineId) {
   const ch = channels.find(c => c.id === chId);
   if (!ch) return;
-  const line = (ch.orderLines || []).find(l => l.id === lineId);
+  const line = (ch.orderLines || []).find(l => String(l.id) === String(lineId));
   if (!line) return;
   _editLineCtx = { chId, lineId };
   document.getElementById('el-product').value = line.product;
@@ -10359,7 +10577,7 @@ function chImportApply() {
       if (existing) {
         Object.assign(existing.days, row.days);
       } else {
-        ch.orderLines.push({ id: Date.now() + Math.random(), product: row.product, variation: '', unitsEach: 1, days: row.days, notes: '' });
+        ch.orderLines.push({ id: 'ol_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), product: row.product, variation: '', unitsEach: 1, days: row.days, notes: '' });
       }
     });
   }
@@ -14976,6 +15194,137 @@ function freezerSetVal(freezerId, name, val) {
     ind.style.opacity = '1';
     setTimeout(() => { ind.style.opacity = '0'; ind.textContent = '✓ Saved'; }, 3000);
   }
+}
+
+function freezerAddCount(freezerId, name, qty) {
+  if (!freezerCanEdit(freezerId)) return;
+  const session = authGetSession();
+  const data = freezerGetData();
+  const key = freezerKey(freezerId, name);
+  const current = (data[key] && data[key].count !== null && data[key].count !== undefined) ? data[key].count : 0;
+  const newCount = current + qty;
+  const by = (session ? session.name : 'Unknown') + ' (Bake Log)';
+  const at = new Date().toISOString();
+  data[key] = { count: newCount, updatedBy: by, updatedAt: at };
+  freezerSaveData(data);
+}
+
+function freezerDeductCount(freezerId, name, qty, label) {
+  const session = authGetSession();
+  const data = freezerGetData();
+  const key = freezerKey(freezerId, name);
+  const current = (data[key] && data[key].count !== null && data[key].count !== undefined) ? data[key].count : 0;
+  const newCount = Math.max(0, current - qty);
+  const by = (session ? session.name : 'Unknown') + ' (' + (label || 'Pull') + ')';
+  const at = new Date().toISOString();
+  data[key] = { count: newCount, updatedBy: by, updatedAt: at };
+  freezerSaveData(data);
+}
+
+// ============================================================
+// BAKE BOARD → FREEZER LOG
+// ============================================================
+let _ltfItem = null;
+
+function wpLogToFreezer(day, itemId) {
+  if (!authCanAccess('Baker')) { alert('Baker access required to log to freezer.'); return; }
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const weekData  = wpGetWeek(mondayStr);
+  const dayData   = weekData[day];
+  if (!dayData) return;
+
+  let item = dayData.items.find(i => i.id === itemId);
+  if (!item) return;
+  if (item._recurringId) {
+    const tpl = wpGetRecurring().find(r => r.id === item._recurringId);
+    if (tpl) item = { ...tpl, id: item.id, _recurringId: item._recurringId };
+  }
+  _ltfItem = { ...item, _day: day };
+
+  document.getElementById('wp-ltf-item-name').textContent = item.name;
+
+  const defs = freezerGetDefs();
+  const bohDefs = defs.filter(f => !FOH_FREEZER_IDS.has(f.id));
+  const selEl = document.getElementById('wp-ltf-freezer-sel');
+  selEl.innerHTML = bohDefs.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+
+  const bestFreezer = wpLtfFindBestFreezer(item.name, bohDefs);
+  if (bestFreezer) selEl.value = bestFreezer;
+
+  wpLtfSelectFreezer(selEl.value);
+
+  const qty = wpLtfSuggestQty(item);
+  document.getElementById('wp-ltf-qty').value = qty || '';
+
+  document.getElementById('wp-ltf-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function wpLtfFindBestFreezer(itemName, bohDefs) {
+  const name = itemName.toLowerCase();
+  for (const f of bohDefs) {
+    if (f.items.some(i => i.toLowerCase() === name || name.includes(i.toLowerCase()) || i.toLowerCase().includes(name))) {
+      return f.id;
+    }
+  }
+  return bohDefs[0]?.id || null;
+}
+
+function wpLtfFindBestItem(itemName, freezerItems) {
+  const name = itemName.toLowerCase();
+  let match = freezerItems.find(i => i.toLowerCase() === name);
+  if (match) return match;
+  match = freezerItems.find(i => i.toLowerCase().includes(name) || name.includes(i.toLowerCase()));
+  return match || null;
+}
+
+function wpLtfSelectFreezer(freezerId) {
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === freezerId);
+  if (!freezer) return;
+  const itemSel = document.getElementById('wp-ltf-item-sel');
+  itemSel.innerHTML = freezer.items.map(name => `<option value="${name}">${name}</option>`).join('');
+  const best = wpLtfFindBestItem(_ltfItem?.name || '', freezer.items);
+  if (best) itemSel.value = best;
+}
+
+function wpLtfSuggestQty(item) {
+  const hint = document.getElementById('wp-ltf-yield-hint');
+  if (item.dtRecipeId) {
+    const rec = recipes.find(r => r.id == item.dtRecipeId);
+    if (rec && rec.yieldQty) {
+      const batches = parseInt(item.qty) || 1;
+      const total = rec.yieldQty * batches;
+      if (hint) hint.textContent = `${rec.yieldQty}/batch × ${batches} batch${batches !== 1 ? 'es' : ''}`;
+      return total;
+    }
+  }
+  const rec = recipes.find(r => r.name.toLowerCase() === (item.name || '').toLowerCase());
+  if (rec && rec.yieldQty) {
+    const batches = parseInt(item.qty) || 1;
+    const total = rec.yieldQty * batches;
+    if (hint) hint.textContent = `${rec.yieldQty}/batch × ${batches} batch${batches !== 1 ? 'es' : ''}`;
+    return total;
+  }
+  if (hint) hint.textContent = 'Enter quantity produced';
+  return '';
+}
+
+function wpCloseLtf() {
+  document.getElementById('wp-ltf-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _ltfItem = null;
+}
+
+function wpLtfConfirm() {
+  const freezerId = document.getElementById('wp-ltf-freezer-sel').value;
+  const freezerItem = document.getElementById('wp-ltf-item-sel').value;
+  const qty = parseInt(document.getElementById('wp-ltf-qty').value);
+  if (!freezerId || !freezerItem) { alert('Please select a freezer and item.'); return; }
+  if (!qty || qty <= 0) { alert('Please enter a valid quantity.'); return; }
+  freezerAddCount(freezerId, freezerItem, qty);
+  wpCloseLtf();
+  toastBy(`❄️ Added ${qty} × ${freezerItem} to freezer`);
 }
 
 function freezerPopulateCatSelect() {
@@ -19686,6 +20035,11 @@ const WP_BAKER_COLORS = ['#1a2a6a','#1a5a2a','#7a2a00','#4a1a7a','#005a4a','#6a0
 
 let _wpWeekMonday        = null;
 let _wpViewDays          = 3;
+let _wpTab               = 'plan'; // 'plan' | 'suggest' | 'smart'
+let _wpSpItems           = [];    // current Smart Plan items (refreshed on render)
+let _wpBbItems           = [];    // current Needs Baking suggestions list (refreshed on render)
+let _wpBatchPlan         = null;  // { item, stages } when approval modal is open
+let _wpSkipped           = {};    // { itemName: timestamp } session-level dismissals
 let _wpCopyItemId        = null;
 let _wpCopyFromDay       = null;
 let _wpEditDay           = null;
@@ -19771,11 +20125,13 @@ function wpPrevWeek() {
   _wpWeekMonday = new Date(_wpWeekMonday);
   _wpWeekMonday.setDate(_wpWeekMonday.getDate() - 7);
   renderWeekPlan();
+  if (_wpTab === 'smart') renderSmartPlan();
 }
 function wpNextWeek() {
   _wpWeekMonday = new Date(_wpWeekMonday);
   _wpWeekMonday.setDate(_wpWeekMonday.getDate() + 7);
   renderWeekPlan();
+  if (_wpTab === 'smart') renderSmartPlan();
 }
 
 function wpCopyToNext() {
@@ -19798,6 +20154,926 @@ function wpCopyToNext() {
   renderWeekPlan();
 }
 
+function wpSwitchTab(tab) {
+  _wpTab = tab;
+  const planBtn    = document.getElementById('wp-tab-plan');
+  const suggestBtn = document.getElementById('wp-tab-suggest');
+  const smartBtn   = document.getElementById('wp-tab-smart');
+  const board      = document.getElementById('wp-board');
+  const suggest    = document.getElementById('wp-suggestions');
+  const smartPlan  = document.getElementById('wp-smart-plan');
+  const tabs = [planBtn, suggestBtn, smartBtn];
+  const keys = ['plan', 'suggest', 'smart'];
+  tabs.forEach((btn, i) => {
+    if (!btn) return;
+    const active = tab === keys[i];
+    btn.style.borderBottomColor = active ? 'var(--navy)' : 'transparent';
+    btn.style.color             = active ? 'var(--navy)' : 'var(--muted)';
+    btn.style.fontWeight        = active ? '600' : '500';
+  });
+  if (board)     board.style.display     = tab === 'plan'    ? 'flex'  : 'none';
+  if (suggest)   suggest.style.display   = tab === 'suggest' ? 'block' : 'none';
+  if (smartPlan) smartPlan.style.display = tab === 'smart'   ? 'block' : 'none';
+  if (tab === 'suggest') renderWpSuggestions();
+  if (tab === 'smart')   renderSmartPlan();
+  if (tab === 'plan') {
+    const tl = document.getElementById('wp-timeline-panel');
+    if (tl) tl.style.display = 'none';
+  }
+}
+
+// ============================================================
+// NEEDS BAKING — suggestions tab
+// ============================================================
+
+function bbSuggestWeekDemand(itemName, daysAhead) {
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayIdx = new Date().getDay();
+  const q = itemName.toLowerCase().trim();
+  let total = 0;
+  for (let i = 0; i < (daysAhead || 7); i++) {
+    const dk = DOW[(todayIdx + i) % 7];
+    (channels || []).forEach(ch => {
+      (ch.orderLines || []).forEach(line => {
+        if (!line.product) return;
+        if (line.product.toLowerCase().trim() === q) {
+          const qty = (line.days && line.days[dk]) || 0;
+          const ue  = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
+          total += qty * ue;
+        }
+      });
+    });
+  }
+  return total;
+}
+
+// Returns { dayKey, mondayStr } for the nearest allowed production day within next 4 days
+function bbSuggestFindMakeDay(recipe) {
+  const allowedDays = (recipe && recipe.productionDays && recipe.productionDays.length) ? recipe.productionDays : null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const DOW_TO_KEY = ['sun','mon','tue','wed','thu','fri','sat'];
+  for (let i = 0; i <= 4; i++) {
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const dKey = DOW_TO_KEY[d.getDay()];
+    if (!allowedDays || allowedDays.includes(dKey)) {
+      const mon = new Date(d); const dow = mon.getDay();
+      mon.setDate(mon.getDate() + (dow === 0 ? -6 : 1 - dow));
+      return { dayKey: dKey, mondayStr: wpMondayStr(mon) };
+    }
+  }
+  // Fallback: tomorrow
+  const tmr = new Date(today); tmr.setDate(today.getDate() + 1);
+  const tKey = DOW_TO_KEY[tmr.getDay()];
+  const tMon = new Date(tmr); const td = tMon.getDay();
+  tMon.setDate(tMon.getDate() + (td === 0 ? -6 : 1 - td));
+  return { dayKey: tKey, mondayStr: wpMondayStr(tMon) };
+}
+
+// Returns true if this item already has a bake board task within the next 4 days
+function bbSuggestItemOnBoard(itemName) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const DOW_TO_KEY = ['sun','mon','tue','wed','thu','fri','sat'];
+  const q = itemName.toLowerCase().trim();
+  const allPlan = wpGetAllPlan();
+  for (let i = 0; i <= 4; i++) {
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const dKey = DOW_TO_KEY[d.getDay()];
+    const mon = new Date(d); const dow = mon.getDay();
+    mon.setDate(mon.getDate() + (dow === 0 ? -6 : 1 - dow));
+    const weekData = allPlan[wpMondayStr(mon)];
+    if (!weekData || !weekData[dKey]) continue;
+    if ((weekData[dKey].items || []).some(it => {
+      if (it.sourceItem && it.sourceItem.toLowerCase().trim() === q) return true;
+      return (it.name || it.text || '').toLowerCase().includes(q);
+    })) return true;
+  }
+  return false;
+}
+
+function bbSuggestGetItems() {
+  const defs   = freezerGetDefs();
+  const data   = freezerGetData();
+  const rrList = rrLoad ? rrLoad() : [];
+  const standalone = [];
+  const sourceGroups = {}; // sourceRecipeId -> { sourceRec, freezerName, items: [] }
+
+  defs.forEach(freezer => {
+    if (FOH_FREEZER_IDS.has(freezer.id)) return;
+    freezer.items.forEach(name => {
+      const key     = freezerKey(freezer.id, name);
+      const entry   = data[key] || {};
+      const current = (entry.count !== null && entry.count !== undefined) ? entry.count : null;
+      const par     = freezerGetPar(freezer.id, name);
+      const todayPull = freezerGetTodayPull(name);
+      const demand4   = bbSuggestWeekDemand(name, 4);
+
+      if (!par && demand4 === 0) return;
+
+      const stock  = current !== null ? current : 0;
+      const target = Math.max(par, demand4);
+      const gap    = target - stock;
+
+      const activeRR = rrList.filter(r =>
+        (r.status === 'pending' || r.status === 'accepted') &&
+        r.product.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+      const rrQty   = activeRR.reduce((s, r) => s + (r.qty || 0), 0);
+      const rrSpike = rrQty > 0 && (stock - rrQty) < (par || 0);
+
+      let urgency;
+      if (rrSpike)                                                       urgency = 'spike';
+      else if (current !== null && todayPull > 0 && stock < todayPull)  urgency = 'critical';
+      else if (par > 0 && stock < par)                                   urgency = 'low';
+      else if (gap > 0)                                                  urgency = 'projected';
+      else return;
+
+      const rec = (recipes || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+      const effectiveGap = rrSpike ? Math.max(gap, rrQty - stock + (par || 0)) : gap;
+
+      // If this item is derived from a source dough recipe, bucket it into the group
+      if (rec && rec.sourceRecipeId) {
+        const srcId = String(rec.sourceRecipeId);
+        if (!sourceGroups[srcId]) {
+          const sourceRec = (recipes || []).find(r => String(r.id) === srcId);
+          if (sourceRec) sourceGroups[srcId] = { sourceRec, freezerName: freezer.name, items: [] };
+        }
+        if (sourceGroups[srcId]) {
+          sourceGroups[srcId].items.push({ name, current, par, demand4, gap: effectiveGap, urgency, rrQty, rrSpike, rec });
+        }
+        return;
+      }
+
+      if (bbSuggestItemOnBoard(name)) return;
+      const skippedAt = _wpSkipped[name];
+      if (skippedAt && (Date.now() - skippedAt) < 4 * 3600 * 1000) return;
+
+      let suggestedBatches = null;
+      if (rec && rec.yieldQty && rec.yieldQty > 0) {
+        suggestedBatches = Math.max(1, Math.ceil(effectiveGap / rec.yieldQty));
+        if (rec.freezerShelfDays) {
+          const shelfDemand = bbSuggestWeekDemand(name, rec.freezerShelfDays);
+          const maxByShelf  = Math.ceil(shelfDemand / rec.yieldQty);
+          if (maxByShelf > 0) suggestedBatches = Math.min(suggestedBatches, maxByShelf);
+        }
+      }
+
+      const suggest = bbSuggestFindMakeDay(rec);
+      standalone.push({ freezerId: freezer.id, freezerName: freezer.name, name, current, par, todayPull, demand4, gap: effectiveGap, urgency, suggestedBatches, rrQty, rrSpike, suggestDayKey: suggest.dayKey, suggestMondayStr: suggest.mondayStr, rec });
+    });
+  });
+
+  // Collapse source-recipe groups into one combined suggestion per base dough
+  const urgencyOrder = { spike: 0, critical: 1, low: 2, projected: 3 };
+  Object.values(sourceGroups).forEach(({ sourceRec, freezerName, items }) => {
+    if (!items.length) return;
+    if (bbSuggestItemOnBoard(sourceRec.name)) return;
+    const skippedAt = _wpSkipped[sourceRec.name];
+    if (skippedAt && (Date.now() - skippedAt) < 4 * 3600 * 1000) return;
+
+    const topUrgency = items.reduce((best, itm) =>
+      (urgencyOrder[itm.urgency] < urgencyOrder[best]) ? itm.urgency : best, 'projected');
+    const totalGap    = items.reduce((s, i) => s + i.gap, 0);
+    const totalDemand = items.reduce((s, i) => s + i.demand4, 0);
+    const anySpike    = items.some(i => i.rrSpike);
+
+    let suggestedBatches = null;
+    if (sourceRec.yieldQty > 0) {
+      suggestedBatches = Math.max(1, Math.ceil(totalGap / sourceRec.yieldQty));
+      if (sourceRec.freezerShelfDays) {
+        const variantShelfDemand = items.reduce((s, i) => s + bbSuggestWeekDemand(i.name, sourceRec.freezerShelfDays), 0);
+        const maxByShelf = Math.ceil(variantShelfDemand / sourceRec.yieldQty);
+        if (maxByShelf > 0) suggestedBatches = Math.min(suggestedBatches, maxByShelf);
+      }
+    }
+
+    const suggest = bbSuggestFindMakeDay(sourceRec);
+    standalone.push({
+      freezerId: null, freezerName,
+      name: sourceRec.name,
+      current: null, par: 0, todayPull: 0,
+      demand4: totalDemand, gap: totalGap,
+      urgency: topUrgency, suggestedBatches,
+      rrQty: 0, rrSpike: anySpike,
+      suggestDayKey: suggest.dayKey, suggestMondayStr: suggest.mondayStr,
+      rec: sourceRec,
+      variants: items
+    });
+  });
+
+  const order = { spike: 0, critical: 1, low: 2, projected: 3 };
+  standalone.sort((a, b) => (order[a.urgency] - order[b.urgency]) || (b.gap - a.gap));
+  return standalone;
+}
+
+// Calculate stage dates working backward from the selected bake/make day
+function wpPlanStageDays(recipe, bakeDayKey, bakeMondayStr) {
+  const DOW_TO_KEY = ['sun','mon','tue','wed','thu','fri','sat'];
+  if (!recipe || !recipe.stages || !recipe.stages.length) {
+    return [{ label: recipe ? recipe.name : 'Make batch', dayKey: bakeDayKey, mondayStr: bakeMondayStr, dayName: WP_DAY_NAMES[bakeDayKey] || bakeDayKey, dayNum: 1, totalMins: 0, skill: '' }];
+  }
+  const maxStageDay = Math.max(...recipe.stages.map(s => s.day || 1));
+  const baseMon  = new Date(bakeMondayStr + 'T00:00:00');
+  const bakeDate = new Date(baseMon);
+  bakeDate.setDate(bakeDate.getDate() + WP_DAYS.indexOf(bakeDayKey));
+
+  const byDay = {};
+  recipe.stages.forEach(s => {
+    const d = s.day || 1;
+    if (!byDay[d]) byDay[d] = [];
+    byDay[d].push(s);
+  });
+
+  return Object.entries(byDay).sort(([a],[b]) => +a - +b).map(([dayNum, stages]) => {
+    const offset    = maxStageDay - parseInt(dayNum);
+    const stageDate = new Date(bakeDate); stageDate.setDate(bakeDate.getDate() - offset);
+    const stageMon  = new Date(stageDate); const sdow = stageMon.getDay();
+    stageMon.setDate(stageMon.getDate() + (sdow === 0 ? -6 : 1 - sdow));
+    const stageDayKey = DOW_TO_KEY[stageDate.getDay()];
+    const label = stages.map(s => s.name || ('Stage ' + dayNum)).join(' + ');
+    const totalMins = stages.reduce((sum, s) => sum + (s.activeMins || 0), 0);
+    const skill = (stages.find(s => s.skill) || {}).skill || '';
+    return { label, dayKey: stageDayKey, mondayStr: wpMondayStr(stageMon), dayName: WP_DAY_NAMES[stageDayKey] || stageDayKey, dayNum: parseInt(dayNum), totalMins, skill };
+  });
+}
+
+function wpShowBatchPlan(idx) {
+  const item = _wpBbItems[idx];
+  if (!item) return;
+  _wpOpenBatchPlanModal(item);
+}
+
+function wpShowBatchPlanForDay(idx, dayKey) {
+  const item = _wpBbItems[idx];
+  if (!item) return;
+  const mondayStr = wpMondayStr(_wpWeekMonday || wpGetCurrentMonday());
+  _wpOpenBatchPlanModal({ ...item, suggestDayKey: dayKey, suggestMondayStr: mondayStr });
+}
+
+function _wpOpenBatchPlanModal(item) {
+  const modal = document.getElementById('wp-batch-plan-modal');
+  if (!modal) return;
+  const stages = wpPlanStageDays(item.rec, item.suggestDayKey, item.suggestMondayStr);
+  _wpBatchPlan = { item, stages };
+  document.getElementById('wp-bpm-title').textContent = item.name;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const batchNote = item.suggestedBatches ? ` · ~${item.suggestedBatches} batch${item.suggestedBatches !== 1 ? 'es' : ''}` : '';
+
+  const variantBreakdown = item.variants
+    ? `<div style="font-size:11px;color:#555;margin-top:6px">
+        <strong>Needed for:</strong>
+        ${item.variants.map(v => `${v.name} <span style="color:#888">(−${v.demand4})</span>`).join(' · ')}
+      </div>` : '';
+  const reasonHtml = item.rrSpike
+    ? `<div style="background:#3a1f7215;border:1px solid #3a1f72;border-radius:6px;padding:10px 14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:800;color:#3a1f72">⚡ FOH Demand Spike</div>
+        <div style="font-size:12px;color:#333;margin-top:3px">Pending restock request: <strong>${item.rrQty} units</strong> · Stock: <strong>${item.current ?? '—'}</strong> · Par: <strong>${item.par || '—'}</strong></div>
+        ${variantBreakdown}
+      </div>`
+    : `<div style="background:#f7f7f7;border-radius:6px;padding:10px 14px;margin-bottom:16px">
+        <div style="font-size:12px;color:#555">Stock: <strong>${item.current ?? '—'}</strong> · Par: <strong>${item.par || '—'}</strong> · 4-day demand: <strong>${item.demand4}</strong> · Gap: <strong>${item.gap}</strong></div>
+        ${variantBreakdown}
+      </div>`;
+
+  const stageRows = stages.map((stage, idx) => {
+    const sd = new Date(stage.mondayStr + 'T00:00:00');
+    sd.setDate(sd.getDate() + WP_DAYS.indexOf(stage.dayKey));
+    const isPast   = sd < today;
+    const isToday2 = sd.getTime() === today.getTime();
+    const dateLabel = isToday2 ? 'Today' : sd.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const isLast = idx === stages.length - 1;
+    const bg = isLast ? '#1a3a8a' : '#f0f4ff';
+    const tc = isLast ? '#fff'    : '#1a3a8a';
+    const sub = isLast ? 'rgba(255,255,255,0.7)' : '#888';
+    return `<div style="opacity:${isPast?'0.5':'1'};display:flex;align-items:center;gap:12px;padding:10px 14px;
+        background:${bg};border-radius:6px;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:800;color:${tc}">${stage.label}</div>
+          ${stage.totalMins ? `<div style="font-size:11px;color:${sub};margin-top:1px">${stage.totalMins} min${stage.skill ? ' · ' + stage.skill : ''}</div>` : ''}
+        </div>
+        <div style="font-size:12px;font-weight:800;color:${tc};white-space:nowrap">${dateLabel}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('wp-bpm-body').innerHTML = `
+    ${reasonHtml}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#aaa;margin-bottom:8px">Production stages${batchNote}</div>
+    ${stageRows}
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button onclick="wpConfirmBatchPlan()" style="flex:1;padding:14px;background:#1a3a8a;border:none;
+        border-radius:9px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;touch-action:manipulation">
+        ✓ Add to Bake Board
+      </button>
+      <button onclick="wpDismissBatchSuggestion(${JSON.stringify(item.name)});wpCloseBatchPlanModal()"
+        style="padding:14px 18px;background:#f5f5f5;border:none;border-radius:9px;
+        font-size:13px;font-weight:700;color:#666;cursor:pointer;touch-action:manipulation">Skip</button>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function wpCloseBatchPlanModal() {
+  const modal = document.getElementById('wp-batch-plan-modal');
+  if (modal) modal.style.display = 'none';
+  _wpBatchPlan = null;
+}
+
+function wpDismissBatchSuggestion(itemName) {
+  _wpSkipped[itemName] = Date.now();
+  renderWpSuggestions();
+}
+
+function wpConfirmBatchPlan() {
+  if (!_wpBatchPlan) return;
+  const { item, stages } = _wpBatchPlan;
+  const qtyStr = item.suggestedBatches ? item.suggestedBatches + (item.suggestedBatches === 1 ? ' batch' : ' batches') : '';
+  const maxDayNum = Math.max(...stages.map(s => s.dayNum));
+
+  // Group by week
+  const byWeek = {};
+  stages.forEach(stage => {
+    if (!byWeek[stage.mondayStr]) byWeek[stage.mondayStr] = {};
+    if (!byWeek[stage.mondayStr][stage.dayKey]) byWeek[stage.mondayStr][stage.dayKey] = [];
+    byWeek[stage.mondayStr][stage.dayKey].push(stage);
+  });
+
+  const batchId = 'btch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  Object.entries(byWeek).forEach(([mondayStr, days]) => {
+    const weekData = wpGetWeek(mondayStr);
+    Object.entries(days).forEach(([dayKey, dayStages]) => {
+      if (!weekData[dayKey]) weekData[dayKey] = { bakers: [], items: [] };
+      dayStages.forEach(stage => {
+        const isLast = stage.dayNum === maxDayNum;
+        const taskName = stages.length > 1 ? `${item.name} — ${stage.label}` : item.name;
+        weekData[dayKey].items.push({
+          id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          name: taskName, qty: isLast ? qtyStr : '',
+          note: '', category: null, phase: null,
+          primaryBaker: null, secondaryBaker: null, dtRecipeId: null,
+          estMins: stage.totalMins || null,
+          sourceItem: item.name, sourceRecipeId: item.rec ? item.rec.id : null, batchId
+        });
+      });
+    });
+    wpSaveWeek(mondayStr, weekData);
+  });
+
+  const addedDays = [...new Set(stages.map(s => s.dayName))].join(', ');
+  toastBy(`Added "${item.name}" to Bake Board · ${addedDays}`);
+  wpCloseBatchPlanModal();
+  if (_wpTab === 'smart') renderSmartPlan(); else renderWpSuggestions();
+}
+
+function renderWpSuggestions() {
+  const el = document.getElementById('wp-suggestions');
+  if (!el) return;
+  if (!_wpWeekMonday) _wpWeekMonday = wpGetCurrentMonday();
+
+  _wpBbItems = bbSuggestGetItems();
+
+  if (!_wpBbItems.length) {
+    el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#888">
+      <div style="font-size:40px;margin-bottom:12px">✓</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">All stocked up</div>
+      <div style="font-size:13px">No items are below par or projected low based on current freezer counts and channel demand.</div>
+    </div>`;
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const urgencyBadge = {
+    spike:    ['badge badge-spike',   '⚡ Demand Spike'],
+    critical: ['badge badge-critical','Critical'],
+    low:      ['badge badge-warn',    'Below Par'],
+    projected:['badge badge-info',    'Projected Low']
+  };
+  const urgencyBorder = { spike:'#d8b4fe', critical:'#fca5a5', low:'#fcd34d', projected:'#93c5fd' };
+
+  const cards = _wpBbItems.map((item, idx) => {
+    const [badgeCls, badgeTxt] = urgencyBadge[item.urgency] || ['badge badge-neutral','—'];
+    const borderColor = urgencyBorder[item.urgency] || '#e2e4e9';
+    const stockDisplay = item.current !== null ? item.current : '—';
+    const rec = item.rec;
+    const allowedDays = (rec && rec.productionDays && rec.productionDays.length) ? rec.productionDays : null;
+
+    const suggestDate = new Date(item.suggestMondayStr + 'T00:00:00');
+    suggestDate.setDate(suggestDate.getDate() + WP_DAYS.indexOf(item.suggestDayKey));
+    const isToday3 = suggestDate.getTime() === today.getTime();
+    const suggestLabel = isToday3 ? 'Today' : suggestDate.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+    const batchNote = item.suggestedBatches ? ` · ${item.suggestedBatches} batch${item.suggestedBatches !== 1 ? 'es' : ''}` : '';
+
+    const stages = wpPlanStageDays(rec, item.suggestDayKey, item.suggestMondayStr);
+    const stagePreview = stages.length > 1
+      ? stages.map(s => {
+          const sd = new Date(s.mondayStr + 'T00:00:00');
+          sd.setDate(sd.getDate() + WP_DAYS.indexOf(s.dayKey));
+          const dl = sd.getTime() === today.getTime() ? 'Today' : sd.toLocaleDateString('en-US', { weekday:'short', day:'numeric' });
+          return `<span style="color:var(--muted)">${dl}</span> ${s.label}`;
+        }).join(' <span style="color:var(--muted2)">→</span> ')
+      : '';
+
+    const dayBtns = WP_DAYS.map(day => {
+      const dayDate = new Date(_wpWeekMonday); dayDate.setDate(dayDate.getDate() + WP_DAYS.indexOf(day));
+      const isPast      = dayDate < today;
+      const isSuggested = day === item.suggestDayKey && item.suggestMondayStr === wpMondayStr(_wpWeekMonday);
+      const isAllowed   = !allowedDays || allowedDays.includes(day);
+      const isDisabled  = isPast || !isAllowed;
+      const lbl = WP_DAY_SHORT[day].slice(0,2);
+      const bg  = isSuggested ? 'var(--navy)' : isDisabled ? 'var(--surface2)' : 'var(--surface)';
+      const tc  = isSuggested ? '#fff' : isDisabled ? 'var(--muted2)' : 'var(--text2)';
+      const bc  = isSuggested ? 'var(--navy)' : isDisabled ? 'var(--border)' : 'var(--border2)';
+      return `<button onclick="wpShowBatchPlanForDay(${idx},'${day}')"
+        ${isDisabled ? 'disabled' : ''}
+        title="${isSuggested ? 'Suggested' : !isAllowed ? 'Not a production day' : day}"
+        style="padding:4px 8px;border:1px solid ${bc};border-radius:4px;background:${bg};color:${tc};
+          font-size:11px;font-weight:600;cursor:${isDisabled?'default':'pointer'};touch-action:manipulation;
+          min-width:30px;opacity:${!isAllowed && !isPast ? '0.35' : '1'};transition:all 0.1s">${lbl}</button>`;
+    }).join('');
+
+    const rrNote = item.rrQty > 0 && !item.rrSpike
+      ? `<span class="badge badge-spike" style="margin-top:4px">Restock request: ${item.rrQty} units pending</span>` : '';
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${borderColor};
+        border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;box-shadow:var(--shadow-sm)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:600;color:var(--text)">${item.name}</span>
+        <span class="${badgeCls}">${badgeTxt}</span>
+        <span style="font-size:11px;color:var(--muted2)">${item.freezerName}</span>
+        ${rrNote}
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin-bottom:${item.variants ? '6px' : '10px'}">
+        ${!item.variants ? `<span>Stock <strong style="color:var(--text)">${stockDisplay}</strong></span>` : ''}
+        ${item.par > 0 ? `<span>Par <strong style="color:var(--text)">${item.par}</strong></span>` : ''}
+        ${item.demand4 > 0 ? `<span>4-day demand <strong style="color:var(--text)">${item.demand4}</strong></span>` : ''}
+        ${item.rrSpike ? `<span style="color:#6b21a8;font-weight:600">FOH request <strong>${item.rrQty}</strong></span>` : ''}
+      </div>
+      ${item.variants ? `<div style="font-size:11px;color:var(--muted2);margin-bottom:10px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <span style="font-weight:600;color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Needed for:</span>
+        ${item.variants.map(v => `<span style="margin-left:8px;color:var(--text2)">${v.name} <span style="color:var(--muted)">−${v.demand4}</span></span>`).join('')}
+      </div>` : ''}
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px">
+        <div class="section-label" style="margin-bottom:4px">Suggested Make Day</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:${stagePreview?'4px':'0'}">${suggestLabel}<span style="font-size:12px;color:var(--success);font-weight:600">${batchNote}</span></div>
+        ${stagePreview ? `<div style="font-size:11px;color:var(--text2);line-height:1.6">${stagePreview}</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button onclick="wpShowBatchPlan(${idx})"
+          style="padding:8px 16px;background:var(--navy);border:none;border-radius:var(--radius-sm);font-size:13px;
+            font-weight:600;color:#fff;cursor:pointer;touch-action:manipulation;transition:filter 0.12s"
+          onmouseover="this.style.filter='brightness(1.12)'" onmouseout="this.style.filter=''">Plan this batch</button>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">${dayBtns}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const spike    = _wpBbItems.filter(i => i.urgency === 'spike').length;
+  const critical = _wpBbItems.filter(i => i.urgency === 'critical').length;
+  const low      = _wpBbItems.filter(i => i.urgency === 'low').length;
+  const proj     = _wpBbItems.filter(i => i.urgency === 'projected').length;
+
+  el.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+      ${spike    ? `<span class="badge badge-spike">⚡ ${spike} Spike</span>` : ''}
+      ${critical ? `<span class="badge badge-critical">${critical} Critical</span>` : ''}
+      ${low      ? `<span class="badge badge-warn">${low} Below Par</span>` : ''}
+      ${proj     ? `<span class="badge badge-info">${proj} Projected</span>` : ''}
+      <span style="margin-left:auto;font-size:11px;color:var(--muted2)">Week of ${wpWeekLabel(_wpWeekMonday)}</span>
+    </div>
+    ${cards}`;
+}
+
+// ── Smart Plan ───────────────────────────────────────────────────────────────
+
+// Like bbSuggestGetItems but accounts for planned bake board production;
+// items fully covered by (stock + planned) are excluded entirely.
+function spGetProjectedItems() {
+  const defs   = freezerGetDefs();
+  const data   = freezerGetData();
+  const rrList = rrLoad ? rrLoad() : [];
+  const result = [];
+  const sourceGroups = {};
+
+  defs.forEach(freezer => {
+    if (FOH_FREEZER_IDS.has(freezer.id)) return;
+    freezer.items.forEach(name => {
+      const key     = freezerKey(freezer.id, name);
+      const entry   = data[key] || {};
+      const current = (entry.count !== null && entry.count !== undefined) ? entry.count : null;
+      const par     = freezerGetPar(freezer.id, name);
+      const demand4 = bbSuggestWeekDemand(name, 4);
+      if (!par && demand4 === 0) return;
+      const stock  = current !== null ? current : 0;
+      const target = Math.max(par, demand4);
+      const rawGap = target - stock;
+      const activeRR = rrList.filter(r =>
+        (r.status === 'pending' || r.status === 'accepted') &&
+        r.product.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+      const rrQty   = activeRR.reduce((s, r) => s + (r.qty || 0), 0);
+      const rrSpike = rrQty > 0 && (stock - rrQty) < (par || 0);
+      const todayPull = freezerGetTodayPull(name);
+      const baseGap = rrSpike ? Math.max(rawGap, rrQty - stock + (par || 0)) : rawGap;
+      const rec = (recipes || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+
+      if (rec && rec.sourceRecipeId) {
+        // Bucket under source recipe — urgency and onBoard resolved at group level
+        let urgency;
+        if (rrSpike)                                                       urgency = 'spike';
+        else if (current !== null && todayPull > 0 && stock < todayPull)  urgency = 'critical';
+        else if (par > 0 && stock < par)                                   urgency = 'low';
+        else if (baseGap > 0)                                              urgency = 'projected';
+        else return;
+        const srcId = String(rec.sourceRecipeId);
+        if (!sourceGroups[srcId]) {
+          const sourceRec = (recipes || []).find(r => String(r.id) === srcId);
+          if (sourceRec) sourceGroups[srcId] = { sourceRec, freezerName: freezer.name, items: [] };
+        }
+        if (sourceGroups[srcId]) {
+          sourceGroups[srcId].items.push({ name, current, par, demand4, gap: baseGap, urgency, rrQty, rrSpike, rec });
+        }
+        return;
+      }
+
+      // Factor in planned production for standalone items
+      const plannedQty = spGetPlannedProduction(name);
+      const netGap     = baseGap - plannedQty;
+      if (netGap <= 0 && !rrSpike) return; // fully covered — don't show
+
+      const effectiveStock = stock + plannedQty;
+      let urgency;
+      if (rrSpike)                                                              urgency = 'spike';
+      else if (current !== null && todayPull > 0 && effectiveStock < todayPull) urgency = 'critical';
+      else if (par > 0 && effectiveStock < par)                                  urgency = 'low';
+      else if (netGap > 0)                                                       urgency = 'projected';
+      else return;
+
+      let suggestedBatches = null;
+      if (rec && rec.yieldQty && rec.yieldQty > 0) {
+        suggestedBatches = Math.max(1, Math.ceil(Math.max(netGap, 1) / rec.yieldQty));
+        if (rec.freezerShelfDays) {
+          const shelfDemand = bbSuggestWeekDemand(name, rec.freezerShelfDays);
+          const maxByShelf  = Math.ceil(shelfDemand / rec.yieldQty);
+          if (maxByShelf > 0) suggestedBatches = Math.min(suggestedBatches, maxByShelf);
+        }
+      }
+      const suggest = bbSuggestFindMakeDay(rec);
+      result.push({ freezerId: freezer.id, freezerName: freezer.name, name, current, par, todayPull, demand4, gap: netGap, urgency, suggestedBatches, rrQty, rrSpike, suggestDayKey: suggest.dayKey, suggestMondayStr: suggest.mondayStr, rec, plannedQty });
+    });
+  });
+
+  const urgencyOrder = { spike: 0, critical: 1, low: 2, projected: 3 };
+  Object.values(sourceGroups).forEach(({ sourceRec, freezerName, items }) => {
+    if (!items.length) return;
+    // Factor planned production against source recipe
+    const plannedQty  = spGetPlannedProduction(sourceRec.name);
+    const totalGap    = items.reduce((s, i) => s + i.gap, 0);
+    const netGap      = totalGap - plannedQty;
+    if (netGap <= 0 && !items.some(i => i.rrSpike)) return; // fully covered
+    const totalDemand = items.reduce((s, i) => s + i.demand4, 0);
+    const anySpike    = items.some(i => i.rrSpike);
+    const topUrgency  = items.reduce((best, itm) =>
+      (urgencyOrder[itm.urgency] < urgencyOrder[best]) ? itm.urgency : best, 'projected');
+    let suggestedBatches = null;
+    if (sourceRec.yieldQty > 0) {
+      suggestedBatches = Math.max(1, Math.ceil(Math.max(netGap, 1) / sourceRec.yieldQty));
+      if (sourceRec.freezerShelfDays) {
+        const variantShelfDemand = items.reduce((s, i) => s + bbSuggestWeekDemand(i.name, sourceRec.freezerShelfDays), 0);
+        const maxByShelf = Math.ceil(variantShelfDemand / sourceRec.yieldQty);
+        if (maxByShelf > 0) suggestedBatches = Math.min(suggestedBatches, maxByShelf);
+      }
+    }
+    const suggest = bbSuggestFindMakeDay(sourceRec);
+    result.push({
+      freezerId: null, freezerName,
+      name: sourceRec.name, current: null, par: 0, todayPull: 0,
+      demand4: totalDemand, gap: netGap,
+      urgency: topUrgency, suggestedBatches,
+      rrQty: 0, rrSpike: anySpike,
+      suggestDayKey: suggest.dayKey, suggestMondayStr: suggest.mondayStr,
+      rec: sourceRec, variants: items, plannedQty
+    });
+  });
+
+  result.sort((a, b) => (urgencyOrder[a.urgency] - urgencyOrder[b.urgency]) || (b.gap - a.gap));
+  return result;
+}
+
+// Add all stages of one item to the board without opening the modal
+function spDirectAdd(item) {
+  if (!item || !item.rec) return;
+  const stages = wpPlanStageDays(item.rec, item.suggestDayKey, item.suggestMondayStr);
+  const maxDayNum = Math.max(...stages.map(s => s.dayNum));
+  const batchId = 'btch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const qtyStr = item.suggestedBatches ? item.suggestedBatches + (item.suggestedBatches === 1 ? ' batch' : ' batches') : '';
+  stages.forEach(stage => {
+    const mondayStr = stage.mondayStr;
+    let week = wpGetWeek(mondayStr);
+    if (!week[stage.dayKey]) week[stage.dayKey] = { items: [] };
+    const isLast = stage.dayNum === maxDayNum;
+    const taskName = stages.length > 1 ? `${item.name} — ${stage.label}` : item.name;
+    week[stage.dayKey].items.push({
+      id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+      name: taskName, qty: isLast ? qtyStr : '',
+      note: '', category: null, phase: null,
+      primaryBaker: null, secondaryBaker: null, dtRecipeId: null,
+      estMins: stage.totalMins || null,
+      sourceItem: item.name, sourceRecipeId: item.rec.id, batchId
+    });
+    wpSaveWeek(mondayStr, week);
+  });
+}
+
+// Add all unscheduled items whose suggestDayKey + suggestMondayStr == the given day
+function spApproveDay(dayKey, mondayStr) {
+  const items = _wpSpItems.filter(i => !i.onBoard && i.suggestDayKey === dayKey && i.suggestMondayStr === mondayStr);
+  if (!items.length) return;
+  items.forEach(item => spDirectAdd(item));
+  const names = items.map(i => i.name).join(', ');
+  toastBy(`Added ${items.length} item${items.length !== 1 ? 's' : ''} to Bake Board · ${names}`);
+  renderSmartPlan();
+}
+
+// Returns total planned production qty (from bake board, next 14 days) for an item
+function spGetPlannedProduction(itemName) {
+  const q = itemName.toLowerCase().trim();
+  const rec = (recipes || []).find(r => r.name.toLowerCase().trim() === q);
+  if (!rec || !rec.yieldQty) return 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const DOW_TO_KEY = ['sun','mon','tue','wed','thu','fri','sat'];
+  const allPlan = wpGetAllPlan();
+  const batchIds = new Set();
+  const weekHits = new Set(); // fallback for items without batchId
+  for (let i = 0; i <= 14; i++) {
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const dKey = DOW_TO_KEY[d.getDay()];
+    const mon = new Date(d); const dow = mon.getDay();
+    mon.setDate(mon.getDate() + (dow === 0 ? -6 : 1 - dow));
+    const mStr = wpMondayStr(mon);
+    const weekData = allPlan[mStr];
+    if (!weekData || !weekData[dKey]) continue;
+    (weekData[dKey].items || []).forEach(it => {
+      const isMatch = (
+        (it.sourceRecipeId && String(it.sourceRecipeId) === String(rec.id)) ||
+        (it.sourceItem && it.sourceItem.toLowerCase().trim() === q) ||
+        (it.name || '').toLowerCase().trim() === q
+      );
+      if (!isMatch) return;
+      if (it.batchId) batchIds.add(it.batchId);
+      else             weekHits.add(mStr);
+    });
+  }
+  return (batchIds.size + weekHits.size) * rec.yieldQty;
+}
+
+function spShowBatchPlanForDay(globalIdx, dayKey, mondayStr) {
+  const item = _wpSpItems[globalIdx];
+  if (!item) return;
+  _wpOpenBatchPlanModal({ ...item, suggestDayKey: dayKey, suggestMondayStr: mondayStr });
+}
+
+// Returns 7-day array of { label, dayQty, cum } for a named item
+function spGetCumDemand(itemName) {
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const q = itemName.toLowerCase().trim();
+  let cum = 0;
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const dowLabel = DOW[d.getDay()];
+    let dayQty = 0;
+    (channels || []).forEach(ch => {
+      (ch.orderLines || []).forEach(line => {
+        if (!line.product) return;
+        if (line.product.toLowerCase().trim() === q) {
+          const qty = (line.days && line.days[dowLabel]) || 0;
+          const ue  = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
+          dayQty += qty * ue;
+        }
+      });
+    });
+    cum += dayQty;
+    const lbl = i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday:'short', day:'numeric' });
+    return { label: lbl, dayQty, cum };
+  });
+}
+
+// Renders a compact inline burn-down row; returns '' when there's no channel demand
+function spBurndownRow(itemName, stock, par, plannedQty) {
+  const days = spGetCumDemand(itemName);
+  if (!days.some(d => d.dayQty > 0)) return ''; // no demand, skip
+  const stockNum = (stock !== null && stock !== undefined) ? stock : null;
+  const planned  = plannedQty || 0;
+  const effective = stockNum !== null ? stockNum + planned : null;
+  let pastRunout = false;
+  const pills = days
+    .filter(d => d.dayQty > 0)
+    .map(d => {
+      let bg, tc, warn = '';
+      if (effective === null) {
+        bg = 'var(--surface2)'; tc = 'var(--muted)';
+      } else if (!pastRunout && d.cum > effective) {
+        pastRunout = true;
+        bg = '#fee2e2'; tc = '#dc2626'; warn = ' ⚠';
+      } else if (pastRunout) {
+        bg = '#fee2e2'; tc = '#dc2626';
+      } else {
+        const pct = d.cum / effective;
+        if (pct >= 0.85) { bg = '#fef9c3'; tc = '#92400e'; }
+        else              { bg = '#dcfce7'; tc = '#15803d'; }
+      }
+      return `<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:${bg};color:${tc};font-weight:600;white-space:nowrap">${d.label} ${d.cum}${warn}</span>`;
+    });
+  if (!pills.length) return '';
+  const stockPill = stockNum !== null
+    ? `<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface2);color:var(--muted);font-weight:500;white-space:nowrap;border:1px solid var(--border)">Stock ${stockNum}</span>`
+    : '';
+  const prodPill = planned > 0
+    ? `<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:#dcfce7;color:#15803d;font-weight:600;white-space:nowrap;border:1px solid #bbf7d0">+${planned} planned</span>`
+    : '';
+  return `<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;align-items:center">${stockPill}${prodPill}${pills.join('')}</div>`;
+}
+
+function renderSmartPlan() {
+  const el = document.getElementById('wp-smart-plan');
+  if (!el) return;
+  if (!_wpWeekMonday) _wpWeekMonday = wpGetCurrentMonday();
+
+  _wpSpItems = spGetProjectedItems();
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const mondayStr = wpMondayStr(_wpWeekMonday);
+
+  const urgencyColor  = { spike: '#7c3aed', critical: '#dc2626', low: '#d97706', projected: '#2563eb' };
+  const urgencyBadge  = { spike: ['badge badge-spike','⚡ Spike'], critical: ['badge badge-critical','Critical'], low: ['badge badge-warn','Low'], projected: ['badge badge-info','Projected'] };
+
+  // Bucket items into days of the current week vs overflow
+  const thisWeekBuckets = {}; // dayKey -> items[]
+  const overflowItems = [];
+  WP_DAYS.forEach(d => { thisWeekBuckets[d] = []; });
+
+  _wpSpItems.forEach(item => {
+    if (item.suggestMondayStr === mondayStr) {
+      if (thisWeekBuckets[item.suggestDayKey]) {
+        thisWeekBuckets[item.suggestDayKey].push(item);
+      }
+    } else {
+      overflowItems.push(item);
+    }
+  });
+
+  const totalItems    = _wpSpItems.length;
+  const onBoardCount  = _wpSpItems.filter(i => i.onBoard).length;
+  const thisWeekCount = _wpSpItems.filter(i => i.suggestMondayStr === mondayStr).length;
+  const needsAction   = _wpSpItems.filter(i => !i.onBoard && i.suggestMondayStr === mondayStr).length;
+
+  const summaryBar = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:10px 14px;
+      background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">Week of ${wpWeekLabel(_wpWeekMonday)}</span>
+      <span style="font-size:12px;color:var(--muted)">·</span>
+      <span style="font-size:12px;color:var(--text2)">${thisWeekCount} item${thisWeekCount !== 1 ? 's' : ''} this week</span>
+      ${onBoardCount ? `<span class="badge badge-info">✓ ${onBoardCount} on board</span>` : ''}
+      ${needsAction  ? `<span class="badge badge-warn">${needsAction} need${needsAction !== 1 ? '' : 's'} action</span>` : ''}
+      ${!thisWeekCount ? `<span class="badge badge-neutral">All stocked up this week</span>` : ''}
+      <span style="margin-left:auto;font-size:12px;color:var(--muted2)">${totalItems} total demand signals</span>
+    </div>`;
+
+  // Build day columns
+  const dayCols = WP_DAYS.map(dayKey => {
+    const dayDate = new Date(_wpWeekMonday);
+    dayDate.setDate(dayDate.getDate() + WP_DAYS.indexOf(dayKey));
+    const isPast = dayDate < today;
+    const isToday4 = dayDate.getTime() === today.getTime();
+    const dayItems = thisWeekBuckets[dayKey];
+    if (!dayItems.length) return '';
+
+    const unscheduled = dayItems.filter(i => !i.onBoard);
+    const headerBg = isToday4 ? 'var(--navy)' : 'var(--surface2)';
+    const headerTc = isToday4 ? '#fff' : 'var(--text)';
+    const dateLabel = dayDate.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+
+    const cards = dayItems.map((item, idx) => {
+      const globalIdx = _wpSpItems.indexOf(item);
+      const [badgeCls, badgeTxt] = urgencyBadge[item.urgency] || ['badge badge-neutral','—'];
+      const borderColor = urgencyColor[item.urgency] || 'var(--border)';
+
+      // Variant breakdown: per-variant name + burn-down row
+      const variantLine = item.variants
+        ? `<div style="margin-top:5px;display:flex;flex-direction:column;gap:4px">
+            ${item.variants.map(v => {
+              const vRow = spBurndownRow(v.name, v.current !== undefined ? v.current : null, v.par, 0);
+              return `<div style="font-size:10px;color:var(--text2);font-weight:600">${v.name}${vRow}</div>`;
+            }).join('')}
+          </div>`
+        : '';
+      const burndownRow = !item.variants ? spBurndownRow(item.name, item.current, item.par, item.plannedQty || 0) : '';
+      const batchLine = item.suggestedBatches
+        ? `<span style="font-size:10px;color:var(--success)"> · ${item.suggestedBatches} batch${item.suggestedBatches!==1?'es':''}</span>` : '';
+
+      // Day-selector buttons — baker picks which day to plan this item
+      const allowedDays = (item.rec && item.rec.productionDays && item.rec.productionDays.length) ? item.rec.productionDays : null;
+      const spMondayStr = wpMondayStr(_wpWeekMonday);
+      const spDayBtns = WP_DAYS.map(day => {
+        const dd = new Date(_wpWeekMonday); dd.setDate(dd.getDate() + WP_DAYS.indexOf(day));
+        const isPast      = dd < today;
+        const isSuggested = day === item.suggestDayKey && item.suggestMondayStr === spMondayStr;
+        const isAllowed   = !allowedDays || allowedDays.includes(day);
+        const isDisabled  = isPast || !isAllowed;
+        const lbl = WP_DAY_SHORT[day].slice(0,2);
+        const bg  = isSuggested ? 'var(--navy)' : isDisabled ? 'var(--surface2)' : 'var(--surface)';
+        const tc  = isSuggested ? '#fff' : isDisabled ? 'var(--muted2)' : 'var(--text2)';
+        const bc  = isSuggested ? 'var(--navy)' : isDisabled ? 'var(--border)' : 'var(--border2)';
+        return `<button onclick="spShowBatchPlanForDay(${globalIdx},'${day}','${spMondayStr}')"
+          ${isDisabled ? 'disabled' : ''}
+          title="${isSuggested ? 'Suggested day' : !isAllowed ? 'Not a production day' : WP_DAY_NAMES[day]}"
+          style="padding:3px 7px;border:1px solid ${bc};border-radius:4px;background:${bg};color:${tc};
+            font-size:10px;font-weight:600;cursor:${isDisabled?'default':'pointer'};touch-action:manipulation;
+            min-width:26px;opacity:${!isAllowed && !isPast ? '0.3' : '1'}">${lbl}</button>`;
+      }).join('');
+
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${borderColor};
+          border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:600;color:var(--text)">${item.name}</span>
+          <span class="${badgeCls}" style="font-size:10px">${badgeTxt}</span>
+          ${batchLine}
+        </div>
+        ${burndownRow}
+        ${variantLine}
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:6px;align-items:center">
+          <button onclick="spOpenPlanModal(${globalIdx})"
+            style="padding:4px 10px;background:var(--navy);border:none;border-radius:var(--radius-sm);
+              font-size:10px;font-weight:600;color:#fff;cursor:pointer;touch-action:manipulation">
+            + Add to Board
+          </button>
+          ${spDayBtns}
+        </div>
+      </div>`;
+    }).join('');
+
+    const addAllBtn = unscheduled.length
+      ? `<button onclick="spApproveDay('${dayKey}','${mondayStr}')"
+          style="font-size:10px;padding:3px 8px;background:var(--navy);border:none;border-radius:4px;
+            color:#fff;font-weight:600;cursor:pointer;touch-action:manipulation;white-space:nowrap">
+          Add All (${unscheduled.length})
+        </button>` : '';
+
+    return `<div style="min-width:200px;flex:1;border-right:1px solid var(--border)">
+      <div style="padding:10px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);
+        background:${headerBg};border-radius:var(--radius-sm) var(--radius-sm) 0 0">
+        <span style="font-size:12px;font-weight:700;color:${headerTc};flex:1">${dateLabel}</span>
+        ${addAllBtn}
+      </div>
+      <div style="padding:10px">${cards}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  const overflowSection = overflowItems.length ? `
+    <div style="margin-top:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);
+        display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">Next Week+ (${overflowItems.length})</span>
+        <span style="font-size:11px;color:var(--muted2)">Items projected beyond this week</span>
+      </div>
+      <div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">
+        ${overflowItems.map(item => {
+          const [badgeCls, badgeTxt] = urgencyBadge[item.urgency] || ['badge badge-neutral','—'];
+          const overDate = new Date(item.suggestMondayStr + 'T00:00:00');
+          overDate.setDate(overDate.getDate() + WP_DAYS.indexOf(item.suggestDayKey));
+          const overLabel = overDate.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+          return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+              padding:8px 10px;min-width:150px;flex:1;max-width:220px">
+            <div style="font-size:11px;font-weight:600;color:var(--text)">${item.name}</div>
+            <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
+              <span class="${badgeCls}" style="font-size:10px">${badgeTxt}</span>
+              <span style="font-size:10px;color:var(--muted2)">${overLabel}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  const noDemand = !totalItems ? `<div style="text-align:center;padding:60px 20px;color:var(--muted)">
+    <div style="font-size:40px;margin-bottom:12px">✓</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">All stocked up</div>
+    <div style="font-size:13px">No demand signals found across freezer inventory and channel orders.</div>
+  </div>` : '';
+
+  el.innerHTML = summaryBar + (noDemand || `
+    <div style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);
+      border-radius:var(--radius);min-height:200px">
+      ${dayCols || `<div style="padding:40px;color:var(--muted);font-size:13px;width:100%;text-align:center">No items for this week — check the Next Week section below.</div>`}
+    </div>
+    ${overflowSection}`);
+}
+
+function spOpenPlanModal(globalIdx) {
+  const item = _wpSpItems[globalIdx];
+  if (!item) return;
+  _wpOpenBatchPlanModal(item);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function renderWeekPlan() {
   if (!_wpWeekMonday) _wpWeekMonday = wpGetCurrentMonday();
   const mondayStr = wpMondayStr(_wpWeekMonday);
@@ -19806,6 +21082,8 @@ function renderWeekPlan() {
   if (lbl) lbl.textContent = wpWeekLabel(_wpWeekMonday);
   const selEl = document.getElementById('wp-view-select');
   if (selEl) selEl.value = _wpViewDays;
+  // keep tab visibility in sync
+  wpSwitchTab(_wpTab);
 
   const today = new Date(); today.setHours(0,0,0,0);
 
@@ -20737,6 +22015,9 @@ function wpShowLongPressMenu(wrap, day, itemId) {
     ${item.parallel ? `<button onclick="wpBreakParallel('${day}','${itemId}');document.getElementById('wp-lp-backdrop')?.click()"
       style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
         font-size:15px;cursor:pointer;border-bottom:1px solid #eee;touch-action:manipulation">∥&nbsp; Break parallel</button>` : ''}
+    <button onclick="wpLogToFreezer('${day}','${itemId}');document.getElementById('wp-lp-backdrop')?.click()"
+      style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#f0fff6;
+        font-size:15px;cursor:pointer;border-bottom:1px solid #eee;color:#1a7a3a;font-weight:700;touch-action:manipulation">❄️&nbsp; Log to Freezer</button>
     <button onclick="wpDeleteItemGesture('${day}','${itemId}');document.getElementById('wp-lp-backdrop')?.click()"
       style="display:block;width:100%;padding:13px 16px;text-align:left;border:none;background:#fff;
         font-size:15px;cursor:pointer;color:#cc3300;touch-action:manipulation">🗑&nbsp; Delete</button>`;
@@ -23579,6 +24860,7 @@ var _sbSelectMode = false;
 var _sbSelected = new Set();
 var _sbUsageCache = null;
 var _sbConsumCache = null;
+var _sbMobileTab = 'in_stock';
 var _sbDragGest = null;
 var _sbDragGhost = null;
 
@@ -24209,26 +25491,91 @@ function rrReject(id) {
   renderHubPage();
 }
 
-async function rrBakedAndDelivered(id) {
+let _rrFzPendingId = null;
+
+function rrBakedAndDelivered(id) {
   const list = rrLoad();
   const t = list.find(r => r.id === id);
   if (!t || t.status !== 'accepted') return;
-  if (!_fbFunctions) { alert('Cloud sync needed to update Square.'); return; }
-  const btn = document.querySelector(`[data-rr-deliver="${id}"]`);
-  if (btn) { btn.disabled = true; btn.textContent = 'Pushing to Square…'; }
-  try {
-    const fn = _fbFunctions.httpsCallable('squareRestockDelivered');
-    await fn({ productName: t.product, qty: t.qty });
-    t.status = 'delivered';
-    t.squarePushed = true;
-    t.updatedAt = new Date().toISOString();
-    rrSave(list);
-    renderTodaysBoard();
-    renderHubPage();
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = '🍞 Baked & Delivered'; }
-    alert('Square update failed: ' + (e.message || e));
+  _rrFzPendingId = id;
+
+  document.getElementById('rr-fz-title').textContent = t.product + ' × ' + t.qty;
+
+  const defs = freezerGetDefs();
+  const selEl = document.getElementById('rr-fz-freezer-sel');
+  selEl.innerHTML = defs.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+
+  const bestFreezer = wpLtfFindBestFreezer(t.product, defs);
+  if (bestFreezer) selEl.value = bestFreezer;
+
+  rrFzSelectFreezer(selEl.value, t.product);
+
+  document.getElementById('rr-fz-qty').value = t.qty;
+  document.getElementById('rr-fz-confirm-btn').disabled = false;
+  document.getElementById('rr-fz-confirm-btn').textContent = '❄️ Confirm Pull & Mark Delivered';
+
+  document.getElementById('rr-fz-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function rrCloseFzModal() {
+  document.getElementById('rr-fz-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _rrFzPendingId = null;
+}
+
+function rrFzSelectFreezer(freezerId, suggestName) {
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === freezerId);
+  if (!freezer) return;
+  const itemSel = document.getElementById('rr-fz-item-sel');
+  itemSel.innerHTML = freezer.items.map(name => `<option value="${name}">${name}</option>`).join('');
+  const list = rrLoad();
+  const t = _rrFzPendingId ? list.find(r => r.id === _rrFzPendingId) : null;
+  const name = suggestName || (t ? t.product : '');
+  const best = wpLtfFindBestItem(name, freezer.items);
+  if (best) itemSel.value = best;
+}
+
+async function rrFzConfirm() {
+  if (!_rrFzPendingId) return;
+  const list = rrLoad();
+  const t = list.find(r => r.id === _rrFzPendingId);
+  if (!t) return;
+
+  const freezerId = document.getElementById('rr-fz-freezer-sel').value;
+  const freezerItem = document.getElementById('rr-fz-item-sel').value;
+  const qty = parseInt(document.getElementById('rr-fz-qty').value);
+  if (!freezerId || !freezerItem) { alert('Please select a freezer and item.'); return; }
+  if (!qty || qty <= 0) { alert('Please enter a valid quantity.'); return; }
+
+  // Deduct from freezer immediately (no permission check needed — kitchen is Baker+)
+  freezerDeductCount(freezerId, freezerItem, qty, 'Restock Pull');
+
+  const btn = document.getElementById('rr-fz-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Pushing to Square…';
+
+  if (_fbFunctions) {
+    try {
+      const fn = _fbFunctions.httpsCallable('squareRestockDelivered');
+      await fn({ productName: t.product, qty: t.qty });
+      t.squarePushed = true;
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = '❄️ Confirm Pull & Mark Delivered';
+      alert('Square update failed: ' + (e.message || e));
+      return;
+    }
   }
+
+  t.status = 'delivered';
+  t.updatedAt = new Date().toISOString();
+  rrSave(list);
+  rrCloseFzModal();
+  renderTodaysBoard();
+  renderHubPage();
+  toastBy('❄️ Pulled ' + qty + ' × ' + freezerItem + ' · Square updated');
 }
 
 function rrDismiss(id) {
@@ -24419,7 +25766,67 @@ function renderSupplyBoard() {
     : '<div style="text-align:center;color:var(--muted);padding:40px 10px;font-size:13px">Drag urgent items here</div>';
 
   sbInitDrag();
+
+  // Update mobile tab counts
+  var smtStock = document.getElementById('smt-cnt-in_stock');
+  var smtSoon  = document.getElementById('smt-cnt-order_soon');
+  var smtNow   = document.getElementById('smt-cnt-order_now');
+  if (smtStock) smtStock.textContent = filteredStock.length ? filteredStock.length + ' items' : '';
+  if (smtSoon)  smtSoon.textContent  = orderSoon.length  ? orderSoon.length  + ' items' : '';
+  if (smtNow)   smtNow.textContent   = orderNow.length   ? orderNow.length   + ' items' : '';
+
+  sbApplyMobileLayout();
 }
+
+function sbSetMobileTab(tab) {
+  _sbMobileTab = tab;
+  sbApplyMobileLayout();
+}
+
+function sbApplyMobileLayout() {
+  var isMobile = window.innerWidth <= 640;
+  var tabsEl   = document.getElementById('sb-mobile-tabs');
+  var boardEl  = document.getElementById('sb-board');
+  if (!tabsEl || !boardEl) return;
+
+  if (isMobile) {
+    tabsEl.style.display = 'block';
+    boardEl.style.borderRadius = '0 0 8px 8px';
+    // Show only active column, full width
+    document.querySelectorAll('.sb-col').forEach(function(col) {
+      var active = col.dataset.col === _sbMobileTab;
+      col.style.display = active ? 'flex' : 'none';
+      col.style.flex = '1';
+      col.style.borderRight = 'none';
+      col.style.minWidth = '0';
+    });
+    // Update tab button states
+    document.querySelectorAll('.sb-mob-tab').forEach(function(btn) {
+      var active = btn.dataset.tab === _sbMobileTab;
+      btn.style.background = active ? 'var(--navy)' : 'var(--surface2)';
+      btn.style.color = active ? '#fff' : 'var(--muted)';
+    });
+  } else {
+    tabsEl.style.display = 'none';
+    boardEl.style.borderRadius = '8px';
+    var cols = document.querySelectorAll('.sb-col');
+    cols.forEach(function(col, i) {
+      col.style.display = 'flex';
+      col.style.flex = i === 0 ? '1 1 48%' : '0 0 26%';
+      col.style.minWidth = i === 0 ? '190px' : '160px';
+      col.style.borderRight = i < cols.length - 1 ? '2px solid var(--border)' : 'none';
+    });
+  }
+}
+
+// Re-apply layout on resize/orientation change
+(function() {
+  var _sbResizeTimer = null;
+  window.addEventListener('resize', function() {
+    clearTimeout(_sbResizeTimer);
+    _sbResizeTimer = setTimeout(sbApplyMobileLayout, 150);
+  });
+})();
 
 function sbRenderStockCard(item) {
   var cc       = (PL_CAT_COLORS && PL_CAT_COLORS[item.cat]) || '#888';
@@ -24742,6 +26149,19 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.4': ['🎯 Smart Plan — production-aware: items whose stock + planned bake board production already covers demand are removed from the list entirely; each card now shows day-selector buttons (Mo/Tu/We…) so baker can plan on any allowed day — clicking opens the stage-chain approval modal for that day; "Add to Board" button moved inline with day buttons; burn-down row now shows "+N planned" pill and uses stock+planned as the coverage threshold; fixed bbSuggestItemOnBoard to check sourceItem and text fields (not just name); fixed spDirectAdd to use name field matching board convention; added batchId to all board items added via batch plan so multi-stage recipes count as 1 batch not N'],
+  '2.5.3': ['📊 Smart Plan — inline burn-down row on every product card: Stock pill + cumulative demand by day (green → amber at 85% → red ⚠ when exceeded); source-grouped cards (e.g. Croissant Dough) show per-variant burn-down rows; ✓ On Board cards also show burn-down so stock coverage is visible at a glance'],
+  '2.5.2': ['🗓 Smart Plan — new Bake Board tab; auto-generates a full 7-day production plan from channel demand + freezer inventory + recipe stage chains; each day column shows what needs to happen and why (urgency badge); derivative products (Almond/Choc Croissant) collapse to their source dough recipe; "Add to Board" on a card opens the existing stage-chain approval modal; "Add All" on a day header directly adds all unscheduled tasks for that day; already-scheduled items show as ✓ On Board; overflow section shows items planned for next week; plan updates live when you navigate weeks'],
+  '2.5.1': ['🐛 Channels — fix drag reorder silently failing on import-added rows (same numeric ID type mismatch as Edit/X); chLineDrop now coerces both IDs to String before the find() call'],
+  '2.5.0': ['🐛 Channels — fix Edit and X buttons silently doing nothing on order lines whose ID was stored as a number (from the Import function); removeOrderLine and openEditLineModal now coerce both sides to String before comparing, matching the approach already used in updateOrderQty; import ID generator changed from numeric Date.now()+Math.random() to a string "ol_..." format so new imports are consistent with picker-added lines'],
+  '2.4.99': ['📱 Supply Board — mobile-friendly: tab-based column switching on small screens (≤640px); In Stock / Order Soon / Order Now appear as full-width tabs instead of three cramped side-by-side columns; active tab highlighted in navy; order badge counts update in tabs; resize/orientation-change listener re-applies layout automatically'],
+  '2.4.98': ['🔗 Source Recipe — derivative products (Almond Croissant, Chocolate Croissant, etc.) can now be linked to a base dough recipe in their recipe form; Needs Baking collapses all variants of the same source into one "Make [Base Dough]" card with combined demand from all variants; stage planning uses the source recipe\'s stages so the action is correct (Mix Dough → Laminate & Form, not Roll & Cut which assumes dough already exists); recipe form gains a "Source Dough Recipe" dropdown in the Production section'],
+  '2.4.97': ['🎨 Visual Revamp — refined design system: tighter CSS variables (--radius, --shadow-sm, --shadow, --navy, --badge- classes), 15px base font, cleaner Inter typography; navigation stripped of emoji for professional SaaS look; nav active state updated to navy underline tab pattern; Needs Baking cards redesigned with CSS badge classes, cleaner hierarchy, subtle shadows; Bake Board tab strip converted to underline-style tabs; header utility buttons decluttered'],
+  '2.4.96': ['🗓 Needs Baking — Batch Stage Planning & Demand Spike Detection: suggestions now show a pre-computed "Suggested Make Day" (nearest allowed production day within 4 days); tapping "Plan this batch" opens an approval sheet showing the full production stage chain (e.g. Mon: Mix Dough → Tue: Laminate & Form) calculated backward from the target day; confirming adds all stages to the correct Bake Board days across week boundaries; suggestions automatically disappear once the item is scheduled within the next 4 days or dismissed (4-hr cooldown); ⚡ Demand Spike detection flags items where a pending FOH restock request would deplete stock below par — spike items sort to the top; recipe form gains a "Freezer shelf life (days)" field to cap suggested batch quantities; day override buttons let bakers pick a different anchor day before confirming'],
+  '2.4.95': ['📅 Recipe Library — Allowed Production Days: each recipe now has a day-of-week picker in the Production section; set which days this recipe can be started (e.g. Mon/Wed/Fri); days left blank = any day allowed; the Needs Baking suggestion board respects these constraints — day buttons are only enabled on allowed production days, grayed out otherwise; this is the first step toward labor-aware scheduling'],
+  '2.4.94': ['💡 Bake Board — "Needs Baking" suggestions tab: a second tab on the Bake Board analyzes current freezer stock vs. pars vs. upcoming 7-day channel demand and surfaces items that need production; cards show current count, par, weekly demand, and the production gap in units and suggested batches (from recipe yieldQty if recipe is linked by name); items sorted by urgency — Critical (below today\'s pull) → Low (below par) → Projected (will go below par this week); each card has day-of-week buttons for the current week so baker can tap a day to instantly add the item to the Bake Board with suggested batch count; also shows active restock requests as a demand signal'],
+  '2.4.93': ['❄️ Restock Request → Freezer deduction: "Baked & Delivered" now first shows a confirm sheet — matched freezer + item (auto-matched by name, adjustable) and quantity from the ticket — before marking done and pushing to Square; confirming deducts from freezer stock using the existing count-add logic (count − qty) so the freezer reflects what was pulled; both the freezer deduction and Square push happen in one tap'],
+  '2.4.92': ['❄️ Bake Board → Freezer — Phase 1 connection: long-press any Bake Board task → "Log to Freezer" opens a confirm sheet showing the item, quantity (pre-filled from recipe yield × batch count if a recipe is linked), and a freezer + item picker with best-match auto-selection by name; confirming adds to the current freezer count (Add, not Replace) and credits "Name (Bake Log)" in the updatedBy field; works for both manual and recurring bake board items'],
   '2.4.91': ['📋 Week Plan — fixed move-button roadblock: recurring template cards (MORNING ROUTINE etc.) are now embedded directly into the per-day item array instead of being prepended in display-only; all items in a column — recurring and manual alike — share the same ordered list, so ↑/↓ works across the full column with no invisible ceiling; first item in the column disables ↑, last item disables ↓, everything in between can move freely; existing weeks auto-migrate on first open (recurring items injected at top, then freely reorderable); recurring items can also be drag-reordered; swipe-to-delete still blocked on recurring items to prevent accidental template removal'],
   '2.4.90': ['🏷 Supply Board — Attribution: every status change (flag, move, return to stock) now records who made it and their area (FOH / Kitchen / Owner); Order Soon and Order Now cards show "👤 Name · FOH/Kitchen · time" at the bottom in area-colored text (blue = FOH, green = Kitchen, amber = Owner); card background picks up a subtle area tint so at a glance you can tell which team flagged each ingredient; In Stock cards show who last returned the item to stock; attribution survives drags, batch-moves, and receive confirmations'],
   '2.4.89': ['📋 Channels — Wk Units now updates live as you type: changed qty input event from "change" (fires on blur) to "input" (fires on every keystroke); Wk Units cell updates in-place with a green flash confirming the save, no full re-render needed; fixed a secondary bug where Wk Units never reflected saves at all (renderWeeklySummary was called but not the channel table)'],
