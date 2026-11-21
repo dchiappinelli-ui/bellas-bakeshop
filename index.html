@@ -1224,7 +1224,13 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="font-size:12px;color:var(--muted);margin-top:2px">Daily stock check — drag items to flag for ordering · generate an end-of-day report</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <button id="sq-eod-btn" onclick="sqEODPush()" style="background:#3a1f72;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer" title="Push tomorrow's channel quantities to Square inventory">📤 Push to Square</button>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+        <div style="display:flex;gap:6px;align-items:center">
+          <button id="sq-eod-btn" onclick="sqEODPush()" style="background:#3a1f72;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer" title="Manually push tomorrow's channel quantities to Square inventory">📤 Push to Square</button>
+          <span style="font-size:10px;color:var(--muted);font-weight:500;white-space:nowrap">· Auto 9 PM ET</span>
+        </div>
+        ${sqGetStatusHtml()}
+      </div>
       <button onclick="sbPrintReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨 Report</button>
       <button onclick="sbResetBoard()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
       <button onclick="sbTogglePriceManager()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📋 Ingredient List ▸</button>
@@ -1878,16 +1884,16 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
   <!-- Tab strip -->
-  <div style="display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:20px;padding-bottom:0">
+  <div style="display:flex;gap:0;border-bottom:3px solid var(--border);margin-bottom:20px;padding-bottom:0">
     <button id="wp-tab-plan" onclick="wpSwitchTab('plan')"
-      style="padding:8px 18px;border:none;border-bottom:2px solid var(--navy);margin-bottom:-2px;font-size:13px;font-weight:600;
-        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--navy)">Week Plan</button>
+      style="padding:11px 24px;border:none;border-bottom:3px solid var(--navy);margin-bottom:-3px;font-size:15px;font-weight:700;
+        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--navy);letter-spacing:-0.2px">Week Plan</button>
     <button id="wp-tab-suggest" onclick="wpSwitchTab('suggest')"
-      style="padding:8px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:13px;font-weight:500;
-        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--muted)">Needs Baking</button>
+      style="padding:11px 24px;border:none;border-bottom:3px solid transparent;margin-bottom:-3px;font-size:15px;font-weight:500;
+        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--muted);letter-spacing:-0.2px">Priority List</button>
     <button id="wp-tab-smart" onclick="wpSwitchTab('smart')"
-      style="padding:8px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:13px;font-weight:500;
-        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--muted)">Smart Plan</button>
+      style="padding:11px 24px;border:none;border-bottom:3px solid transparent;margin-bottom:-3px;font-size:15px;font-weight:500;
+        cursor:pointer;touch-action:manipulation;background:transparent;color:var(--muted);letter-spacing:-0.2px">Smart Plan</button>
   </div>
 
   <div id="wp-board"
@@ -3141,7 +3147,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.4';
+const APP_VERSION      = '2.5.9';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4916,7 +4922,7 @@ function renderRecipes() {
 
           <div class="form-row" style="margin-bottom:4px">
             <div class="form-group" style="flex-basis:100%">
-              <label title="Marks this product as a derivative — Needs Baking will suggest making the source dough instead of this item">Source Dough Recipe <span style="color:var(--muted);font-size:10px;font-weight:400">— if made from another recipe's dough (optional)</span></label>
+              <label title="Marks this product as a derivative — Priority List will suggest making the source dough instead of this item">Source Dough Recipe <span style="color:var(--muted);font-size:10px;font-weight:400">— if made from another recipe's dough (optional)</span></label>
               <select onchange="updateRecipe(${r.id},'sourceRecipeId',this.value?parseInt(this.value):null)" style="max-width:300px">
                 <option value="">— Standalone product —</option>
                 ${(recipes||[]).filter(rx => rx.id !== r.id && rx.stages && rx.stages.length).map(rx =>
@@ -20037,6 +20043,18 @@ let _wpWeekMonday        = null;
 let _wpViewDays          = 3;
 let _wpTab               = 'plan'; // 'plan' | 'suggest' | 'smart'
 let _wpSpItems           = [];    // current Smart Plan items (refreshed on render)
+let _spPhase             = (() => {
+  const stored    = sessionStorage.getItem('bk_sp_phase');
+  const storedDate = sessionStorage.getItem('bk_sp_phase_date');
+  const today     = new Date().toDateString();
+  if (storedDate !== today) {
+    sessionStorage.setItem('bk_sp_phase_date', today);
+    sessionStorage.setItem('bk_sp_phase', 'pre_pull');
+    return 'pre_pull';
+  }
+  return stored === 'post_pull' ? 'post_pull' : 'pre_pull';
+})(); // 'pre_pull' | 'post_pull'
+let _spPhasePickerOpen   = false;
 let _wpBbItems           = [];    // current Needs Baking suggestions list (refreshed on render)
 let _wpBatchPlan         = null;  // { item, stages } when approval modal is open
 let _wpSkipped           = {};    // { itemName: timestamp } session-level dismissals
@@ -20205,6 +20223,44 @@ function bbSuggestWeekDemand(itemName, daysAhead) {
     });
   }
   return total;
+}
+
+// Returns HTML row of daily demand pills for the next `daysAhead` days
+function bbDemandByDayRow(itemNames, daysAhead) {
+  const DOW     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const LABELS  = ['SU','M','T','W','TH','F','SA'];
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const todayIdx = today.getDay();
+  const names   = Array.isArray(itemNames) ? itemNames : [itemNames];
+  const days    = Array.from({ length: daysAhead || 4 }, (_, i) => {
+    const dowIdx = (todayIdx + i) % 7;
+    const dk     = DOW[dowIdx];
+    const label  = LABELS[dowIdx];
+    let qty = 0;
+    names.forEach(itemName => {
+      const q = itemName.toLowerCase().trim();
+      (channels || []).forEach(ch => {
+        (ch.orderLines || []).forEach(line => {
+          if (!line.product) return;
+          if (line.product.toLowerCase().trim() === q) {
+            const q2 = (line.days && line.days[dk]) || 0;
+            const ue = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
+            qty += q2 * ue;
+          }
+        });
+      });
+    });
+    return { label, qty };
+  });
+  if (!days.some(d => d.qty > 0)) return '';
+  const pills = days.map(d => {
+    const hasQty = d.qty > 0;
+    return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;min-width:22px">
+      <span style="font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase">${d.label}</span>
+      <span style="font-size:12px;font-weight:${hasQty ? '700' : '400'};color:${hasQty ? 'var(--text)' : 'var(--muted2)'}">${hasQty ? d.qty : '—'}</span>
+    </span>`;
+  }).join('');
+  return `<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:4px">${pills}</div>`;
 }
 
 // Returns { dayKey, mondayStr } for the nearest allowed production day within next 4 days
@@ -20600,12 +20656,12 @@ function renderWpSuggestions() {
         <span style="font-size:11px;color:var(--muted2)">${item.freezerName}</span>
         ${rrNote}
       </div>
-      <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin-bottom:${item.variants ? '6px' : '10px'}">
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin-bottom:6px">
         ${!item.variants ? `<span>Stock <strong style="color:var(--text)">${stockDisplay}</strong></span>` : ''}
         ${item.par > 0 ? `<span>Par <strong style="color:var(--text)">${item.par}</strong></span>` : ''}
-        ${item.demand4 > 0 ? `<span>4-day demand <strong style="color:var(--text)">${item.demand4}</strong></span>` : ''}
         ${item.rrSpike ? `<span style="color:#6b21a8;font-weight:600">FOH request <strong>${item.rrQty}</strong></span>` : ''}
       </div>
+      ${bbDemandByDayRow(item.variants ? item.variants.map(v => v.name) : item.name, 7)}
       ${item.variants ? `<div style="font-size:11px;color:var(--muted2);margin-bottom:10px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
         <span style="font-weight:600;color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Needed for:</span>
         ${item.variants.map(v => `<span style="margin-left:8px;color:var(--text2)">${v.name} <span style="color:var(--muted)">−${v.demand4}</span></span>`).join('')}
@@ -20698,6 +20754,15 @@ function spGetProjectedItems() {
       const netGap     = baseGap - plannedQty;
       if (netGap <= 0 && !rrSpike) return; // fully covered — don't show
 
+      // Can gap be covered from freezer stock without making a full batch?
+      let canCoverFromFreezer = false;
+      let freezerCoverQty = 0;
+      if (!rrSpike && netGap > 0 && rec && rec.yieldQty > 0 && netGap < rec.yieldQty && stock >= netGap) {
+        canCoverFromFreezer = true;
+        freezerCoverQty = netGap;
+        if (_spPhase === 'post_pull') return; // pull confirmed — gap is covered
+      }
+
       const effectiveStock = stock + plannedQty;
       let urgency;
       if (rrSpike)                                                              urgency = 'spike';
@@ -20707,7 +20772,7 @@ function spGetProjectedItems() {
       else return;
 
       let suggestedBatches = null;
-      if (rec && rec.yieldQty && rec.yieldQty > 0) {
+      if (!canCoverFromFreezer && rec && rec.yieldQty && rec.yieldQty > 0) {
         suggestedBatches = Math.max(1, Math.ceil(Math.max(netGap, 1) / rec.yieldQty));
         if (rec.freezerShelfDays) {
           const shelfDemand = bbSuggestWeekDemand(name, rec.freezerShelfDays);
@@ -20716,7 +20781,7 @@ function spGetProjectedItems() {
         }
       }
       const suggest = bbSuggestFindMakeDay(rec);
-      result.push({ freezerId: freezer.id, freezerName: freezer.name, name, current, par, todayPull, demand4, gap: netGap, urgency, suggestedBatches, rrQty, rrSpike, suggestDayKey: suggest.dayKey, suggestMondayStr: suggest.mondayStr, rec, plannedQty });
+      result.push({ freezerId: freezer.id, freezerName: freezer.name, name, current, par, todayPull, demand4, gap: netGap, urgency, suggestedBatches, rrQty, rrSpike, suggestDayKey: suggest.dayKey, suggestMondayStr: suggest.mondayStr, rec, plannedQty, canCoverFromFreezer, freezerCoverQty, stock });
     });
   });
 
@@ -20824,6 +20889,167 @@ function spGetPlannedProduction(itemName) {
   return (batchIds.size + weekHits.size) * rec.yieldQty;
 }
 
+const SP_PHASES = {
+  pre_pull:  { icon: '🧺', label: 'Pre-Pull',  sub: 'Freezer pull not yet done for today' },
+  post_pull: { icon: '✓',  label: 'Post-Pull', sub: 'Freezer pulled — restocking in progress' }
+};
+
+function spSetPhase(phase) {
+  _spPhase = phase;
+  sessionStorage.setItem('bk_sp_phase', phase);
+  sessionStorage.setItem('bk_sp_phase_date', new Date().toDateString());
+  _spPhasePickerOpen = false;
+  const picker = document.getElementById('sp-phase-picker');
+  if (picker) picker.style.display = 'none';
+  renderSmartPlan();
+}
+
+function spTogglePhasePicker() {
+  _spPhasePickerOpen = !_spPhasePickerOpen;
+  const picker = document.getElementById('sp-phase-picker');
+  if (picker) picker.style.display = _spPhasePickerOpen ? 'block' : 'none';
+}
+
+function spClosePhasePicker(e) {
+  if (!_spPhasePickerOpen) return;
+  const btn  = document.getElementById('sp-phase-btn');
+  const pck  = document.getElementById('sp-phase-picker');
+  if (btn && btn.contains(e.target)) return;
+  if (pck && pck.contains(e.target)) return;
+  _spPhasePickerOpen = false;
+  if (pck) pck.style.display = 'none';
+}
+document.addEventListener('click', spClosePhasePicker);
+
+// ----- Pull from Freezer workflow -----
+
+function spGetPullList() {
+  const defs = freezerGetDefs();
+  const data = freezerGetData();
+  const result = [];
+  defs.forEach(freezer => {
+    if (FOH_FREEZER_IDS.has(freezer.id)) return;
+    (freezer.items || []).forEach(name => {
+      const pullQty = freezerGetTodayPull(name);
+      if (!pullQty) return;
+      const key   = freezerKey(freezer.id, name);
+      const entry = data[key] || {};
+      const stock = (entry.count !== null && entry.count !== undefined) ? Number(entry.count) : 0;
+      const afterPull     = stock - pullQty;
+      const shortage      = afterPull < 0 ? Math.abs(afterPull) : 0;
+      const rec           = (recipes || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+      const batchesNeeded = (shortage > 0 && rec && rec.yieldQty > 0)
+        ? Math.ceil(shortage / rec.yieldQty) : 0;
+      result.push({ name, pullQty, stock, afterPull, shortage, batchesNeeded, rec, type: 'scheduled' });
+    });
+  });
+  // Also include gap-cover items from Smart Plan
+  (_wpSpItems || []).forEach(item => {
+    if (!item.canCoverFromFreezer) return;
+    result.push({
+      name: item.name, pullQty: item.freezerCoverQty,
+      stock: item.stock, afterPull: item.stock - item.freezerCoverQty,
+      shortage: 0, batchesNeeded: 0, rec: item.rec, type: 'gap_cover'
+    });
+  });
+  return result;
+}
+
+function spOpenPullModal() {
+  let modal = document.getElementById('sp-pull-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'sp-pull-modal';
+    modal.onclick = e => { if (e.target === modal) spClosePullModal(); };
+    modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:99995;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+    document.body.appendChild(modal);
+  }
+  const list      = spGetPullList();
+  const scheduled = list.filter(i => i.type === 'scheduled');
+  const gapCovers = list.filter(i => i.type === 'gap_cover');
+  const hasShortage = scheduled.some(i => i.shortage > 0);
+
+  const renderRow = item => {
+    const isShort    = item.shortage > 0;
+    const afterColor = isShort ? '#dc2626' : (item.afterPull < item.stock * 0.25 ? '#d97706' : '#15803d');
+    const afterLabel = isShort ? `⚠ Short ${item.shortage}` : `→ ${item.afterPull} remaining`;
+    const bakeNote   = item.batchesNeeded > 0 ? `
+      <div style="margin-top:5px;padding:6px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:11px;color:#dc2626;font-weight:600">
+        Make ${item.batchesNeeded} batch${item.batchesNeeded !== 1 ? 'es' : ''} today${item.rec ? ' of ' + item.rec.name : ''} to cover shortage
+      </div>` : '';
+    const isGapCover = item.type === 'gap_cover';
+    return `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <span style="font-size:14px;font-weight:700;color:var(--text)">${item.name}</span>
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px">
+            <span style="background:${isGapCover ? '#fef3c7' : '#eff6ff'};color:${isGapCover ? '#92400e' : '#1d4ed8'};padding:2px 8px;border-radius:10px;font-weight:600">
+              Pull ${item.pullQty}
+            </span>
+            <span style="color:var(--muted)">Stock ${item.stock}</span>
+            <span style="font-weight:700;color:${afterColor}">${afterLabel}</span>
+          </div>
+        </div>
+        ${bakeNote}
+      </div>`;
+  };
+
+  const scheduledSection = scheduled.length ? `
+    <div style="margin-bottom:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">
+      Scheduled Today
+    </div>
+    ${scheduled.map(renderRow).join('')}` : '';
+
+  const gapSection = gapCovers.length ? `
+    <div style="margin-top:12px;margin-bottom:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">
+      Cover Demand Gap
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Gap is smaller than a full batch — pull from freezer stock instead of baking</div>
+    ${gapCovers.map(renderRow).join('')}` : '';
+
+  const emptyMsg = !list.length ? `
+    <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">
+      No freezer pulls scheduled for today.
+    </div>` : '';
+
+  const shortageHeader = hasShortage ? `
+    <div style="margin-bottom:12px;padding:10px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:12px;color:#dc2626;font-weight:600">
+      ⚠ Shortages detected — review items below before confirming pull
+    </div>` : '';
+
+  modal.innerHTML = `
+    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.25);
+      max-width:520px;width:90%;max-height:85vh;overflow-y:auto;padding:24px;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="font-size:18px;font-weight:800;color:var(--text);margin:0">🧺 Today's Freezer Pull</h3>
+        <button onclick="spClosePullModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:var(--muted);padding:4px;line-height:1">×</button>
+      </div>
+      ${shortageHeader}
+      <div style="margin-bottom:16px">${scheduledSection}${gapSection}${emptyMsg}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button onclick="spClosePullModal()"
+          style="padding:10px 18px;border:1.5px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer">
+          Cancel
+        </button>
+        <button onclick="spConfirmPull()"
+          style="padding:10px 20px;border:none;border-radius:8px;background:var(--navy);color:#fff;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation">
+          Confirm Pull →
+        </button>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function spClosePullModal() {
+  const modal = document.getElementById('sp-pull-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function spConfirmPull() {
+  spClosePullModal();
+  spSetPhase('post_pull');
+}
+
 function spShowBatchPlanForDay(globalIdx, dayKey, mondayStr) {
   const item = _wpSpItems[globalIdx];
   if (!item) return;
@@ -20864,11 +21090,16 @@ function spBurndownRow(itemName, stock, par, plannedQty) {
   const planned  = plannedQty || 0;
   const effective = stockNum !== null ? stockNum + planned : null;
   let pastRunout = false;
+  let firstDemandDay = true;
   const pills = days
     .filter(d => d.dayQty > 0)
     .map(d => {
+      const isToday = firstDemandDay; firstDemandDay = false;
+      const isDone  = isToday && _spPhase === 'post_pull';
       let bg, tc, warn = '';
-      if (effective === null) {
+      if (isDone) {
+        bg = 'var(--surface2)'; tc = 'var(--muted2)'; warn = ' ✓';
+      } else if (effective === null) {
         bg = 'var(--surface2)'; tc = 'var(--muted)';
       } else if (!pastRunout && d.cum > effective) {
         pastRunout = true;
@@ -20880,7 +21111,7 @@ function spBurndownRow(itemName, stock, par, plannedQty) {
         if (pct >= 0.85) { bg = '#fef9c3'; tc = '#92400e'; }
         else              { bg = '#dcfce7'; tc = '#15803d'; }
       }
-      return `<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:${bg};color:${tc};font-weight:600;white-space:nowrap">${d.label} ${d.cum}${warn}</span>`;
+      return `<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:${bg};color:${tc};font-weight:600;white-space:nowrap${isDone?';text-decoration:line-through;opacity:0.6':''}">${d.label} ${d.cum}${warn}</span>`;
     });
   if (!pills.length) return '';
   const stockPill = stockNum !== null
@@ -20925,16 +21156,50 @@ function renderSmartPlan() {
   const thisWeekCount = _wpSpItems.filter(i => i.suggestMondayStr === mondayStr).length;
   const needsAction   = _wpSpItems.filter(i => !i.onBoard && i.suggestMondayStr === mondayStr).length;
 
+  const ph = SP_PHASES[_spPhase] || SP_PHASES.pre_pull;
+  const phBg    = _spPhase === 'post_pull' ? '#dcfce7' : '#eff6ff';
+  const phColor = _spPhase === 'post_pull' ? '#15803d' : '#1d4ed8';
+  const phasePicker = `
+    <div style="position:relative;display:inline-block">
+      <button id="sp-phase-btn" onclick="spTogglePhasePicker()" title="Set today's production phase"
+        style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid ${phColor}40;
+          background:${phBg};color:${phColor};font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation;
+          white-space:nowrap">
+        <span>${ph.icon}</span><span>${ph.label}</span><span style="font-size:9px;opacity:0.7">▾</span>
+      </button>
+      <div id="sp-phase-picker" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:999;
+        background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.14);
+        padding:6px;min-width:210px">
+        ${Object.entries(SP_PHASES).map(([key, p]) => {
+          const isActive = key === _spPhase;
+          return `<button onclick="spSetPhase('${key}')"
+            style="display:flex;flex-direction:column;width:100%;padding:10px 12px;border:none;border-radius:8px;
+              background:${isActive ? 'var(--navy)' : 'transparent'};color:${isActive ? '#fff' : 'var(--text)'};
+              text-align:left;cursor:pointer;touch-action:manipulation;margin-bottom:2px">
+            <span style="font-size:13px;font-weight:700">${p.icon} ${p.label}</span>
+            <span style="font-size:11px;opacity:0.7;margin-top:1px">${p.sub}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+
   const summaryBar = `
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:10px 14px;
       background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
       <span style="font-size:13px;font-weight:700;color:var(--text)">Week of ${wpWeekLabel(_wpWeekMonday)}</span>
       <span style="font-size:12px;color:var(--muted)">·</span>
       <span style="font-size:12px;color:var(--text2)">${thisWeekCount} item${thisWeekCount !== 1 ? 's' : ''} this week</span>
-      ${onBoardCount ? `<span class="badge badge-info">✓ ${onBoardCount} on board</span>` : ''}
       ${needsAction  ? `<span class="badge badge-warn">${needsAction} need${needsAction !== 1 ? '' : 's'} action</span>` : ''}
       ${!thisWeekCount ? `<span class="badge badge-neutral">All stocked up this week</span>` : ''}
-      <span style="margin-left:auto;font-size:12px;color:var(--muted2)">${totalItems} total demand signals</span>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        ${_spPhase === 'pre_pull'
+          ? `<button onclick="spOpenPullModal()"
+              style="padding:5px 14px;border:1.5px solid #1d4ed8;border-radius:20px;background:#eff6ff;
+                color:#1d4ed8;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation;
+                white-space:nowrap">🧺 Pull from Freezer</button>`
+          : `<span style="font-size:11px;color:#15803d;font-weight:700">✓ Freezer pulled today</span>`}
+        ${phasePicker}
+      </div>
     </div>`;
 
   // Build day columns
@@ -20966,7 +21231,7 @@ function renderSmartPlan() {
           </div>`
         : '';
       const burndownRow = !item.variants ? spBurndownRow(item.name, item.current, item.par, item.plannedQty || 0) : '';
-      const batchLine = item.suggestedBatches
+      const batchLine = (!item.canCoverFromFreezer && item.suggestedBatches)
         ? `<span style="font-size:10px;color:var(--success)"> · ${item.suggestedBatches} batch${item.suggestedBatches!==1?'es':''}</span>` : '';
 
       // Day-selector buttons — baker picks which day to plan this item
@@ -21000,12 +21265,20 @@ function renderSmartPlan() {
         ${burndownRow}
         ${variantLine}
         <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:6px;align-items:center">
-          <button onclick="spOpenPlanModal(${globalIdx})"
-            style="padding:4px 10px;background:var(--navy);border:none;border-radius:var(--radius-sm);
-              font-size:10px;font-weight:600;color:#fff;cursor:pointer;touch-action:manipulation">
-            + Add to Board
-          </button>
-          ${spDayBtns}
+          ${item.canCoverFromFreezer
+            ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%">
+                <span style="padding:4px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--radius-sm);
+                  font-size:10px;font-weight:700;color:#92400e;white-space:nowrap">
+                  🧺 Pull ${item.freezerCoverQty} from freezer — covers gap
+                </span>
+                <span style="font-size:10px;color:var(--muted)">Stock ${item.stock} · gap of ${item.gap} &lt; 1 batch</span>
+              </div>`
+            : `<button onclick="spOpenPlanModal(${globalIdx})"
+                style="padding:4px 10px;background:var(--navy);border:none;border-radius:var(--radius-sm);
+                  font-size:10px;font-weight:600;color:#fff;cursor:pointer;touch-action:manipulation">
+                + Add to Board
+              </button>
+              ${spDayBtns}`}
         </div>
       </div>`;
     }).join('');
@@ -22630,6 +22903,7 @@ function wpPrintBakerChecklists(dayData, dateStr) {
 const FB_SYNC_KEYS = new Set(["bk_staff","bk_recipes","bk_standing_tasks","bk_role_slots","bk_freezer_defs","bk_ing_defs","bk_cl_defs_opening","bk_cl_defs_closing","bk_cl_defs_baker","bk_side_tasks","bk_dough_recipes","bk_sandwich_recipes","bk_sg_recipes","bk_shift_templates","bk_display_defs","bk_channels","bk_ing_lib","bk_price_lib","bk_freezer","bk_freezer_pars","bk_freezer_last_submit","bk_freezer_last_scan","bk_ingredients","bk_ing_last_submit","bk_cl_state_opening","bk_cl_state_closing","bk_cl_state_baker","bk_cl_log_opening","bk_cl_log_closing","bk_cl_log_baker","bk_eod_log","bk_eod_locations","bk_side_task_log","bk_staff_board","bk_alert","bk_dough_batches","bk_week_plan","bk_display_log","bk_inv_state","bk_orders_state","bk_order_batches","bk_ingredient_status","bk_custom_ingredients","bk_hidden_ingredients","bk_prep_status","bk_custom_prep_items","bk_hidden_prep_items","bk_daily_sel","bk_weekly_buffers","bk_weekly_confirmed","bk_levain_pool","bk_closed_days","bk_dough_pool","bk_today_tasks","bk_crew_shifts","bk_vis_blocks","bk_vis_checks","bk_tl_templates","bk_supply_board","bk_restock_requests","bk_hub_state"]);
 const _ls = { set: localStorage.setItem.bind(localStorage), get: localStorage.getItem.bind(localStorage) };
 let _fbDb = null, _fbFunctions = null, _fbLastSync = null;
+let _squareSyncLog = null; // last Square push result loaded from Firestore
 const secureBases = {}, secureStops = [];
 const secureHeld = {};
 let secureQueue = {}, secureBusy = false, secureReady = false, secureQueueKey = null;
@@ -22846,6 +23120,14 @@ function fbSetupListeners(db) {
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { secureHeld[key] = value; return; }
     if (value !== secureBases[key]) secureApply(key, value);
   }, () => { fbSetSyncStatus('error'); })));
+  // Square sync log — read-only, not part of secure sync
+  db.collection('bakery_data').doc('bk_square_sync_log').onSnapshot(snap => {
+    try {
+      const val = snap.data()?.value;
+      _squareSyncLog = val ? JSON.parse(val) : null;
+    } catch(e) { _squareSyncLog = null; }
+    sqRefreshStatusBadge();
+  }, () => {});
 }
 document.addEventListener('focusout', () => setTimeout(() => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
@@ -25644,6 +25926,46 @@ function renderRestockSection() {
   return html;
 }
 
+// ── Square sync status ────────────────────────────────────────
+function sqGetStatusHtml() {
+  const log = _squareSyncLog;
+  if (!log) {
+    return `<span id="sq-status-badge" style="font-size:11px;color:#b45309;font-weight:600;white-space:nowrap"
+      title="Square inventory has never been synced from this app">⚠ Square: never synced</span>`;
+  }
+  if (!log.ok) {
+    return `<span id="sq-status-badge" style="font-size:11px;color:#dc2626;font-weight:600;white-space:nowrap"
+      title="Last sync attempt failed: ${(log.error || '').replace(/"/g,'&quot;')}"
+      >🔴 Square: sync failed · ${log.source === 'scheduled' ? 'auto' : 'manual'}</span>`;
+  }
+  if (log.skippedMonday) {
+    return `<span id="sq-status-badge" style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap"
+      title="Monday is a closed day — push skipped">⏭ Square: skipped (Mon closed)</span>`;
+  }
+  const tsDate = new Date(log.ts);
+  const now    = new Date();
+  const hrsAgo = (now - tsDate) / 3600000;
+  const timeStr = tsDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dayStr  = tsDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const isToday = tsDate.toDateString() === now.toDateString();
+  const ago     = isToday ? `today ${timeStr}` : `${dayStr}`;
+  const freshness = hrsAgo < 26 ? '🟢' : hrsAgo < 50 ? '🟡' : '🔴';
+  const freshTitle = hrsAgo < 26 ? 'Synced recently' : hrsAgo < 50 ? 'Synced yesterday — consider running again' : 'Sync is overdue';
+  const src     = log.source === 'scheduled' ? 'auto' : 'manual';
+  return `<span id="sq-status-badge" style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap"
+    title="${freshTitle} · ${log.pushed} items · ${log.skipped?.length || 0} skipped · ${src}"
+    >${freshness} Square: ${log.pushed} items · ${ago}</span>`;
+}
+
+function sqRefreshStatusBadge() {
+  const el = document.getElementById('sq-status-badge');
+  if (!el) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = sqGetStatusHtml();
+  const newEl = tmp.firstElementChild;
+  if (newEl) el.replaceWith(newEl);
+}
+
 // ── Square EOD Push ───────────────────────────────────────────
 async function sqEODPush() {
   if (!authCanAccess('Owner')) { alert('Owner access required.'); return; }
@@ -26149,6 +26471,11 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.9': ['🔄 Square inventory — fully automatic: squareNightlyPush Firebase Function now runs at 9 PM ET every night with no computer required; fixed channel filter bug that was silently skipping all products (was restricted to "bella" channels; now sums all channels, relying on the variation ID map to filter to retail items); manual "Push to Square" button still works for ad-hoc pushes; both manual and scheduled pushes write a result log to Firestore (bk_square_sync_log); Supply Board now shows a live Square status badge (🟢/🟡/🔴) under the push button indicating last sync time, item count, and source (auto vs. manual); badge updates in real-time when a push completes'],
+  '2.5.8': ['📅 Priority List — daily demand breakdown: each card now shows demand by day-of-week (SU M T W TH F SA) instead of a single "4-day demand" total; days with no demand show a dash; source-grouped items (e.g. Croissant Dough) sum demand across all variants per day; spans all 7 days so the full week\'s demand is visible at a glance'],
+  '2.5.7': ['🗂 Bake Board — tab navigation redesigned: tabs are now larger (15px, bold) with a thicker 3px active underline for clear visual prominence; "Needs Baking" renamed to "Priority List" — reflects that the tab covers all production needs (dough mixing, shaping, baking) not just literal baking'],
+  '2.5.6': ['🧺 Smart Plan — Pull from Freezer workflow: phase simplified to 2 states (Pre-Pull / Post-Pull); day auto-resets to Pre-Pull each morning; "Pull from Freezer" button in summary bar opens a pull checklist modal — shows each item\'s pull qty, current stock, and stock after pull; ⚠ shortage alerts flag items where freezer stock is less than today\'s pull demand with "make N batches" guidance; gap-cover logic: when a demand gap is smaller than a full batch AND current freezer stock covers it, Smart Plan shows "Pull N from freezer — covers gap" instead of scheduling a batch; confirming the pull switches to Post-Pull phase and removes covered-from-freezer items from the plan'],
+  '2.5.5': ['⏱ Smart Plan — production phase picker: clickable badge in the summary bar cycles between Morning / In Production / Restocked; in Restocked phase the Today pill in every burn-down row is greyed out with strikethrough to show it\'s already been fulfilled; phase persists in sessionStorage for the day; popup closes on click-outside; sets the pattern for future interactive popup controls'],
   '2.5.4': ['🎯 Smart Plan — production-aware: items whose stock + planned bake board production already covers demand are removed from the list entirely; each card now shows day-selector buttons (Mo/Tu/We…) so baker can plan on any allowed day — clicking opens the stage-chain approval modal for that day; "Add to Board" button moved inline with day buttons; burn-down row now shows "+N planned" pill and uses stock+planned as the coverage threshold; fixed bbSuggestItemOnBoard to check sourceItem and text fields (not just name); fixed spDirectAdd to use name field matching board convention; added batchId to all board items added via batch plan so multi-stage recipes count as 1 batch not N'],
   '2.5.3': ['📊 Smart Plan — inline burn-down row on every product card: Stock pill + cumulative demand by day (green → amber at 85% → red ⚠ when exceeded); source-grouped cards (e.g. Croissant Dough) show per-variant burn-down rows; ✓ On Board cards also show burn-down so stock coverage is visible at a glance'],
   '2.5.2': ['🗓 Smart Plan — new Bake Board tab; auto-generates a full 7-day production plan from channel demand + freezer inventory + recipe stage chains; each day column shows what needs to happen and why (urgency badge); derivative products (Almond/Choc Croissant) collapse to their source dough recipe; "Add to Board" on a card opens the existing stage-chain approval modal; "Add All" on a day header directly adds all unscheduled tasks for that day; already-scheduled items show as ✓ On Board; overflow section shows items planned for next week; plan updates live when you navigate weeks'],
