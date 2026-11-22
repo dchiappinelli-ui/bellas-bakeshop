@@ -1846,20 +1846,32 @@ document.addEventListener('DOMContentLoaded', function() {
       <p class="subtitle" style="margin:0">Weekly production plan — bakers and items in priority order, top to bottom</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <button onclick="wpPrevWeek()"
+      <button onclick="wpNavPrev()"
         style="padding:10px 16px;border:2px solid #ccc;border-radius:4px;background:#fff;
           font-size:18px;cursor:pointer;touch-action:manipulation">←</button>
       <div id="wp-week-label"
         style="font-size:15px;font-weight:700;min-width:190px;text-align:center;color:#111"></div>
-      <button onclick="wpNextWeek()"
+      <button onclick="wpNavNext()"
         style="padding:10px 16px;border:2px solid #ccc;border-radius:4px;background:#fff;
           font-size:18px;cursor:pointer;touch-action:manipulation">→</button>
-      <select id="wp-view-select" onchange="_wpViewDays=+this.value;renderWeekPlan()"
+      <select id="wp-view-select" onchange="_wpViewDays=+this.value;_wpViewStart=null;renderWeekPlan()"
         style="padding:10px 12px;border:2px solid #ccc;border-radius:4px;background:#fff;
           font-size:13px;font-weight:700;color:#111;cursor:pointer;touch-action:manipulation">
         <option value="7">7 Days</option>
         <option value="3" selected>3 Days</option>
         <option value="1">1 Day</option>
+      </select>
+      <select id="wp-start-day-select" onchange="wpSetStartDay(+this.value)"
+        title="Week start day (7-day view)"
+        style="padding:10px 12px;border:2px solid #ccc;border-radius:4px;background:#fff;
+          font-size:13px;font-weight:700;color:#111;cursor:pointer;touch-action:manipulation">
+        <option value="0">Sun first</option>
+        <option value="1" selected>Mon first</option>
+        <option value="2">Tue first</option>
+        <option value="3">Wed first</option>
+        <option value="4">Thu first</option>
+        <option value="5">Fri first</option>
+        <option value="6">Sat first</option>
       </select>
       <button onclick="wpCopyToNext()"
         style="padding:10px 18px;border:2px solid #111;border-radius:4px;background:#fff;
@@ -3235,7 +3247,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.14';
+const APP_VERSION      = '2.5.15';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -20594,6 +20606,9 @@ const WP_BAKER_COLORS = ['#1a2a6a','#1a5a2a','#7a2a00','#4a1a7a','#005a4a','#6a0
 
 let _wpWeekMonday        = null;
 let _wpViewDays          = 3;
+let _wpViewStart         = null;  // first date of current view (any day of week)
+let _wpWeekStartDay      = parseInt(localStorage.getItem('bk_wp_start_day') || '1'); // 0=Sun..6=Sat
+let _wpColumnMondayStr   = {};    // {dayKey: mondayStr}, populated each render
 let _wpTab               = 'plan'; // 'plan' | 'suggest' | 'smart'
 let _wpSpItems           = [];    // current Smart Plan items (refreshed on render)
 let _spPhase             = (() => {
@@ -20648,6 +20663,24 @@ function wpGetCurrentMonday() {
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
   return d;
 }
+function wpMondayOf(date) {
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const dow = d.getDay();
+  d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+  return d;
+}
+function wpGetCurrentViewStart() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  if (_wpViewDays < 7) return d; // 1/3-day: start from today
+  // 7-day: find most recent occurrence of _wpWeekStartDay
+  const dow = d.getDay();
+  const diff = (dow - _wpWeekStartDay + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+function wpMondayForDay(dayKey) {
+  return _wpColumnMondayStr[dayKey] || wpMondayStr(_wpWeekMonday);
+}
 
 function wpGetWeek(mondayStr) {
   const all = wpGetAllPlan();
@@ -20692,18 +20725,33 @@ function wpWeekLabel(monday) {
   return fmt(monday) + ' – ' + fmt(sun, true);
 }
 
-function wpPrevWeek() {
-  _wpWeekMonday = new Date(_wpWeekMonday);
-  _wpWeekMonday.setDate(_wpWeekMonday.getDate() - 7);
+function wpNavPrev() {
+  if (!_wpViewStart) _wpViewStart = wpGetCurrentViewStart();
+  const d = new Date(_wpViewStart);
+  d.setDate(d.getDate() - _wpViewDays);
+  _wpViewStart = d;
+  _wpWeekMonday = wpMondayOf(_wpViewStart);
   renderWeekPlan();
   if (_wpTab === 'smart') renderSmartPlan();
 }
-function wpNextWeek() {
-  _wpWeekMonday = new Date(_wpWeekMonday);
-  _wpWeekMonday.setDate(_wpWeekMonday.getDate() + 7);
+function wpNavNext() {
+  if (!_wpViewStart) _wpViewStart = wpGetCurrentViewStart();
+  const d = new Date(_wpViewStart);
+  d.setDate(d.getDate() + _wpViewDays);
+  _wpViewStart = d;
+  _wpWeekMonday = wpMondayOf(_wpViewStart);
   renderWeekPlan();
   if (_wpTab === 'smart') renderSmartPlan();
 }
+function wpSetStartDay(dow) {
+  _wpWeekStartDay = dow;
+  localStorage.setItem('bk_wp_start_day', dow);
+  _wpViewStart = null;
+  renderWeekPlan();
+}
+// Kept as aliases for any legacy calls
+function wpPrevWeek() { wpNavPrev(); }
+function wpNextWeek() { wpNavNext(); }
 
 function wpCopyToNext() {
   const mondayStr  = wpMondayStr(_wpWeekMonday);
@@ -21907,42 +21955,53 @@ function spOpenPlanModal(globalIdx) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function renderWeekPlan() {
-  if (!_wpWeekMonday) _wpWeekMonday = wpGetCurrentMonday();
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const weekData  = wpGetWeek(mondayStr);
+  if (!_wpViewStart) _wpViewStart = wpGetCurrentViewStart();
+  _wpWeekMonday = wpMondayOf(_wpViewStart);
+
+  // Build columns as absolute dates from _wpViewStart
+  const DOW_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
+  const cols = [];
+  for (let i = 0; i < _wpViewDays; i++) {
+    const d = new Date(_wpViewStart);
+    d.setDate(d.getDate() + i);
+    const dayKey = DOW_KEYS[d.getDay()];
+    const mon = wpMondayOf(d);
+    const mondayStr = wpMondayStr(mon);
+    cols.push({ date: d, dayKey, mondayStr });
+  }
+  // Populate column Monday map so action functions resolve per-column week
+  _wpColumnMondayStr = {};
+  cols.forEach(c => { _wpColumnMondayStr[c.dayKey] = c.mondayStr; });
+
   const lbl = document.getElementById('wp-week-label');
-  if (lbl) lbl.textContent = wpWeekLabel(_wpWeekMonday);
+  if (lbl) {
+    if (_wpViewDays === 1) {
+      lbl.textContent = cols[0].date.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+    } else {
+      const first = cols[0].date, last = cols[cols.length - 1].date;
+      const fmt = d2 => d2.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+      lbl.textContent = fmt(first) + ' – ' + fmt(last) + ', ' + last.getFullYear();
+    }
+  }
   const selEl = document.getElementById('wp-view-select');
   if (selEl) selEl.value = _wpViewDays;
+  const sdEl = document.getElementById('wp-start-day-select');
+  if (sdEl) sdEl.value = _wpWeekStartDay;
   // keep tab visibility in sync
   wpSwitchTab(_wpTab);
 
   const today = new Date(); today.setHours(0,0,0,0);
 
-  // Compute which days to display based on _wpViewDays
-  const visibleDays = (() => {
-    if (_wpViewDays === 7) return WP_DAYS;
-    const weekEnd = new Date(_wpWeekMonday); weekEnd.setDate(weekEnd.getDate() + 6);
-    const inWeek = today >= _wpWeekMonday && today <= weekEnd;
-    const dayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
-    const todayKey = dayKeys[today.getDay()];
-    let startIdx = inWeek ? WP_DAYS.indexOf(todayKey) : 0;
-    if (startIdx < 0) startIdx = 0;
-    startIdx = Math.min(startIdx, WP_DAYS.length - _wpViewDays);
-    return WP_DAYS.slice(startIdx, startIdx + _wpViewDays);
-  })();
-
   const boardEl = document.getElementById('wp-board');
   if (!boardEl) return;
 
-  boardEl.innerHTML = visibleDays.map((day, idx) => {
-    const dayData = weekData[day];
-    const wpIdx = WP_DAYS.indexOf(day);
-    const dayDate = new Date(_wpWeekMonday);
-    dayDate.setDate(dayDate.getDate() + wpIdx);
-    const isToday = dayDate.getTime() === today.getTime();
-    const dateStr = dayDate.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const isLast  = idx === visibleDays.length - 1;
+  boardEl.innerHTML = cols.map(({ date, dayKey, mondayStr }, idx) => {
+    const weekData = wpGetWeek(mondayStr);
+    const dayData = weekData[dayKey];
+    const day = dayKey; // alias so all existing template strings work unchanged
+    const isToday = date.getTime() === today.getTime();
+    const dateStr = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const isLast  = idx === cols.length - 1;
 
     const bakerChips = dayData.bakers.length
       ? dayData.bakers.map(name => {
@@ -22050,7 +22109,7 @@ function renderWeekPlan() {
         : cardsHtml;
     }).join('');
 
-    return `<div style="flex:0 0 max(170px,calc(100%/${visibleDays.length}));min-width:170px;display:flex;
+    return `<div style="flex:0 0 max(170px,calc(100%/${cols.length}));min-width:170px;display:flex;
       flex-direction:column;border-right:${isLast?'none':'2px solid #111'}">
       <div style="background:${isToday?'#1a3a8a':'#111'};color:#fff;padding:13px 12px;
         border-bottom:2px solid ${isToday?'#3a6acc':'#333'}">
@@ -22186,7 +22245,7 @@ function wpShowTimeline(day) {
   const panel = document.getElementById('wp-timeline-panel');
   if (!panel) return;
 
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(day);
   const weekData  = wpGetWeek(mondayStr);
   const dayData   = weekData[day];
   const recurMapTl = Object.fromEntries(wpGetRecurring().map(r => [r.id, r]));
@@ -22371,7 +22430,7 @@ function wpOpenItemModal(day, itemId) {
   if (isRecurring) {
     item = wpGetRecurring().find(r => r.id === itemId) || null;
   } else {
-    const dayData = wpGetWeek(wpMondayStr(_wpWeekMonday))[day];
+    const dayData = wpGetWeek(wpMondayForDay(day))[day];
     item = itemId ? dayData.items.find(i => i.id === itemId) : null;
   }
 
@@ -22562,7 +22621,7 @@ function wpSaveItem() {
       wpSaveRecurring(list);
       // If converting an existing day-specific item to recurring, remove it from the day
       if (_wpEditItemId) {
-        const mondayStr = wpMondayStr(_wpWeekMonday);
+        const mondayStr = wpMondayForDay(_wpEditDay);
         const weekData  = wpGetWeek(mondayStr);
         weekData[_wpEditDay].items = weekData[_wpEditDay].items.filter(i => i.id !== _wpEditItemId);
         wpSaveWeek(mondayStr, weekData);
@@ -22570,7 +22629,7 @@ function wpSaveItem() {
     }
   } else {
     // Save as a regular day-specific item
-    const mondayStr = wpMondayStr(_wpWeekMonday);
+    const mondayStr = wpMondayForDay(_wpEditDay);
     const weekData  = wpGetWeek(mondayStr);
     const dayItems  = weekData[_wpEditDay].items;
     if (_wpEditItemId) {
@@ -22590,7 +22649,7 @@ function wpDeleteItem() {
     wpSaveRecurring(wpGetRecurring().filter(r => r.id !== _wpEditRecurringId));
   } else {
     if (!_wpEditItemId || !confirm('Remove this item?')) return;
-    const mondayStr = wpMondayStr(_wpWeekMonday);
+    const mondayStr = wpMondayForDay(_wpEditDay);
     const weekData  = wpGetWeek(mondayStr);
     weekData[_wpEditDay].items = weekData[_wpEditDay].items.filter(i => i.id !== _wpEditItemId);
     wpSaveWeek(mondayStr, weekData);
@@ -22735,7 +22794,7 @@ function wpConfirmPush() {
 }
 
 function wpMoveItem(day, itemId, dir) {
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(day);
   const weekData  = wpGetWeek(mondayStr);
   const items     = weekData[day].items;
   const idx       = items.findIndex(i => i.id === itemId);
@@ -22748,32 +22807,51 @@ function wpMoveItem(day, itemId, dir) {
 
 function wpMoveItemToDay(fromDay, itemId, toDay) {
   document.getElementById('wp-lp-backdrop')?.click();
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const weekData  = wpGetWeek(mondayStr);
-  const idx = weekData[fromDay].items.findIndex(i => i.id === itemId);
-  if (idx < 0) return;
-  const [item] = weekData[fromDay].items.splice(idx, 1);
-  weekData[toDay].items.push(item);
-  wpSaveWeek(mondayStr, weekData);
+  const fromMon = wpMondayForDay(fromDay);
+  const toMon   = wpMondayForDay(toDay);
+  if (fromMon === toMon) {
+    const weekData = wpGetWeek(fromMon);
+    const idx = weekData[fromDay].items.findIndex(i => i.id === itemId);
+    if (idx < 0) return;
+    const [item] = weekData[fromDay].items.splice(idx, 1);
+    weekData[toDay].items.push(item);
+    wpSaveWeek(fromMon, weekData);
+  } else {
+    const fromWeek = wpGetWeek(fromMon);
+    const toWeek   = wpGetWeek(toMon);
+    const idx = fromWeek[fromDay].items.findIndex(i => i.id === itemId);
+    if (idx < 0) return;
+    const [item] = fromWeek[fromDay].items.splice(idx, 1);
+    wpSaveWeek(fromMon, fromWeek);
+    toWeek[toDay].items.push(item);
+    wpSaveWeek(toMon, toWeek);
+  }
   renderWeekPlan();
 }
 
 function wpCopyItemToDay(fromDay, itemId, toDay) {
   document.getElementById('wp-lp-backdrop')?.click();
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const weekData  = wpGetWeek(mondayStr);
-  const item = weekData[fromDay].items.find(i => i.id === itemId);
+  const fromMon = wpMondayForDay(fromDay);
+  const toMon   = wpMondayForDay(toDay);
+  const fromWeek = wpGetWeek(fromMon);
+  const item = fromWeek[fromDay].items.find(i => i.id === itemId);
   if (!item) return;
   const copy = Object.assign({}, item, { id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) });
-  weekData[toDay].items.push(copy);
-  wpSaveWeek(mondayStr, weekData);
+  if (fromMon === toMon) {
+    fromWeek[toDay].items.push(copy);
+    wpSaveWeek(fromMon, fromWeek);
+  } else {
+    const toWeek = wpGetWeek(toMon);
+    toWeek[toDay].items.push(copy);
+    wpSaveWeek(toMon, toWeek);
+  }
   renderWeekPlan();
 }
 
 function wpDeleteItemGesture(day, itemId) {
   const wrap = document.querySelector(`.wp-item-wrap[data-item-id="${itemId}"]`);
   const finish = () => {
-    const mondayStr = wpMondayStr(_wpWeekMonday);
+    const mondayStr = wpMondayForDay(day);
     const weekData  = wpGetWeek(mondayStr);
     weekData[day].items = weekData[day].items.filter(i => i.id !== itemId);
     wpSaveWeek(mondayStr, weekData);
@@ -22790,11 +22868,10 @@ function wpDeleteItemGesture(day, itemId) {
 function wpShowLongPressMenu(wrap, day, itemId) {
   document.getElementById('wp-lp-backdrop')?.remove();
   document.getElementById('wp-lp-menu')?.remove();
-  const mondayStr  = wpMondayStr(_wpWeekMonday);
   const isRecurring = itemId && itemId.startsWith('rec_');
   const item = isRecurring
     ? wpGetRecurring().find(r => r.id === itemId)
-    : wpGetWeek(mondayStr)[day]?.items.find(i => i.id === itemId);
+    : wpGetWeek(wpMondayForDay(day))[day]?.items.find(i => i.id === itemId);
   if (!item) return;
   const rect     = wrap.getBoundingClientRect();
   const menuTop  = Math.min(rect.bottom + 6, window.innerHeight - 280);
@@ -22859,7 +22936,7 @@ function wpShowLongPressMenu(wrap, day, itemId) {
 }
 
 function wpBreakParallel(day, itemId) {
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(day);
   const weekData  = wpGetWeek(mondayStr);
   const item = weekData[day]?.items.find(i => i.id === itemId);
   if (!item) return;
@@ -23060,7 +23137,7 @@ function _wpGestDragEnd() {
   const ti         = _wpGest?.targetIdx;
   const { day, itemId } = _wpGest;
   _wpGestDragCleanup();
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(day);
   const weekData  = wpGetWeek(mondayStr);
   const items     = weekData[day].items;
   const fi        = items.findIndex(i => i.id === itemId);
@@ -23170,9 +23247,9 @@ function wpUpdateCopyBtn() {
 }
 
 function wpConfirmCopy() {
-  const mondayStr = wpMondayStr(_wpWeekMonday);
-  const weekData  = wpGetWeek(mondayStr);
-  const fromItems = weekData[_wpCopyFromDay]?.items || [];
+  const fromMon  = wpMondayForDay(_wpCopyFromDay);
+  const fromWeek = wpGetWeek(fromMon);
+  const fromItems = fromWeek[_wpCopyFromDay]?.items || [];
   const srcItem   = fromItems.find(it => it.id === _wpCopyItemId);
   if (!srcItem) { document.getElementById('wp-copy-modal').style.display = 'none'; return; }
 
@@ -23181,20 +23258,28 @@ function wpConfirmCopy() {
     return b && b.getAttribute('data-selected') === 'true';
   });
 
+  // Group target days by their Monday (may cross weeks)
+  const byMon = {};
   selected.forEach(day => {
-    if (!weekData[day]) weekData[day] = { items:[], bakers:[] };
-    if (!weekData[day].items) weekData[day].items = [];
-    // Don't duplicate if identical item name already exists on that day
-    const alreadyThere = weekData[day].items.some(it => it.name === srcItem.name);
-    if (!alreadyThere) {
-      weekData[day].items.push({
-        ...srcItem,
-        id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      });
-    }
+    const mon = wpMondayForDay(day);
+    if (!byMon[mon]) byMon[mon] = [];
+    byMon[mon].push(day);
   });
-
-  wpSaveWeek(mondayStr, weekData);
+  Object.entries(byMon).forEach(([mon, days]) => {
+    const weekData = wpGetWeek(mon);
+    days.forEach(day => {
+      if (!weekData[day]) weekData[day] = { items:[], bakers:[] };
+      if (!weekData[day].items) weekData[day].items = [];
+      const alreadyThere = weekData[day].items.some(it => it.name === srcItem.name);
+      if (!alreadyThere) {
+        weekData[day].items.push({
+          ...srcItem,
+          id: 'wpi_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        });
+      }
+    });
+    wpSaveWeek(mon, weekData);
+  });
   document.getElementById('wp-copy-modal').style.display = 'none';
   renderWeekPlan();
   wpInitGestures();
@@ -23204,7 +23289,7 @@ function wpConfirmCopy() {
 // — Baker picker —
 function wpOpenBakerPicker(day) {
   _wpBakerDay = day;
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(day);
   const dayData   = wpGetWeek(mondayStr)[day];
   const staff     = JSON.parse(localStorage.getItem('bk_staff') || '[]');
   document.getElementById('wp-baker-modal-title').textContent = 'Bakers on shift — ' + WP_DAY_NAMES[day];
@@ -23234,7 +23319,7 @@ function wpOpenBakerPicker(day) {
   document.body.style.overflow = 'hidden';
 }
 function wpToggleBaker(name, btn) {
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(_wpBakerDay);
   const weekData  = wpGetWeek(mondayStr);
   const bakers    = weekData[_wpBakerDay].bakers;
   const idx       = bakers.indexOf(name);
@@ -27030,6 +27115,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.15': ['📅 Bake Board navigation — arrows now move by view size (1 day in 1-day mode, 3 days in 3-day mode, 7 days in 7-day mode); new "week start day" selector lets you set any day as the first column of a 7-day view (e.g. Sun first so today\'s Sunday shows at the left); cross-week views (e.g. Sun from one data week + Mon-Sat from the next) are handled correctly — moving, copying, adding, and deleting items all write to the right data week automatically'],
   '2.5.14': ['🔗 Freezer link migration tool — amber banner appears when unlinked items exist; "Link Now" opens a step-through modal covering every unlinked item across all freezers; auto-matches each item to a recipe or ingredient by name and pre-selects the best match; confirm, swap to a different pick, or mark as Manual; progress bar tracks completion; skipped items can be revisited next time the banner is shown'],
   '2.5.13': ['🔗 Freezer data integrity — Add Item now has 3 source tabs: Recipe (pick from recipe library), Ingredient (pick from price library), Manual (free text for purchased/external items); each item displays a source badge (📖 recipe / 🧂 ingredient / · unlinked) so mis-linked items are immediately visible; source stored as itemLinks per freezer — all existing items appear as unlinked until re-added or migrated'],
   '2.5.12': ['🗂 Recipe UI — recipes now open in a 3-tab modal (Details / Production / Costing) instead of inline expansion; cards show a compact summary with click-to-open; Costing tab includes an inline unit converter (oz/lbs/cups/tbsp/tsp → grams)'],
