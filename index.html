@@ -2677,24 +2677,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Add item row -->
   <div id="freezer-add-row" style="display:none;margin-top:16px;background:var(--surface2);
-       border:1px solid var(--border);border-radius:4px;padding:14px 16px">
+       border:1px solid var(--border);border-radius:8px;padding:14px 16px">
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
-         color:var(--muted);margin-bottom:10px">Add Item</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+         color:var(--muted);margin-bottom:10px">Add Item to Freezer</div>
+    <!-- Source type tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap">
+      <button id="fz-tab-recipe" onclick="freezerSetAddTab('recipe')"
+        style="padding:6px 14px;border-radius:6px;border:2px solid var(--accent);background:var(--accent);color:#1a1209;font-size:12px;font-weight:700;cursor:pointer">📖 Recipe</button>
+      <button id="fz-tab-ingredient" onclick="freezerSetAddTab('ingredient')"
+        style="padding:6px 14px;border-radius:6px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer">🧂 Ingredient</button>
+      <button id="fz-tab-manual" onclick="freezerSetAddTab('manual')"
+        style="padding:6px 14px;border-radius:6px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer">✏️ Manual</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+      <!-- Recipe picker -->
+      <select id="fz-add-recipe-sel"
+        style="flex:2;min-width:200px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"></select>
+      <!-- Ingredient picker -->
+      <select id="fz-add-ing-sel"
+        style="display:none;flex:2;min-width:200px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"></select>
+      <!-- Manual text input -->
       <input id="freezer-add-input" type="text" placeholder="Item name…"
         onkeydown="if(event.key==='Enter')freezerAddItem()"
-        style="flex:2;min-width:160px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
-               border-radius:4px;color:var(--text);font-size:14px">
+        style="display:none;flex:2;min-width:160px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px">
+      <!-- Category (always shown) -->
       <select id="freezer-add-cat-select" onchange="freezerCatSelectChange()"
-        style="flex:1;min-width:130px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);
-               border-radius:4px;color:var(--text);font-size:13px"></select>
+        style="flex:1;min-width:130px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px"></select>
       <input id="freezer-add-cat" type="text" placeholder="New category name…"
         onkeydown="if(event.key==='Enter')freezerAddItem()"
-        style="display:none;flex:1;min-width:130px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);
-               border-radius:4px;color:var(--text);font-size:14px">
+        style="display:none;flex:1;min-width:130px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px">
       <button onclick="freezerAddItem()"
-        style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:10px 18px;
-               font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
+        style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
     </div>
   </div>
 
@@ -3147,7 +3160,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.11';
+const APP_VERSION      = '2.5.13';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4158,17 +4171,14 @@ function addStage(recipeId) {
   };
   r.stages.push(stage);
   save();
-  renderRecipes();
-  // Re-expand
-  setTimeout(() => toggleRecipe(recipeId), 50);
+  renderRecipeModal(recipeId);
 }
 
 function deleteStage(recipeId, stageId) {
   const r = recipes.find(r => r.id === recipeId);
   r.stages = r.stages.filter(s => s.id !== stageId);
   save();
-  renderRecipes();
-  setTimeout(() => toggleRecipe(recipeId), 50);
+  renderRecipeModal(recipeId);
 }
 
 function addPreferment(recipeId) {
@@ -4186,8 +4196,7 @@ function addPreferment(recipeId) {
     notes:        document.getElementById(`pf-notes-${recipeId}`)?.value || '',
   });
   save();
-  renderRecipes();
-  setTimeout(() => toggleRecipe(recipeId), 50);
+  renderRecipeModal(recipeId);
 }
 
 function updatePreferment(recipeId, prefId, field, val) {
@@ -4206,13 +4215,11 @@ function deletePreferment(recipeId, prefId) {
   if (!r || !r.preferments) return;
   r.preferments = r.preferments.filter(p => p.id !== prefId);
   save();
-  renderRecipes();
-  setTimeout(() => toggleRecipe(recipeId), 50);
+  renderRecipeModal(recipeId);
 }
 
 function toggleRecipe(id) {
-  const body = document.getElementById(`recipe-body-${id}`);
-  if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
+  openRecipeModal(id);
 }
 
 function skillBadge(skill) {
@@ -4264,9 +4271,7 @@ function updateStage(recipeId, stageId, field, val) {
   }
   save();
   if (field === 'day') {
-    // Day changes affect grouping — full re-render, keep this recipe expanded
-    renderRecipes();
-    setTimeout(() => toggleRecipe(recipeId), 50);
+    renderRecipeModal(recipeId);
     return;
   }
   // Refresh just the timing pills without full re-render
@@ -4304,15 +4309,8 @@ function addIngredient(recipeId) {
     costPerUnit
   });
   save();
-  renderRecipes();
-  setTimeout(() => {
-    toggleRecipe(recipeId);
-    setTimeout(() => {
-      document.getElementById('ing-name-' + recipeId)?.focus();
-      const previewEl = document.getElementById('ing-cost-preview-' + recipeId);
-      if (previewEl) previewEl.innerHTML = '';
-    }, 50);
-  }, 30);
+  renderRecipeModal(recipeId);
+  setTimeout(() => document.getElementById('ing-name-' + recipeId)?.focus(), 80);
 }
 
 function plSyncIngredient(recipeId, ingId) {
@@ -4326,8 +4324,7 @@ function plSyncIngredient(recipeId, ingId) {
   ing.costPerUnit = 0;
   if (!ing.unit) ing.unit = 'g';
   save();
-  renderRecipes();
-  setTimeout(() => toggleRecipe(recipeId), 30);
+  renderRecipeModal(recipeId);
 }
 
 function plAutoFillIng(recipeId) {
@@ -4355,7 +4352,7 @@ function plSyncAllIngredients(recipeId) {
     // Clear manual override so each ingredient resolves live from the library going forward
     if (lib && lib.pricePerGram) { ing.costPerUnit = 0; if (!ing.unit) ing.unit = 'g'; synced++; }
   });
-  if (synced > 0) { save(); renderRecipes(); setTimeout(() => toggleRecipe(recipeId), 30); }
+  if (synced > 0) { save(); renderRecipeModal(recipeId); }
 }
 
 function plOpenIngPicker(recipeId) {
@@ -4430,8 +4427,7 @@ function deleteIngredient(recipeId, ingId) {
   if (!r || !r.ingredients) return;
   r.ingredients = r.ingredients.filter(i => i.id !== ingId);
   save();
-  renderRecipes();
-  setTimeout(() => toggleRecipe(recipeId), 30);
+  renderRecipeModal(recipeId);
 }
 
 function updateIngredient(recipeId, ingId, field, val) {
@@ -4506,8 +4502,7 @@ function closeAddIngModal() {
   const rid = _addIngModalRecipeId;
   _addIngModalRecipeId = null;
   if (_addIngModalAdded > 0 && rid != null) {
-    renderRecipes();
-    setTimeout(() => toggleRecipe(rid), 30);
+    renderRecipeModal(rid);
   }
   _addIngModalAdded = 0;
 }
@@ -4699,6 +4694,647 @@ function confirmBulkImport() {
   alert(`Imported ${names.length} recipes with ingredients!`);
 }
 
+// ── Recipe Modal Infrastructure ───────────────────────────────────────────
+let _openRecipeModalId = null;
+let _recipeModalTab = 'details';
+const RECIPE_EDIT_SKILLS = ['Head Baker','Baker','Bakery Assistant','Anyone'];
+
+function resolveIngCost(ing) {
+  const lib = plLookupByName(ing.name);
+  if (lib && lib.pricePerGram > 0) return lib.pricePerGram;
+  return parseFloat(ing.costPerUnit) || 0;
+}
+
+function openRecipeModal(id) {
+  _openRecipeModalId = id;
+  const r = recipes.find(r => r.id === id);
+  if (!r) return;
+  let overlay = document.getElementById('recipe-modal-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'recipe-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:800;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px 60px;overflow-y:auto';
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeRecipeModal(); });
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  overlay.innerHTML = _buildRecipeModalHtml(r, _recipeModalTab);
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => { const inp = document.getElementById('rm-name-input'); if (inp) { inp.focus(); inp.select(); } }, 60);
+}
+
+function closeRecipeModal() {
+  const overlay = document.getElementById('recipe-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+  _openRecipeModalId = null;
+  renderRecipes();
+}
+
+function renderRecipeModal(id) {
+  _openRecipeModalId = id;
+  const overlay = document.getElementById('recipe-modal-overlay');
+  if (!overlay || overlay.style.display === 'none') { openRecipeModal(id); return; }
+  const r = recipes.find(r => r.id === id);
+  if (!r) return;
+  const bodyEl = document.getElementById('recipe-modal-body');
+  if (bodyEl) bodyEl.innerHTML = _recipeModalTabContent(r, _recipeModalTab);
+}
+
+function setRecipeModalTab(tab) {
+  _recipeModalTab = tab;
+  const id = _openRecipeModalId;
+  if (id == null) return;
+  const r = recipes.find(r => r.id === id);
+  if (!r) return;
+  document.querySelectorAll('.rm-tab-btn').forEach(btn => {
+    const on = btn.dataset.tab === tab;
+    btn.style.borderBottom = on ? '2px solid var(--accent)' : '2px solid transparent';
+    btn.style.color = on ? 'var(--accent)' : 'var(--muted)';
+    btn.style.fontWeight = on ? '700' : '500';
+  });
+  const bodyEl = document.getElementById('recipe-modal-body');
+  if (bodyEl) bodyEl.innerHTML = _recipeModalTabContent(r, tab);
+}
+
+function rmConvertUnit() {
+  const amt = parseFloat(document.getElementById('rm-conv-amt')?.value) || 0;
+  const factor = parseFloat(document.getElementById('rm-conv-unit')?.value) || 1;
+  const el = document.getElementById('rm-conv-result');
+  if (el) el.textContent = (amt * factor).toFixed(2) + ' g';
+}
+
+function _buildRecipeModalHtml(r, tab) {
+  const catM = getCatMeta(r.category || 'Other');
+  const catEmojis = {'Bread':'🍞','Pastry':'🥐','Cake':'🎂','Cookie':'🍪','Prep Item':'🫙','Seasonal':'🌟'};
+  const icon = catEmojis[r.category] || '📋';
+  const tabs = [
+    { key:'details',    label:'Details' },
+    { key:'production', label:'Production' },
+    { key:'costing',    label:'Costing' },
+  ];
+  return `
+  <div id="recipe-modal-card" style="
+    width:100%;max-width:860px;background:var(--bg);border-radius:16px;
+    box-shadow:0 24px 80px rgba(0,0,0,.55);border:1px solid var(--border);
+    display:flex;flex-direction:column;max-height:88vh;min-height:300px;
+  ">
+    <div style="padding:22px 24px 0;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px;line-height:1;flex-shrink:0">${icon}</span>
+        <input id="rm-name-input" type="text" value="${r.name.replace(/"/g,'&quot;')}"
+          style="flex:1;font-size:20px;font-weight:700;color:var(--text);background:transparent;
+            border:none;border-bottom:2px solid transparent;outline:none;padding:2px 0;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='transparent'"
+          onchange="updateRecipe(${r.id},'name',this.value);recipeMarkSaved(${r.id})">
+        <span id="recipe-saved-${r.id}" style="display:none;font-size:11px;font-weight:600;color:#4a9c6e;background:#1e3a2f;border-radius:3px;padding:1px 8px;white-space:nowrap">✓ saved</span>
+        <button onclick="closeRecipeModal()" style="
+          background:none;border:none;cursor:pointer;font-size:22px;color:var(--muted);
+          line-height:1;padding:4px 6px;border-radius:4px;flex-shrink:0"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);padding-left:32px;margin-top:3px">
+        ${r.yield ? r.yield + ' · ' : ''}${r.stages.length} stage${r.stages.length!==1?'s':''} · <span style="color:${catM.color}">${catM.name}</span>
+      </div>
+    </div>
+
+    <div id="recipe-modal-tabs" style="display:flex;padding:0 20px;border-bottom:1px solid var(--border);margin-top:16px;flex-shrink:0">
+      ${tabs.map(t => `<button class="rm-tab-btn" data-tab="${t.key}"
+        onclick="setRecipeModalTab('${t.key}')"
+        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;
+          font-weight:${tab===t.key?'700':'500'};color:${tab===t.key?'var(--accent)':'var(--muted)'};
+          border-bottom:2px solid ${tab===t.key?'var(--accent)':'transparent'};
+          transition:all .15s;white-space:nowrap;margin-bottom:-1px">${t.label}</button>`).join('')}
+    </div>
+
+    <div id="recipe-modal-body" style="padding:22px 24px;overflow-y:auto;flex:1;min-height:0">
+      ${_recipeModalTabContent(r, tab)}
+    </div>
+
+    <div style="padding:14px 24px;border-top:1px solid var(--border);flex-shrink:0;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--surface2);border-radius:0 0 16px 16px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="sendRecipeToDoughTimer(${r.id})"
+          style="background:#1a3a8a;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          ⏱ Send to Dough Timer</button>
+        <button onclick="event.stopPropagation();duplicateRecipe(${r.id})"
+          style="background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">
+          ⧉ Duplicate</button>
+        <button onclick="event.stopPropagation();archiveRecipe(${r.id})"
+          style="background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">
+          🗄 Archive</button>
+      </div>
+      <button onclick="closeRecipeModal()"
+        style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:9px 28px;font-size:13px;font-weight:700;cursor:pointer">
+        Done</button>
+    </div>
+  </div>`;
+}
+
+function _recipeModalTabContent(r, tab) {
+  if (tab === 'details')    return _rmDetailsTab(r);
+  if (tab === 'production') return _rmProductionTab(r);
+  if (tab === 'costing')    return _rmCostingTab(r);
+  return '';
+}
+
+function _rmDetailsTab(r) {
+  return `<div style="display:flex;flex-direction:column;gap:22px">
+
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Category</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${recipeCategories.map(cat => {
+          const on = (r.category||'Other') === cat.name;
+          return `<button onclick="updateRecipe(${r.id},'category','${cat.name}');recipeMarkSaved(${r.id});setRecipeModalTab('details')"
+            style="padding:7px 16px;border-radius:20px;border:2px solid ${on?cat.color:'var(--border)'};
+              background:${on?cat.color+'22':'transparent'};color:${on?cat.color:'var(--muted)'};
+              cursor:pointer;font-size:12px;font-weight:${on?'700':'500'};transition:all .15s">${cat.name}</button>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Yield / Batch Size</div>
+      <input type="text" value="${(r.yield||'').replace(/"/g,'&quot;')}" placeholder="e.g. 24 croissants, 2 loaves"
+        onchange="updateRecipe(${r.id},'yield',this.value);recipeMarkSaved(${r.id})"
+        style="width:100%;max-width:380px;padding:10px 14px;border-radius:8px;
+          border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box">
+    </div>
+
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Source Dough Recipe <span style="font-weight:400;text-transform:none">— if this product is made from another recipe's dough</span></div>
+      <select onchange="updateRecipe(${r.id},'sourceRecipeId',this.value?parseInt(this.value):null);recipeMarkSaved(${r.id})"
+        style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;max-width:380px;width:100%">
+        <option value="">— Standalone product —</option>
+        ${(recipes||[]).filter(rx => rx.id!==r.id && rx.stages && rx.stages.length).map(rx =>
+          `<option value="${rx.id}" ${r.sourceRecipeId==rx.id?'selected':''}>${rx.name}</option>`
+        ).join('')}
+      </select>
+    </div>
+
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Notes / Description</div>
+      <textarea rows="3" placeholder="Describe the process, key steps, or any notes…"
+        onchange="updateRecipe(${r.id},'notes',this.value);recipeMarkSaved(${r.id})"
+        style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
+          background:var(--surface);color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box;line-height:1.5"
+        >${(r.notes||'').replace(/<\/textarea>/g,'')}</textarea>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" ${r.isPrepItem?'checked':''}
+          onchange="updateRecipe(${r.id},'isPrepItem',this.checked);recipeMarkSaved(${r.id});setRecipeModalTab('details')"
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);margin-top:2px;flex-shrink:0">
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--text)">🫙 Track as prep item</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">Appears in Prep Items tracker; can be used as an ingredient in other recipes</div>
+        </div>
+      </label>
+      ${r.isPrepItem?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Shelf life (days)</div>
+          <input type="number" min="1" step="1" value="${r.prepShelfDays||7}"
+            onchange="updateRecipe(${r.id},'prepShelfDays',parseInt(this.value)||7);recipeMarkSaved(${r.id})"
+            style="width:70px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;text-align:center">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Yield amount</div>
+          <input type="text" value="${(r.prepYieldUnit||'').replace(/"/g,'&quot;')}" placeholder="e.g. 500g, 2 jars"
+            onchange="updateRecipe(${r.id},'prepYieldUnit',this.value);recipeMarkSaved(${r.id})"
+            style="width:150px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+        </div>
+      </div>`:''}
+    </div>
+
+  </div>`;
+}
+
+function _rmProductionTab(r) {
+  return `<div style="display:flex;flex-direction:column;gap:22px">
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Lead Time</div>
+        <select onchange="updateRecipe(${r.id},'leadDays',this.value);recipeMarkSaved(${r.id})"
+          style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+          <option value="0" ${(r.leadDays||0)==0?'selected':''}>Same day</option>
+          <option value="1" ${(r.leadDays||0)==1?'selected':''}>1 day ahead</option>
+          <option value="2" ${(r.leadDays||0)==2?'selected':''}>2 days ahead</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Max Batches / Run</div>
+        <input type="number" min="0" step="1" value="${r.batchCapacity||0}"
+          onchange="updateRecipe(${r.id},'batchCapacity',parseInt(this.value)||0);recipeMarkSaved(${r.id})"
+          style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;text-align:center"
+          placeholder="0 = unlimited">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Freezer Shelf Life (days)</div>
+        <input type="number" min="1" max="365" step="1" value="${r.freezerShelfDays||''}" placeholder="e.g. 7"
+          onchange="updateRecipe(${r.id},'freezerShelfDays',parseInt(this.value)||null);recipeMarkSaved(${r.id})"
+          style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;text-align:center">
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Allowed Production Days <span style="font-weight:400;text-transform:none">— blank = any day</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${['mon','tue','wed','thu','fri','sat','sun'].map(d => {
+          const lbl={mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',sat:'Sat',sun:'Sun'}[d];
+          const on=(r.productionDays||[]).includes(d);
+          return `<button type="button" onclick="toggleRecipeProductionDay(${r.id},'${d}');renderRecipeModal(${r.id})"
+            style="padding:9px 16px;border:2px solid ${on?'var(--accent)':'var(--border)'};border-radius:8px;
+              background:${on?'var(--accent)':'transparent'};color:${on?'#fff':'var(--muted)'};
+              font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">${lbl}</button>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${recipePrefermentHtml(r)}
+    ${recipeStagesHtml(r, RECIPE_EDIT_SKILLS)}
+
+  </div>`;
+}
+
+function _rmCostingTab(r) {
+  const ings = r.ingredients || [];
+  const ingCost = ings.reduce((sum, ing) => sum + (parseFloat(ing.quantity)||0) * resolveIngCost(ing), 0);
+  const totalActiveMins = r.stages.reduce((s, x) => s + (x.activeMins||0), 0);
+  const laborRate = r.laborRatePerHour || 18;
+  const laborCost = (totalActiveMins / 60) * laborRate;
+  const totalCost = ingCost + laborCost;
+  const retailPrice = parseFloat(r.retailPrice) || 0;
+  const yieldQty = parseInt(r.yieldQty) || 0;
+  const batchValue = retailPrice * yieldQty;
+  const margin = batchValue - totalCost;
+  const hasRetail = retailPrice > 0 && yieldQty > 0;
+  const costPerUnit = (yieldQty > 0 && totalCost > 0) ? totalCost / yieldQty : 0;
+
+  return `<div style="display:flex;flex-direction:column;gap:22px">
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Retail Price / Unit ($)</div>
+        <input type="number" min="0" step="0.25" value="${r.retailPrice||''}" placeholder="0.00"
+          onchange="updateRecipe(${r.id},'retailPrice',parseFloat(this.value)||0);recipeMarkSaved(${r.id});renderRecipeModal(${r.id})"
+          style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:18px;font-weight:600;text-align:center;box-sizing:border-box">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Units per Batch</div>
+        <input type="number" min="0" step="1" value="${r.yieldQty||''}" placeholder="e.g. 12"
+          onchange="updateRecipe(${r.id},'yieldQty',parseInt(this.value)||0);recipeMarkSaved(${r.id});renderRecipeModal(${r.id})"
+          style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:18px;font-weight:600;text-align:center;box-sizing:border-box">
+      </div>
+      ${hasRetail ? `
+      <div style="flex:1;min-width:140px;background:${margin>=0?'#1a3a2a':'#5a1a1a'};border-radius:8px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:11px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.05em">Margin / Batch</div>
+        <div style="font-size:24px;font-weight:700;color:#fff;margin-top:2px">${margin>=0?'+':''}$${margin.toFixed(2)}</div>
+        ${costPerUnit>0?`<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:2px">$${costPerUnit.toFixed(3)} / unit cost</div>`:''}
+      </div>` : ''}
+      ${totalCost > 0 ? `
+      <div style="flex:1;min-width:140px;background:var(--accent);border-radius:8px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em">Total Cost / Batch</div>
+        <div style="font-size:24px;font-weight:700;color:#fff;margin-top:2px">$${totalCost.toFixed(2)}</div>
+        ${laborCost>0?`<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px">incl. $${laborCost.toFixed(2)} labor · <label style="cursor:pointer">$<input type="number" min="0" step="1" value="${laborRate}" style="width:34px;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.4);font-size:11px;color:#fff;text-align:right;padding:0" onchange="updateRecipe(${r.id},'laborRatePerHour',parseFloat(this.value)||18);renderRecipeModal(${r.id})">/hr</label></div>`:''}
+      </div>` : ''}
+    </div>
+
+    <div style="background:var(--surface2);border-radius:10px;padding:16px 18px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px">📏 Unit Converter → Grams</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input type="number" id="rm-conv-amt" value="1" min="0" step="any"
+          oninput="rmConvertUnit()"
+          style="width:80px;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px;font-weight:700;text-align:center">
+        <select id="rm-conv-unit" onchange="rmConvertUnit()"
+          style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+          <option value="28.3495">oz (ounce)</option>
+          <option value="453.592">lb (pound)</option>
+          <option value="125">cup (flour)</option>
+          <option value="240">cup (water / liquid)</option>
+          <option value="120">cup (honey / syrup)</option>
+          <option value="14.1748">tbsp (tablespoon)</option>
+          <option value="4.72591">tsp (teaspoon)</option>
+          <option value="1">g (reference)</option>
+        </select>
+        <span style="font-size:16px;color:var(--muted)">=</span>
+        <span id="rm-conv-result" style="font-size:24px;font-weight:700;color:var(--accent)">28.35 g</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">Convert volume or weight measurements to grams before entering ingredient quantities.</div>
+    </div>
+
+    ${recipeIngredientsHtml(r)}
+
+  </div>`;
+}
+
+// Global ingredient/cost HTML helpers (used by modal tabs)
+function recipeIngredientsHtml(r) {
+  const ings = r.ingredients || [];
+  const rows = ings.map(ing => {
+    const lib = plLookupByName(ing.name);
+    const hasLib = !!lib;
+    const hasOverride = ing.costPerUnit > 0;
+    const liveCost = resolveIngCost(ing);
+    const isOverridden = hasLib && hasOverride && Math.abs(ing.costPerUnit - lib.pricePerGram) > 0.000001;
+    const rowBg = hasLib ? 'rgba(74,156,110,0.04)' : 'transparent';
+    let badge;
+    if (hasLib) {
+      badge = `<span
+        title="${isOverridden?'Manual override active ($'+ing.costPerUnit.toFixed(5)+'/g). Library price: $'+lib.pricePerGram.toFixed(5)+'/g. Click to clear override.':'Live price from library · $'+lib.pricePerGram.toFixed(5)+'/g'}"
+        style="font-size:10px;${isOverridden?'color:#e8a045;border-color:#e8a045':'color:#4a9c6e;border-color:#4a9c6e'};
+          cursor:pointer;border:1px solid;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap"
+        onclick="plSyncIngredient(${r.id},${ing.id})">📚${isOverridden?' ≠':''}</span>`;
+    } else {
+      badge = hasOverride ? '' :
+        `<span title="Not in ingredient library — no price set" style="font-size:10px;color:#cc4444;border:1px solid #cc4444;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap">⚠ no price</span>`;
+    }
+    const qty = parseFloat(ing.quantity) || 0;
+    const rowCost = (qty && liveCost) ? '$' + (qty * liveCost).toFixed(2) : '—';
+    return `
+    <tr style="border-bottom:1px solid var(--border);background:${rowBg}"
+        onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='${rowBg}'">
+      <td style="padding:6px 8px">
+        <input type="text" value="${(ing.name||'').replace(/"/g,'&quot;')}"
+          style="width:100%;background:transparent;border:none;border-bottom:1px solid transparent;font-size:13px;color:var(--text);padding:2px 0;outline:none"
+          onfocus="this.style.borderBottom='1px solid var(--accent)'" onblur="this.style.borderBottom='1px solid transparent'"
+          onchange="updateIngredient(${r.id},${ing.id},'name',this.value)">
+      </td>
+      <td style="padding:6px 8px;white-space:nowrap">
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="number" value="${ing.quantity||''}"
+            style="width:68px;background:transparent;border:none;border-bottom:1px solid transparent;font-size:13px;color:var(--text);text-align:right;padding:2px 0;outline:none"
+            onfocus="this.style.borderBottom='1px solid var(--accent)'" onblur="this.style.borderBottom='1px solid transparent'"
+            onchange="updateIngredient(${r.id},${ing.id},'quantity',this.value)">
+          <input type="text" value="${ing.unit||'g'}"
+            style="width:30px;background:transparent;border:none;border-bottom:1px solid transparent;font-size:12px;color:var(--muted);padding:2px 0;outline:none"
+            onfocus="this.style.borderBottom='1px solid var(--accent)'" onblur="this.style.borderBottom='1px solid transparent'"
+            onchange="updateIngredient(${r.id},${ing.id},'unit',this.value)">
+        </div>
+      </td>
+      <td style="padding:6px 8px;text-align:right">
+        <input type="number" min="0" step="0.00001" value="${ing.costPerUnit||''}"
+          placeholder="${lib?lib.pricePerGram.toFixed(5):'0.00000'}"
+          style="width:85px;background:transparent;border:none;border-bottom:1px solid transparent;font-size:12px;color:var(--text);text-align:right;padding:2px 0;outline:none"
+          onfocus="this.style.borderBottom='1px solid var(--accent)'" onblur="this.style.borderBottom='1px solid transparent'"
+          onchange="updateIngredient(${r.id},${ing.id},'costPerUnit',parseFloat(this.value)||0)">
+        <span style="font-size:10px;color:var(--muted)">/unit</span>
+      </td>
+      <td style="padding:6px 8px;text-align:right;color:var(--text);font-size:13px;font-weight:600;white-space:nowrap">
+        <span id="ing-cost-cell-${r.id}-${ing.id}">${rowCost}</span>
+      </td>
+      <td style="padding:6px 4px;text-align:center">${badge}</td>
+      <td style="padding:6px 4px;text-align:center">
+        <button onclick="deleteIngredient(${r.id},${ing.id})"
+          style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
+          onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'"
+          title="Remove ingredient">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+  const libCount = ings.filter(i => plLookupByName(i.name)).length;
+  const unlibCount = ings.length - libCount;
+  return `
+    <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="section-label">Ingredients</div>
+          ${ings.length>0?`<span style="font-size:11px;color:var(--muted)">${ings.length} item${ings.length!==1?'s':''}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${libCount>0?`<button class="btn btn-ghost btn-sm" onclick="plSyncAllIngredients(${r.id})"
+            style="font-size:11px;color:#4a9c6e;border-color:#4a9c6e">📚 Sync All (${libCount})</button>`:''}
+          ${unlibCount>0?`<span style="font-size:11px;color:#cc4444;font-weight:600">⚠ ${unlibCount} not in library</span>`:''}
+        </div>
+      </div>
+      ${ings.length>0?`<div style="overflow-x:auto;margin-bottom:12px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:5px 8px;font-weight:600">Ingredient</th>
+          <th style="text-align:left;padding:5px 8px;width:110px;font-weight:600">Amount</th>
+          <th style="text-align:right;padding:5px 8px;width:120px;font-weight:600">Cost / Unit</th>
+          <th style="text-align:right;padding:5px 8px;width:70px;font-weight:600">Total</th>
+          <th style="width:36px"></th><th style="width:28px"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`:'<div style="color:var(--muted);font-size:12px;padding:4px 0 12px">No ingredients yet — add one below</div>'}
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openAddIngModal(${r.id})"
+          style="font-size:13px;padding:9px 20px;font-weight:700">+ Add Ingredient</button>
+        <button class="btn btn-ghost btn-sm" onclick="plOpenIngPicker(${r.id})"
+          style="font-size:12px;color:#4a9c6e;border-color:#4a9c6e;padding:8px 12px">📚 Price Library</button>
+      </div>
+    </div>`;
+}
+
+function recipeCostSummaryHtml(r) {
+  const ings = r.ingredients || [];
+  const ingCost = ings.reduce((sum, ing) => sum + (parseFloat(ing.quantity)||0) * resolveIngCost(ing), 0);
+  const totalActiveMins = r.stages.reduce((s, x) => s + (x.activeMins||0), 0);
+  const laborRate = r.laborRatePerHour || 18;
+  const laborCost = (totalActiveMins / 60) * laborRate;
+  const totalCost = ingCost + laborCost;
+  const retailPrice = parseFloat(r.retailPrice) || 0;
+  const yieldQty = parseInt(r.yieldQty) || 0;
+  const batchValue = retailPrice * yieldQty;
+  const margin = batchValue - totalCost;
+  const hasRetail = retailPrice > 0 && yieldQty > 0;
+  if (ingCost === 0 && laborCost === 0 && !hasRetail) return '';
+  return `
+    <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
+      <div style="margin-bottom:8px"><div class="section-label">Cost &amp; Value per Batch</div></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+        <div style="flex:1;min-width:110px">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ingredients</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text)">$${ingCost.toFixed(2)}</div>
+        </div>
+        <div style="flex:1;min-width:110px;background:var(--accent);border-radius:6px;padding:8px 14px">
+          <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Total Cost / Batch</div>
+          <div style="font-size:20px;font-weight:700;color:#fff">$${totalCost.toFixed(2)}</div>
+        </div>
+        ${hasRetail?`
+        <div style="flex:1;min-width:110px;background:#1a5a2a;border-radius:6px;padding:8px 14px">
+          <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Retail Value (${yieldQty} × $${retailPrice.toFixed(2)})</div>
+          <div style="font-size:20px;font-weight:700;color:#fff">$${batchValue.toFixed(2)}</div>
+        </div>
+        <div style="flex:1;min-width:110px;background:${margin>=0?'#1a3a2a':'#5a1a1a'};border-radius:6px;padding:8px 14px">
+          <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Margin / Batch</div>
+          <div style="font-size:20px;font-weight:700;color:#fff">${margin>=0?'+':''}$${margin.toFixed(2)}</div>
+        </div>`:''}
+      </div>
+      ${laborCost>0?`<div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px">
+        Labor: <span style="color:var(--text);font-weight:600">$${laborCost.toFixed(2)}</span>
+        · ${totalActiveMins}m active
+        · <label style="cursor:pointer">$<input type="number" min="0" step="1" value="${laborRate}"
+          style="width:38px;background:transparent;border:none;border-bottom:1px solid var(--border);font-size:11px;color:var(--text);text-align:right;padding:0"
+          onchange="updateRecipe(${r.id},'laborRatePerHour',parseFloat(this.value)||18);renderRecipeModal(${r.id})"
+        >/hr</label>
+      </div>`:''}
+    </div>`;
+}
+
+function recipePrefermentHtml(r) {
+  const pfs = r.preferments || [];
+  const PF_TYPES = ['Levain','Poolish','Biga','Starter','Other'];
+  const rows = pfs.map(pf => `
+    <div style="display:grid;grid-template-columns:110px 100px 90px 75px 1fr 34px;gap:8px;align-items:end;
+      background:var(--surface);border-radius:4px;padding:9px 10px;margin-bottom:6px">
+      <div class="form-group" style="margin:0">
+        <label>Type</label>
+        <select onchange="updatePreferment(${r.id},${pf.id},'type',this.value)">
+          ${PF_TYPES.map(t => `<option ${t===pf.type?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Grams / batch</label>
+        <input type="number" min="0" step="50" value="${pf.gramsPerBatch||0}"
+          onchange="updatePreferment(${r.id},${pf.id},'gramsPerBatch',this.value)">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Lead time (hrs)</label>
+        <input type="number" min="1" max="48" step="1" value="${pf.leadHrs||12}"
+          onchange="updatePreferment(${r.id},${pf.id},'leadHrs',this.value)">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Hydration %</label>
+        <input type="number" min="50" max="200" step="5" value="${pf.hydration||''}" placeholder="—"
+          onchange="updatePreferment(${r.id},${pf.id},'hydration',this.value)">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Notes</label>
+        <input type="text" value="${(pf.notes||'').replace(/"/g,'&quot;')}" placeholder="e.g. Build to 2× volume"
+          onchange="updatePreferment(${r.id},${pf.id},'notes',this.value)">
+      </div>
+      <div style="padding-bottom:1px">
+        <button class="btn btn-danger btn-sm" style="padding:6px 8px" onclick="deletePreferment(${r.id},${pf.id})">✕</button>
+      </div>
+    </div>`).join('');
+  return `<div style="border:1px solid #b8e0c8;border-radius:6px;padding:12px 14px;background:#f4fbf7">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#2a7d4f">🌱 Pre-ferments</div>
+      <div style="font-size:11px;color:#5a9a6f">Each batch of this recipe requires:</div>
+    </div>
+    ${pfs.length?rows:'<div style="font-size:12px;color:#7ab08a;margin-bottom:10px">No pre-ferments defined — add one if this recipe uses levain, poolish, or biga</div>'}
+    <div style="display:grid;grid-template-columns:110px 100px 90px 75px 1fr auto;gap:8px;align-items:end;
+      border-top:1px dashed #c8e8d4;padding-top:10px;margin-top:${pfs.length?'8':'0'}px">
+      <div class="form-group" style="margin:0"><label>Type</label>
+        <select id="pf-type-${r.id}">${PF_TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="form-group" style="margin:0"><label>Grams / batch</label>
+        <input type="number" min="0" step="50" id="pf-grams-${r.id}" placeholder="e.g. 500"></div>
+      <div class="form-group" style="margin:0"><label>Lead time (hrs)</label>
+        <input type="number" min="1" max="48" step="1" id="pf-lead-${r.id}" value="12"></div>
+      <div class="form-group" style="margin:0"><label>Hydration %</label>
+        <input type="number" min="50" max="200" step="5" id="pf-hydration-${r.id}" placeholder="—"></div>
+      <div class="form-group" style="margin:0"><label>Notes</label>
+        <input type="text" id="pf-notes-${r.id}" placeholder="Optional notes"></div>
+      <button class="btn btn-primary btn-sm" onclick="addPreferment(${r.id})" style="white-space:nowrap;align-self:end">+ Add</button>
+    </div>
+  </div>`;
+}
+
+function recipeStagesHtml(r, SKILLS) {
+  const byDay = {};
+  r.stages.forEach((s, i) => {
+    const d = s.day || 1;
+    if (!byDay[d]) byDay[d] = [];
+    byDay[d].push({ ...s, _origIndex: i });
+  });
+  const dayKeys = Object.keys(byDay).map(Number).sort((a, b) => a - b);
+  return `
+    <div class="stages-list">
+      ${r.stages.length===0?'<div style="color:var(--muted);font-size:12px;padding:8px 0">No stages yet — add below</div>':''}
+      ${dayKeys.map(dayNum => `
+        <div style="margin:14px 0 8px;display:flex;align-items:center;gap:8px">
+          <div style="font-weight:700;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.6px">Day ${dayNum}</div>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        ${byDay[dayNum].map(s => `
+          <div style="background:var(--surface2);border-radius:5px;padding:10px 12px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span class="stage-num">${s._origIndex+1}</span>
+              <input type="text" value="${s.name.replace(/"/g,'&quot;')}"
+                onchange="updateStage(${r.id},${s.id},'name',this.value)"
+                style="flex:1;font-weight:600;font-size:13px">
+              <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 70px 1fr 1fr;gap:8px;align-items:end;flex-wrap:wrap">
+              <div class="form-group" style="margin:0"><label>Day</label>
+                <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
+                  ${[1,2,3,4].map(d=>`<option value="${d}" ${(s.day||1)===d?'selected':''}>${d}</option>`).join('')}
+                </select></div>
+              <div class="form-group" style="margin:0"><label>Active (min)</label>
+                <input type="number" min="0" value="${s.activeMins}"
+                  onchange="updateStage(${r.id},${s.id},'activeMins',this.value)" style="text-align:center"></div>
+              <div class="form-group" style="margin:0"><label>Wait (min)</label>
+                <input type="number" min="0" value="${s.waitMins}"
+                  onchange="updateStage(${r.id},${s.id},'waitMins',this.value)" style="text-align:center"></div>
+              <div class="form-group" style="margin:0"><label>Baker Role</label>
+                <select onchange="updateStage(${r.id},${s.id},'baker',this.value)">
+                  <option value="">— Unassigned —</option>
+                  <option value="_primary" ${s.baker==='_primary'?'selected':''}>Primary (item)</option>
+                  <option value="_secondary" ${s.baker==='_secondary'?'selected':''}>Secondary (item)</option>
+                  <option value="_day" ${s.baker==='_day'?'selected':''}>Baker on Day</option>
+                  <optgroup label="Specific Person">
+                    ${staff.filter(m=>m.name).map(m=>`<option value="${m.id}" ${s.baker==m.id?'selected':''}>${m.name}</option>`).join('')}
+                  </optgroup>
+                </select></div>
+              <div class="form-group" style="margin:0"><label>Value %</label>
+                <input type="number" min="0" max="100" step="5" value="${s.valuePct||0}"
+                  onchange="updateStage(${r.id},${s.id},'valuePct',this.value)" style="text-align:center"></div>
+              <div class="form-group" style="margin:0"><label>Who Can Do This</label>
+                <select onchange="updateStage(${r.id},${s.id},'skill',this.value)">
+                  ${SKILLS.map(sk=>`<option ${sk===s.skill?'selected':''}>${sk}</option>`).join('')}
+                </select></div>
+              <div class="form-group" style="margin:0"><label>Stage Notes</label>
+                <input type="text" value="${(s.notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."
+                  onchange="updateStage(${r.id},${s.id},'notes',this.value)"></div>
+            </div>
+            ${(()=>{ const pctSum=r.stages.reduce((s,x)=>s+(x.valuePct||0),0); return pctSum>0&&pctSum!==100?`<div style="margin-top:5px;font-size:11px;color:#cc6600;font-weight:700">⚠ Value % sum = ${pctSum}% (should be 100%)</div>`:''; })()}
+          </div>
+        `).join('')}
+      `).join('')}
+    </div>
+    <div class="stage-add-form">
+      <div class="section-label">Add Stage</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Stage Name</label>
+          <input type="text" id="stage-name-${r.id}" placeholder="e.g. Mix dough, Shape, Proof, Bake"></div>
+        <div class="form-group"><label>Day</label>
+          <select id="stage-day-${r.id}" style="width:60px">
+            ${[1,2,3,4].map(d=>`<option value="${d}">${d}</option>`).join('')}
+          </select></div>
+        <div class="form-group"><label>Active (mins)</label>
+          <input type="number" id="stage-active-${r.id}" placeholder="30" min="0"></div>
+        <div class="form-group"><label>Wait / Rest (mins)</label>
+          <input type="number" id="stage-wait-${r.id}" placeholder="0" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Who Can Do This</label>
+          <select id="stage-skill-${r.id}">${SKILLS.map(sk=>`<option>${sk}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Baker Role</label>
+          <select id="stage-baker-${r.id}">
+            <option value="">— Unassigned —</option>
+            <option value="_primary">Primary (item)</option>
+            <option value="_secondary">Secondary (item)</option>
+            <option value="_day">Baker on Day</option>
+            <optgroup label="Specific Person">
+              ${staff.filter(m=>m.name).map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}
+            </optgroup>
+          </select></div>
+        <div class="form-group" style="min-width:80px"><label>Value %</label>
+          <input type="number" id="stage-valuepct-${r.id}" placeholder="0" min="0" max="100" step="5" style="width:65px"></div>
+        <div class="form-group" style="flex:2"><label>Stage Notes</label>
+          <input type="text" id="stage-notes-${r.id}" placeholder="Optional notes"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addStage(${r.id})">+ Add Stage</button>
+    </div>
+  </div>`;
+}
+
+// ── End Recipe Modal Infrastructure ───────────────────────────────────────
+
 function renderRecipes() {
   const el = document.getElementById('recipe-list');
   const empty = document.getElementById('recipe-empty');
@@ -4751,8 +5387,8 @@ function renderRecipes() {
   let html = filterTabs;
 
   function recipeCard(r) {
-    const totalActive = r.stages.reduce((s, x) => s + x.activeMins, 0);
-    const totalWait   = r.stages.reduce((s, x) => s + x.waitMins, 0);
+    const totalActive = r.stages.reduce((s, x) => s + (x.activeMins||0), 0);
+    const totalWait   = r.stages.reduce((s, x) => s + (x.waitMins||0), 0);
     const totalMins   = totalActive + totalWait;
     const multiDay    = r.stages.some(s => (s.day || 1) > 1);
     const maxDay      = r.stages.reduce((m, s) => Math.max(m, s.day || 1), 1);
@@ -4760,10 +5396,10 @@ function renderRecipes() {
       ? `${maxDay}-day · ${totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60||'')+(totalMins%60?'m':'') : totalMins+'m'} total`
       : (totalMins >= 60 ? Math.floor(totalMins/60)+'h '+(totalMins%60 ? totalMins%60+'m' : '') + ' total' : totalMins+'m total');
     const isArchived  = r.active === false;
-    // Prep item section variables
-    const ps  = (prepStatus || {})[r.name.toUpperCase()];
+    const ps = (prepStatus || {})[r.name.toUpperCase()];
     const psm = ps ? (PREP_STATUS_META || {})[ps.status] : null;
-    const prepBatchBtn = r.isPrepItem ? `
+    const prepBadge = r.isPrepItem ? `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4a8fa8;border:1px solid #4a8fa855;border-radius:12px;padding:1px 8px;flex-shrink:0">🫙 Prep</span>` : '';
+    const RECIPE_CARD_UNUSED_prepBatchBtn = r.isPrepItem ? `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(106,159,181,0.12);border-radius:6px;border:1px solid rgba(106,159,181,0.35);margin-bottom:12px;flex-wrap:wrap">
         <span style="font-size:13px;font-weight:700;color:#4a8fa8">🫙 Prep Item</span>
         ${ps ? `<span style="font-size:20px">${psm?.emoji||'🟢'}</span><span style="font-size:12px;color:var(--muted)">${psm?.label||''} · last: ${ps.lastPreppedAt ? new Date(ps.lastPreppedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'never'}</span>` : ''}
@@ -4791,549 +5427,27 @@ function renderRecipes() {
         <input type="text" value="${(r.prepYieldUnit||'').replace(/"/g,'&quot;')}" placeholder="e.g. 500g, 2 jars, 1 batch"
           onchange="updateRecipe(${r.id},'prepYieldUnit',this.value)" style="width:160px">
       </div>` : ''}`;
-    const CATS        = recipeCategories.map(c => c.name);
-
     return `
     <div class="recipe-card" style="${isArchived ? 'opacity:0.6' : ''}">
-      <div class="recipe-card-header" onclick="toggleRecipe(${r.id})">
+      <div class="recipe-card-header" onclick="openRecipeModal(${r.id})" style="cursor:pointer">
         <div style="flex:1">
           <div class="recipe-name" style="display:flex;align-items:center;gap:8px">
             ${r.name}
             ${(()=>{ const m=getCatMeta(r.category||'Other'); return `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:${m.color};border:1px solid ${m.color}66;border-radius:12px;padding:1px 8px;flex-shrink:0">${m.name}</span>`; })()}
             ${(r.notes || '').startsWith('⚠️ Placeholder') ? `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:#3a2800;color:#e8a045;border:1px solid #6b4700;border-radius:4px;padding:1px 7px;flex-shrink:0">Placeholder</span>` : ''}
-            ${r.productionBase ? `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6a7fa8;border:1px solid #6a7fa855;border-radius:12px;padding:1px 8px;flex-shrink:0">🏭 ${r.productionBase}</span>` : ''}
+            ${r.sourceRecipeId ? `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8b6fba;border:1px solid #8b6fba55;border-radius:12px;padding:1px 8px;flex-shrink:0">🔗 Dough</span>` : ''}
+            ${prepBadge}
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.yield || '?'} ${r.notes && !(r.notes || '').startsWith('⚠️ Placeholder') ? '· '+r.notes : ''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.yield || '?'}${r.notes && !(r.notes || '').startsWith('⚠️ Placeholder') ? ' · '+r.notes : ''}</div>
         </div>
         <div class="recipe-meta">
           <span class="badge badge-stages">${r.stages.length} stage${r.stages.length !== 1 ? 's' : ''}</span>
-          <span class="time-pill" id="r-active-${r.id}">${totalActive}m active</span>
-          ${totalWait > 0 ? `<span class="wait-pill" id="r-wait-${r.id}">${totalWait}m wait</span>` : `<span class="wait-pill" id="r-wait-${r.id}" style="display:none">0m wait</span>`}
+          <span class="time-pill">${totalActive}m active</span>
+          ${totalWait > 0 ? `<span class="wait-pill">${totalWait}m wait</span>` : ''}
           <span style="font-size:11px;color:var(--muted);white-space:nowrap">${totalLabel}</span>
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();duplicateRecipe(${r.id})" title="Duplicate recipe" style="font-size:13px">⧉ Copy</button>
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveRecipe(${r.id})" title="${isArchived ? 'Restore recipe' : 'Archive recipe'}" style="font-size:12px">${isArchived ? '↩ Restore' : '🗄 Archive'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();duplicateRecipe(${r.id})" title="Duplicate" style="font-size:13px">⧉</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveRecipe(${r.id})" style="font-size:12px">${isArchived ? '↩' : '🗄'}</button>
           <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRecipe(${r.id})">✕</button>
-        </div>
-      </div>
-      <div class="recipe-body" id="recipe-body-${r.id}" style="display:none">
-
-        ${(()=>{
-          const catM = getCatMeta(r.category || 'Other');
-          const synNote = r.notes && !r.notes.startsWith('⚠️ Placeholder') ? r.notes : '';
-          const stageFlow = (() => {
-            if (!r.stages.length) return '';
-            if (multiDay) {
-              const groups = {};
-              r.stages.forEach(s => { const d = s.day || 1; if (!groups[d]) groups[d] = []; groups[d].push(s.name.split(/[,·—]/)[0].trim()); });
-              return Object.entries(groups).sort(([a],[b])=>+a-+b)
-                .map(([d,ns])=>`<span style="font-weight:600;color:var(--text)">Day ${d}:</span> ${ns.join(' · ')}`)
-                .join('<span style="color:var(--border)"> &nbsp;/&nbsp; </span>');
-            }
-            return r.stages.map(s => s.name.split(',')[0].trim()).join(' → ');
-          })();
-          return `
-          <div style="border-left:3px solid ${catM.color};background:${catM.color}0d;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:14px">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:${synNote||stageFlow?'7px':'0'}">
-              <span style="font-size:15px;font-weight:700;color:var(--text)">${r.name}</span>
-              <span style="font-size:11px;font-weight:700;color:${catM.color}">${catM.name}</span>
-              ${r.yield ? `<span style="font-size:12px;color:var(--muted)">· ${r.yield}</span>` : ''}
-              <span style="font-size:12px;color:var(--muted);margin-left:auto">${totalLabel}</span>
-            </div>
-            ${synNote ? `<div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:${stageFlow?'7px':'0'}">${synNote}</div>` : ''}
-            ${stageFlow ? `<div style="font-size:11px;color:var(--muted);line-height:1.7">${stageFlow}</div>` : ''}
-          </div>`;
-        })()}
-
-        <!-- Recipe-level editable fields -->
-        <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="section-label">Edit Recipe</div>
-              <span id="recipe-saved-${r.id}" style="display:none;font-size:11px;font-weight:600;color:#4a9c6e;background:#1e3a2f;border-radius:3px;padding:1px 7px">✓ saved</span>
-            </div>
-            <button onclick="sendRecipeToDoughTimer(${r.id})"
-              style="background:#1a3a8a;color:#fff;border:none;border-radius:4px;
-                padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
-              ⏱ Send to Dough Timer</button>
-          </div>
-
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Recipe</div>
-          <div class="form-row" style="margin-bottom:14px">
-            <div class="form-group" style="flex:3">
-              <label>Name</label>
-              <input type="text" value="${r.name.replace(/"/g,'&quot;')}"
-                onchange="updateRecipe(${r.id},'name',this.value);this.closest('.recipe-card').querySelector('.recipe-name').textContent=this.value"
-                style="font-weight:600">
-            </div>
-            <div class="form-group" style="min-width:130px">
-              <label>Category</label>
-              <select onchange="updateRecipe(${r.id},'category',this.value)">
-                ${CATS.map(c => `<option ${c===r.category?'selected':''}>${c}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group" style="min-width:150px">
-              <label>Yield / Batch Size</label>
-              <input type="text" value="${(r.yield||'').replace(/"/g,'&quot;')}" placeholder="e.g. 24 loaves"
-                onchange="updateRecipe(${r.id},'yield',this.value)">
-            </div>
-          </div>
-
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;border-top:1px solid var(--border);padding-top:10px">Production</div>
-          <div class="form-row" style="margin-bottom:14px">
-            <div class="form-group">
-              <label>Lead Time</label>
-              <select onchange="updateRecipe(${r.id},'leadDays',this.value)">
-                <option value="0" ${(r.leadDays||0)==0?'selected':''}>Same day</option>
-                <option value="1" ${(r.leadDays||0)==1?'selected':''}>1 day ahead</option>
-                <option value="2" ${(r.leadDays||0)==2?'selected':''}>2 days ahead</option>
-              </select>
-            </div>
-            <div class="form-group" style="min-width:110px">
-              <label title="Mixer/oven holds this many batches per run. 0 = no limit.">Max batches/run</label>
-              <input type="number" min="0" step="1" value="${r.batchCapacity || 0}" placeholder="0 = unlimited"
-                onchange="updateRecipe(${r.id},'batchCapacity',parseInt(this.value)||0)" style="width:80px">
-            </div>
-            <div class="form-group" style="flex:2">
-              <label title="Recipes sharing a base are rolled up in production planning">Production Base <span style="color:var(--muted);font-size:10px;font-weight:400">(optional)</span></label>
-              <input type="text" list="prod-base-list-${r.id}" value="${(r.productionBase||'').replace(/"/g,'&quot;')}" placeholder="e.g. Laminated Round"
-                onchange="updateRecipe(${r.id},'productionBase',this.value.trim())">
-              <datalist id="prod-base-list-${r.id}">
-                ${[...new Set(recipes.filter(rx => rx.productionBase && rx.id !== r.id).map(rx => rx.productionBase))].map(b => `<option value="${b.replace(/"/g,'&quot;')}">`).join('')}
-              </datalist>
-            </div>
-          </div>
-
-          <div class="form-row" style="margin-bottom:4px">
-            <div class="form-group" style="flex-basis:100%">
-              <label>Allowed Production Days <span style="color:var(--muted);font-size:10px;font-weight:400">— leave blank for any day</span></label>
-              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
-                ${['mon','tue','wed','thu','fri','sat','sun'].map(d => {
-                  const lbl = {mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',sat:'Sat',sun:'Sun'}[d];
-                  const on  = (r.productionDays || []).includes(d);
-                  return `<button type="button" id="rpd-${r.id}-${d}"
-                    onclick="toggleRecipeProductionDay(${r.id},'${d}')"
-                    style="padding:5px 10px;border:2px solid ${on?'#1a4a8a':'#ccc'};border-radius:4px;
-                      background:${on?'#1a4a8a':'#fff'};color:${on?'#fff':'#555'};
-                      font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation">${lbl}</button>`;
-                }).join('')}
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row" style="margin-bottom:4px">
-            <div class="form-group" style="flex-basis:100%">
-              <label title="Marks this product as a derivative — Priority List will suggest making the source dough instead of this item">Source Dough Recipe <span style="color:var(--muted);font-size:10px;font-weight:400">— if made from another recipe's dough (optional)</span></label>
-              <select onchange="updateRecipe(${r.id},'sourceRecipeId',this.value?parseInt(this.value):null)" style="max-width:300px">
-                <option value="">— Standalone product —</option>
-                ${(recipes||[]).filter(rx => rx.id !== r.id && rx.stages && rx.stages.length).map(rx =>
-                  `<option value="${rx.id}" ${r.sourceRecipeId == rx.id ? 'selected' : ''}>${rx.name}</option>`
-                ).join('')}
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row" style="margin-bottom:4px">
-            <div class="form-group">
-              <label title="Max days this item can be stored unbaked in the freezer">Freezer shelf life <span style="color:var(--muted);font-size:10px;font-weight:400">days (unbaked in freezer)</span></label>
-              <input type="number" min="1" max="365" step="1" value="${r.freezerShelfDays || ''}" placeholder="e.g. 7"
-                onchange="updateRecipe(${r.id},'freezerShelfDays',parseInt(this.value)||null)" style="width:70px">
-            </div>
-          </div>
-
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;border-top:1px solid var(--border);padding-top:10px">Pricing & Notes</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label title="Retail sale price per unit">Retail price / unit ($)</label>
-              <input type="number" min="0" step="0.25" value="${r.retailPrice || ''}" placeholder="0.00"
-                onchange="updateRecipe(${r.id},'retailPrice',parseFloat(this.value)||0)" style="width:80px">
-            </div>
-            <div class="form-group">
-              <label title="How many sellable units does one batch produce?">Units per batch</label>
-              <input type="number" min="0" step="1" value="${r.yieldQty || ''}" placeholder="e.g. 12"
-                onchange="updateRecipe(${r.id},'yieldQty',parseInt(this.value)||0)" style="width:70px">
-            </div>
-            <div class="form-group" style="flex:3">
-              <label>Notes / Description</label>
-              <input type="text" value="${(r.notes||'').replace(/"/g,'&quot;')}" placeholder="Describe the process, key steps, or any notes…"
-                onchange="updateRecipe(${r.id},'notes',this.value)">
-            </div>
-          </div>
-          <div class="form-row" style="margin-top:4px">
-            ${prepToggleHtml}
-          </div>
-        </div>
-        ${prepBatchBtn}
-        ${recipeIngredientsHtml(r)}
-        ${recipeCostSummaryHtml(r)}
-        ${recipePrefermentHtml(r)}`
-    + recipeStagesHtml(r, SKILLS);
-  }
-
-  // Resolves effective cost per gram for an ingredient:
-  // — if it matches the price library by name, use the LIVE library price (not the stored snapshot)
-  // — stored ing.costPerUnit is a manual override, used only when no library match exists
-  function resolveIngCost(ing) {
-    const lib = plLookupByName(ing.name);
-    if (lib && lib.pricePerGram > 0) return lib.pricePerGram;
-    return parseFloat(ing.costPerUnit) || 0;
-  }
-
-  function recipeIngredientsHtml(r) {
-    const ings = r.ingredients || [];
-    const rows = ings.map(ing => {
-      const lib = plLookupByName(ing.name);
-      const hasLib = !!lib;
-      const hasOverride = ing.costPerUnit > 0;
-      // Live cost: library price when linked; stored override otherwise
-      const liveCost = resolveIngCost(ing);
-      const isOverridden = hasLib && hasOverride && Math.abs(ing.costPerUnit - lib.pricePerGram) > 0.000001;
-      const rowBg = hasLib ? 'rgba(74,156,110,0.04)' : 'transparent';
-      let badge;
-      if (hasLib) {
-        badge = `<span
-          title="${isOverridden ? 'Manual override active ($'+ing.costPerUnit.toFixed(5)+'/g). Library price: $'+lib.pricePerGram.toFixed(5)+'/g. Click to clear override.' : 'Live price from library · $'+lib.pricePerGram.toFixed(5)+'/g'}"
-          style="font-size:10px;${isOverridden ? 'color:#e8a045;border-color:#e8a045' : 'color:#4a9c6e;border-color:#4a9c6e'};
-            cursor:pointer;border:1px solid;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap"
-          onclick="plSyncIngredient(${r.id},${ing.id})">📚${isOverridden ? ' ≠' : ''}</span>`;
-      } else {
-        badge = hasOverride
-          ? ''
-          : `<span title="Not in ingredient library — no price set" style="font-size:10px;color:#cc4444;border:1px solid #cc4444;border-radius:3px;padding:1px 4px;line-height:1.5;white-space:nowrap">⚠ no price</span>`;
-      }
-      const qty = parseFloat(ing.quantity) || 0;
-      const cpu = liveCost;
-      const rowCost = (qty && cpu) ? '$' + (qty * cpu).toFixed(2) : '—';
-      return `
-      <tr style="border-bottom:1px solid var(--border);background:${rowBg}"
-          onmouseover="this.style.background='var(--surface)'"
-          onmouseout="this.style.background='${rowBg}'">
-        <td style="padding:6px 8px">
-          <input type="text" value="${(ing.name||'').replace(/"/g,'&quot;')}"
-            style="width:100%;background:transparent;border:none;border-bottom:1px solid transparent;font-size:13px;color:var(--text);padding:2px 0;outline:none"
-            onfocus="this.style.borderBottom='1px solid var(--accent)'"
-            onblur="this.style.borderBottom='1px solid transparent'"
-            onchange="updateIngredient(${r.id},${ing.id},'name',this.value)">
-        </td>
-        <td style="padding:6px 8px;white-space:nowrap">
-          <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" value="${ing.quantity||''}"
-              style="width:68px;background:transparent;border:none;border-bottom:1px solid transparent;font-size:13px;color:var(--text);text-align:right;padding:2px 0;outline:none"
-              onfocus="this.style.borderBottom='1px solid var(--accent)'"
-              onblur="this.style.borderBottom='1px solid transparent'"
-              onchange="updateIngredient(${r.id},${ing.id},'quantity',this.value)">
-            <input type="text" value="${ing.unit||'g'}"
-              style="width:30px;background:transparent;border:none;border-bottom:1px solid transparent;font-size:12px;color:var(--muted);padding:2px 0;outline:none"
-              onfocus="this.style.borderBottom='1px solid var(--accent)'"
-              onblur="this.style.borderBottom='1px solid transparent'"
-              onchange="updateIngredient(${r.id},${ing.id},'unit',this.value)">
-          </div>
-        </td>
-        <td style="padding:6px 8px;text-align:right">
-          <input type="number" min="0" step="0.00001" value="${ing.costPerUnit||''}"
-            placeholder="${lib ? lib.pricePerGram.toFixed(5) : '0.00000'}"
-            style="width:85px;background:transparent;border:none;border-bottom:1px solid transparent;font-size:12px;color:var(--text);text-align:right;padding:2px 0;outline:none"
-            onfocus="this.style.borderBottom='1px solid var(--accent)'"
-            onblur="this.style.borderBottom='1px solid transparent'"
-            onchange="updateIngredient(${r.id},${ing.id},'costPerUnit',parseFloat(this.value)||0)">
-          <span style="font-size:10px;color:var(--muted)">/unit</span>
-        </td>
-        <td style="padding:6px 8px;text-align:right;color:var(--text);font-size:13px;font-weight:600;white-space:nowrap">
-          <span id="ing-cost-cell-${r.id}-${ing.id}">${rowCost}</span>
-        </td>
-        <td style="padding:6px 4px;text-align:center">${badge}</td>
-        <td style="padding:6px 4px;text-align:center">
-          <button onclick="deleteIngredient(${r.id},${ing.id})"
-            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
-            onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'"
-            title="Remove ingredient">✕</button>
-        </td>
-      </tr>`;
-    }).join('');
-    const libCount = ings.filter(i => plLookupByName(i.name)).length;
-    const unlibCount = ings.length - libCount;
-    return `
-      <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="section-label">Ingredients</div>
-            ${ings.length > 0 ? `<span style="font-size:11px;color:var(--muted)">${ings.length} item${ings.length!==1?'s':''}</span>` : ''}
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            ${libCount > 0 ? `<button class="btn btn-ghost btn-sm" onclick="plSyncAllIngredients(${r.id})"
-              style="font-size:11px;color:#4a9c6e;border-color:#4a9c6e">📚 Sync All (${libCount})</button>` : ''}
-            ${unlibCount > 0 ? `<span style="font-size:11px;color:#cc4444;font-weight:600">⚠ ${unlibCount} not in library</span>` : ''}
-          </div>
-        </div>
-        ${ings.length > 0 ? `
-        <div style="overflow-x:auto;margin-bottom:12px">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--border)">
-              <th style="text-align:left;padding:5px 8px;font-weight:600">Ingredient</th>
-              <th style="text-align:left;padding:5px 8px;width:110px;font-weight:600">Amount</th>
-              <th style="text-align:right;padding:5px 8px;width:120px;font-weight:600">Cost / Unit</th>
-              <th style="text-align:right;padding:5px 8px;width:70px;font-weight:600">Total</th>
-              <th style="width:36px"></th>
-              <th style="width:28px"></th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table></div>` : '<div style="color:var(--muted);font-size:12px;padding:4px 0 12px">No ingredients yet — add one below</div>'}
-
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="openAddIngModal(${r.id})"
-            style="font-size:13px;padding:9px 20px;font-weight:700">+ Add Ingredient</button>
-          <button class="btn btn-ghost btn-sm" onclick="plOpenIngPicker(${r.id})"
-            style="font-size:12px;color:#4a9c6e;border-color:#4a9c6e;padding:8px 12px">📚 Price Library</button>
-        </div>
-      </div>`;
-  }
-
-  function recipeCostSummaryHtml(r) {
-    const ings = r.ingredients || [];
-    const ingCost = ings.reduce((sum, ing) => sum + (parseFloat(ing.quantity)||0) * resolveIngCost(ing), 0);
-    const totalActiveMins = r.stages.reduce((s, x) => s + (x.activeMins||0), 0);
-    const laborRate = r.laborRatePerHour || 18;
-    const laborCost = (totalActiveMins / 60) * laborRate;
-    const totalCost = ingCost + laborCost;
-    const retailPrice = parseFloat(r.retailPrice) || 0;
-    const yieldQty    = parseInt(r.yieldQty) || 0;
-    const batchValue  = retailPrice * yieldQty;
-    const margin      = batchValue - totalCost;
-    const hasRetail   = retailPrice > 0 && yieldQty > 0;
-    if (ingCost === 0 && laborCost === 0 && !hasRetail) return '';
-    return `
-      <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
-        <div style="margin-bottom:8px"><div class="section-label">Cost &amp; Value per Batch</div></div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
-          <div style="flex:1;min-width:110px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ingredients</div>
-            <div style="font-size:20px;font-weight:700;color:var(--text)">$${ingCost.toFixed(2)}</div>
-          </div>
-          <div style="flex:1;min-width:110px;background:var(--accent);border-radius:6px;padding:8px 14px">
-            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Total Cost / Batch</div>
-            <div style="font-size:20px;font-weight:700;color:#fff">$${totalCost.toFixed(2)}</div>
-          </div>
-          ${hasRetail ? `
-          <div style="flex:1;min-width:110px;background:#1a5a2a;border-radius:6px;padding:8px 14px">
-            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Retail Value (${yieldQty} × $${retailPrice.toFixed(2)})</div>
-            <div style="font-size:20px;font-weight:700;color:#fff">$${batchValue.toFixed(2)}</div>
-          </div>
-          <div style="flex:1;min-width:110px;background:${margin>=0?'#1a3a2a':'#5a1a1a'};border-radius:6px;padding:8px 14px">
-            <div style="font-size:11px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Margin / Batch</div>
-            <div style="font-size:20px;font-weight:700;color:#fff">${margin>=0?'+':''}$${margin.toFixed(2)}</div>
-          </div>` : ''}
-        </div>
-        ${laborCost > 0 ? `<div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px">
-          Labor: <span style="color:var(--text);font-weight:600">$${laborCost.toFixed(2)}</span>
-          · ${totalActiveMins}m active
-          · <label style="cursor:pointer">$<input type="number" min="0" step="1" value="${laborRate}"
-            style="width:38px;background:transparent;border:none;border-bottom:1px solid var(--border);font-size:11px;color:var(--text);text-align:right;padding:0"
-            onchange="updateRecipe(${r.id},'laborRatePerHour',parseFloat(this.value)||18);renderRecipes();setTimeout(()=>toggleRecipe(${r.id}),30)"
-          >/hr</label>
-        </div>` : ''}
-      </div>`;
-  }
-
-  function recipePrefermentHtml(r) {
-    const pfs = r.preferments || [];
-    const PF_TYPES = ['Levain','Poolish','Biga','Starter','Other'];
-    const rows = pfs.map(pf => `
-      <div style="display:grid;grid-template-columns:110px 100px 90px 75px 1fr 34px;gap:8px;align-items:end;
-        background:var(--surface);border-radius:4px;padding:9px 10px;margin-bottom:6px">
-        <div class="form-group" style="margin:0">
-          <label>Type</label>
-          <select onchange="updatePreferment(${r.id},${pf.id},'type',this.value)">
-            ${PF_TYPES.map(t => `<option ${t===pf.type?'selected':''}>${t}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Grams / batch</label>
-          <input type="number" min="0" step="50" value="${pf.gramsPerBatch||0}"
-            onchange="updatePreferment(${r.id},${pf.id},'gramsPerBatch',this.value)">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Lead time (hrs)</label>
-          <input type="number" min="1" max="48" step="1" value="${pf.leadHrs||12}"
-            onchange="updatePreferment(${r.id},${pf.id},'leadHrs',this.value)">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Hydration %</label>
-          <input type="number" min="50" max="200" step="5" value="${pf.hydration||''}" placeholder="—"
-            onchange="updatePreferment(${r.id},${pf.id},'hydration',this.value)">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Notes</label>
-          <input type="text" value="${(pf.notes||'').replace(/"/g,'&quot;')}" placeholder="e.g. Build to 2× volume"
-            onchange="updatePreferment(${r.id},${pf.id},'notes',this.value)">
-        </div>
-        <div style="padding-bottom:1px">
-          <button class="btn btn-danger btn-sm" style="padding:6px 8px" onclick="deletePreferment(${r.id},${pf.id})">✕</button>
-        </div>
-      </div>`).join('');
-
-    return `<div style="border:1px solid #b8e0c8;border-radius:6px;padding:12px 14px;margin-bottom:14px;background:#f4fbf7">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#2a7d4f">🌱 Pre-ferments</div>
-        <div style="font-size:11px;color:#5a9a6f">Each batch of this recipe requires:</div>
-      </div>
-      ${pfs.length ? rows : '<div style="font-size:12px;color:#7ab08a;margin-bottom:10px">No pre-ferments defined — add one if this recipe uses levain, poolish, or biga</div>'}
-      <div style="display:grid;grid-template-columns:110px 100px 90px 75px 1fr auto;gap:8px;align-items:end;
-        border-top:1px dashed #c8e8d4;padding-top:10px;margin-top:${pfs.length?'8':'0'}px">
-        <div class="form-group" style="margin:0">
-          <label>Type</label>
-          <select id="pf-type-${r.id}">
-            ${PF_TYPES.map(t => `<option>${t}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Grams / batch</label>
-          <input type="number" min="0" step="50" id="pf-grams-${r.id}" placeholder="e.g. 500">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Lead time (hrs)</label>
-          <input type="number" min="1" max="48" step="1" id="pf-lead-${r.id}" value="12">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Hydration %</label>
-          <input type="number" min="50" max="200" step="5" id="pf-hydration-${r.id}" placeholder="—">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Notes</label>
-          <input type="text" id="pf-notes-${r.id}" placeholder="Optional notes">
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="addPreferment(${r.id})" style="white-space:nowrap;align-self:end">+ Add</button>
-      </div>
-    </div>`;
-  }
-
-  function recipeStagesHtml(r, SKILLS) {
-    const byDay = {};
-    r.stages.forEach((s, i) => {
-      const d = s.day || 1;
-      if (!byDay[d]) byDay[d] = [];
-      byDay[d].push({ ...s, _origIndex: i });
-    });
-    const dayKeys = Object.keys(byDay).map(Number).sort((a, b) => a - b);
-    return `
-        <div class="stages-list">
-          ${r.stages.length === 0 ? '<div style="color:var(--muted);font-size:12px;padding:8px 0">No stages yet — add below</div>' : ''}
-          ${dayKeys.map(dayNum => `
-            <div style="margin:14px 0 8px;display:flex;align-items:center;gap:8px">
-              <div style="font-weight:700;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.6px">Day ${dayNum}</div>
-              <div style="flex:1;height:1px;background:var(--border)"></div>
-            </div>
-            ${byDay[dayNum].map(s => `
-              <div style="background:var(--surface2);border-radius:5px;padding:10px 12px;margin-bottom:8px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                  <span class="stage-num">${s._origIndex + 1}</span>
-                  <input type="text" value="${s.name.replace(/"/g,'&quot;')}"
-                    onchange="updateStage(${r.id},${s.id},'name',this.value)"
-                    style="flex:1;font-weight:600;font-size:13px">
-                  <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
-                </div>
-                <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 70px 1fr 1fr;gap:8px;align-items:end;flex-wrap:wrap">
-                  <div class="form-group" style="margin:0">
-                    <label>Day</label>
-                    <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
-                      ${[1,2,3,4].map(d => `<option value="${d}" ${(s.day||1)===d?'selected':''}>${d}</option>`).join('')}
-                    </select>
-                  </div>
-                  <div class="form-group" style="margin:0">
-                    <label>Active (min)</label>
-                    <input type="number" min="0" value="${s.activeMins}"
-                      onchange="updateStage(${r.id},${s.id},'activeMins',this.value)" style="text-align:center">
-                  </div>
-                  <div class="form-group" style="margin:0">
-                    <label>Wait (min)</label>
-                    <input type="number" min="0" value="${s.waitMins}"
-                      onchange="updateStage(${r.id},${s.id},'waitMins',this.value)" style="text-align:center">
-                  </div>
-                  <div class="form-group" style="margin:0">
-                    <label title="Who does this stage — role or specific person">Baker Role</label>
-                    <select onchange="updateStage(${r.id},${s.id},'baker',this.value)">
-                      <option value="">— Unassigned —</option>
-                      <option value="_primary"   ${s.baker==='_primary'   ?'selected':''}>Primary (item)</option>
-                      <option value="_secondary" ${s.baker==='_secondary' ?'selected':''}>Secondary (item)</option>
-                      <option value="_day"       ${s.baker==='_day'       ?'selected':''}>Baker on Day</option>
-                      <optgroup label="Specific Person">
-                        ${staff.filter(m => m.name).map(m => `<option value="${m.id}" ${s.baker==m.id?'selected':''}>${m.name}</option>`).join('')}
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div class="form-group" style="margin:0">
-                    <label title="This stage's share of the batch retail value (all stages should sum to 100%)">Value %</label>
-                    <input type="number" min="0" max="100" step="5" value="${s.valuePct||0}"
-                      onchange="updateStage(${r.id},${s.id},'valuePct',this.value)" style="text-align:center">
-                  </div>
-                  <div class="form-group" style="margin:0">
-                    <label>Who Can Do This</label>
-                    <select onchange="updateStage(${r.id},${s.id},'skill',this.value)">
-                      ${SKILLS.map(sk => `<option ${sk===s.skill?'selected':''}>${sk}</option>`).join('')}
-                    </select>
-                  </div>
-                  <div class="form-group" style="margin:0">
-                    <label>Stage Notes</label>
-                    <input type="text" value="${(s.notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."
-                      onchange="updateStage(${r.id},${s.id},'notes',this.value)">
-                  </div>
-                </div>
-                ${(()=>{ const pctSum = r.stages.reduce((s,x)=>s+(x.valuePct||0),0); return pctSum>0&&pctSum!==100?`<div style="margin-top:5px;font-size:11px;color:#cc6600;font-weight:700">⚠ Value % sum = ${pctSum}% (should be 100%)</div>`:''; })()}
-              </div>
-            `).join('')}
-          `).join('')}
-        </div>
-        <div class="stage-add-form">
-          <div class="section-label">Add Stage</div>
-          <div class="form-row">
-            <div class="form-group" style="flex:2">
-              <label>Stage Name</label>
-              <input type="text" id="stage-name-${r.id}" placeholder="e.g. Mix dough, Shape, Proof, Bake">
-            </div>
-            <div class="form-group">
-              <label>Day</label>
-              <select id="stage-day-${r.id}" style="width:60px">
-                ${[1,2,3,4].map(d => `<option value="${d}">${d}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Active (mins)</label>
-              <input type="number" id="stage-active-${r.id}" placeholder="30" min="0">
-            </div>
-            <div class="form-group">
-              <label>Wait / Rest (mins)</label>
-              <input type="number" id="stage-wait-${r.id}" placeholder="0" min="0">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Who Can Do This</label>
-              <select id="stage-skill-${r.id}">
-                ${SKILLS.map(sk => `<option>${sk}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label title="Who does this stage — role or specific person">Baker Role</label>
-              <select id="stage-baker-${r.id}">
-                <option value="">— Unassigned —</option>
-                <option value="_primary">Primary (item)</option>
-                <option value="_secondary">Secondary (item)</option>
-                <option value="_day">Baker on Day</option>
-                <optgroup label="Specific Person">
-                  ${staff.filter(m => m.name).map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
-                </optgroup>
-              </select>
-            </div>
-            <div class="form-group" style="min-width:80px">
-              <label title="% of batch retail value for this stage">Value %</label>
-              <input type="number" id="stage-valuepct-${r.id}" placeholder="0" min="0" max="100" step="5" style="width:65px">
-            </div>
-            <div class="form-group" style="flex:2">
-              <label>Stage Notes</label>
-              <input type="text" id="stage-notes-${r.id}" placeholder="Optional notes">
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="addStage(${r.id})">+ Add Stage</button>
         </div>
       </div>
     </div>`;
@@ -14792,8 +14906,8 @@ function renderFreezerPage() {
     bohDefs.map(tabBtn).join('');
 
   freezerRenderItems(canEdit);
-  acAttach(document.getElementById('freezer-add-input'));
   freezerPopulateCatSelect();
+  if (canEdit) freezerSetAddTab(_fzAddTab);
 
   // Last submit / last scan
   const last = localStorage.getItem('bk_freezer_last_submit');
@@ -14832,6 +14946,7 @@ function freezerRenderItems(canEdit) {
   });
 
   // Group items by category, preserving order
+  const links = freezer.itemLinks || {};
   const groups = {};
   const groupOrder = [];
   freezer.items.forEach(name => {
@@ -14846,7 +14961,7 @@ function freezerRenderItems(canEdit) {
       tableRows += `<tr><td colspan="8" style="padding:12px 10px 4px;background:var(--surface2)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">${cat}</span></td></tr>`;
     }
     groups[cat].forEach(name => {
-      tableRows += freezerTableRow(freezer.id, name, data, todayPulls[name] || 0, nextPulls[name] || 0, canEdit);
+      tableRows += freezerTableRow(freezer.id, name, data, todayPulls[name] || 0, nextPulls[name] || 0, canEdit, links);
     });
   });
 
@@ -14896,7 +15011,7 @@ function freezerRenderItems(canEdit) {
     </div>`;
 }
 
-function freezerTableRow(freezerId, name, data, pull, nextPull, canEdit) {
+function freezerTableRow(freezerId, name, data, pull, nextPull, canEdit, itemLinks) {
   const key = freezerKey(freezerId, name);
   const entry = data[key] || {};
   const count = (entry.count !== null && entry.count !== undefined) ? entry.count : null;
@@ -14955,9 +15070,16 @@ function freezerTableRow(freezerId, name, data, pull, nextPull, canEdit) {
         style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:3px 6px;margin-left:2px" title="Remove">✕</button>`
     : '';
 
+  const link = (itemLinks || {})[name];
+  const srcBadge = link?.sourceType === 'recipe'
+    ? `<span title="Linked to recipe" style="font-size:10px;color:#4a9c6e;border:1px solid #4a9c6e55;border-radius:3px;padding:1px 5px;margin-left:6px;white-space:nowrap">📖 recipe</span>`
+    : link?.sourceType === 'ingredient'
+    ? `<span title="Linked to ingredient library" style="font-size:10px;color:#8a7a4a;border:1px solid #8a7a4a55;border-radius:3px;padding:1px 5px;margin-left:6px;white-space:nowrap">🧂 ingredient</span>`
+    : `<span title="Not linked — edit to link this item to a recipe or ingredient" style="font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:1px 5px;margin-left:6px;white-space:nowrap">· unlinked</span>`;
+
   return `<tr id="fz-row-${freezerHtmlId(key)}" style="border-bottom:1px solid var(--border)20">
     <td style="padding:10px">
-      <span style="font-size:14px;font-weight:600;color:var(--text)">${name}</span>
+      <span style="font-size:14px;font-weight:600;color:var(--text)">${name}</span>${srcBadge}
       ${statusLabel ? `<span style="font-size:11px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>` : ''}
       <div id="fz-meta-${freezerHtmlId(key)}" style="display:none"></div>
     </td>
@@ -15424,6 +15546,66 @@ function freezerPopulateCatSelect() {
   }
 }
 
+let _fzAddTab = 'recipe';
+
+function freezerSetAddTab(tab) {
+  _fzAddTab = tab;
+  [['recipe','fz-tab-recipe'], ['ingredient','fz-tab-ingredient'], ['manual','fz-tab-manual']].forEach(([t, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const active = t === tab;
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.background  = active ? 'var(--accent)' : 'var(--surface)';
+    btn.style.color       = active ? '#1a1209' : 'var(--text)';
+    btn.style.fontWeight  = active ? '700' : '600';
+  });
+  document.getElementById('fz-add-recipe-sel').style.display  = tab === 'recipe'     ? '' : 'none';
+  document.getElementById('fz-add-ing-sel').style.display     = tab === 'ingredient'  ? '' : 'none';
+  document.getElementById('freezer-add-input').style.display  = tab === 'manual'      ? '' : 'none';
+  if (tab === 'recipe')     freezerPopulateRecipeSel();
+  if (tab === 'ingredient') freezerPopulateIngSel();
+  if (tab === 'manual')     setTimeout(() => document.getElementById('freezer-add-input')?.focus(), 50);
+}
+
+function freezerPopulateRecipeSel() {
+  const sel = document.getElementById('fz-add-recipe-sel');
+  if (!sel) return;
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === _activeFreezer);
+  const existing = new Set(freezer ? freezer.items : []);
+  const grouped = {};
+  (recipes || []).filter(r => !r.archived && !r.isPlaceholder).forEach(r => {
+    const cat = r.category || 'Other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(r);
+  });
+  let html = '<option value="">— pick a recipe —</option>';
+  Object.keys(grouped).sort().forEach(cat => {
+    html += `<optgroup label="${cat}">`;
+    grouped[cat].sort((a,b) => a.name.localeCompare(b.name)).forEach(r => {
+      const inUse = existing.has(r.name);
+      html += `<option value="${r.id}"${inUse ? ' disabled' : ''}>${r.name}${inUse ? ' ✓' : ''}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  sel.innerHTML = html;
+}
+
+function freezerPopulateIngSel() {
+  const sel = document.getElementById('fz-add-ing-sel');
+  if (!sel) return;
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === _activeFreezer);
+  const existing = new Set(freezer ? freezer.items : []);
+  const all = plGetAll().filter(i => i.name).sort((a,b) => a.name.localeCompare(b.name));
+  let html = '<option value="">— pick an ingredient —</option>';
+  all.forEach(i => {
+    const inUse = existing.has(i.name);
+    html += `<option value="${i.id}" data-name="${i.name.replace(/"/g,'&quot;')}"${inUse ? ' disabled' : ''}>${i.name}${inUse ? ' ✓' : ''}</option>`;
+  });
+  sel.innerHTML = html;
+}
+
 function freezerCatSelectChange() {
   const sel = document.getElementById('freezer-add-cat-select');
   const catInput = document.getElementById('freezer-add-cat');
@@ -15437,27 +15619,67 @@ function freezerCatSelectChange() {
 }
 
 function freezerAddItem() {
-  const input = document.getElementById('freezer-add-input');
-  const catInput = document.getElementById('freezer-add-cat');
-  const catSel = document.getElementById('freezer-add-cat-select');
-  const name = input.value.trim();
-  const cat = (catSel && catSel.value !== '__new__' && catSel.style.display !== 'none')
-    ? catSel.value.trim()
-    : (catInput ? catInput.value.trim() : '');
-  if (!name) return;
   const defs = freezerGetDefs();
   const freezer = defs.find(f => f.id === _activeFreezer);
   if (!freezer) return;
+
+  let name = '', sourceType = 'manual', sourceId = null;
+
+  if (_fzAddTab === 'recipe') {
+    const sel = document.getElementById('fz-add-recipe-sel');
+    const recipeId = parseInt(sel?.value);
+    if (!recipeId) { sel?.focus(); return; }
+    const r = (recipes || []).find(r => r.id === recipeId);
+    if (!r) return;
+    name = r.name;
+    sourceType = 'recipe';
+    sourceId = r.id;
+  } else if (_fzAddTab === 'ingredient') {
+    const sel = document.getElementById('fz-add-ing-sel');
+    if (!sel?.value) { sel?.focus(); return; }
+    const opt = sel.options[sel.selectedIndex];
+    name = opt.getAttribute('data-name') || opt.textContent.replace(/ ✓$/, '');
+    sourceType = 'ingredient';
+    sourceId = parseInt(sel.value);
+  } else {
+    const input = document.getElementById('freezer-add-input');
+    name = input?.value.trim() || '';
+    if (!name) { input?.focus(); return; }
+    sourceType = 'manual';
+    sourceId = null;
+  }
+
+  if (!name) return;
   if (freezer.items.includes(name)) { alert('That item is already in this freezer.'); return; }
+
+  const catInput = document.getElementById('freezer-add-cat');
+  const catSel   = document.getElementById('freezer-add-cat-select');
+  const cat = (catSel && catSel.value !== '__new__' && catSel.style.display !== 'none')
+    ? catSel.value.trim()
+    : (catInput ? catInput.value.trim() : '');
+
   freezer.items.push(name);
   if (cat) {
     if (!freezer.itemCategories) freezer.itemCategories = {};
     freezer.itemCategories[name] = cat;
   }
+  if (!freezer.itemLinks) freezer.itemLinks = {};
+  freezer.itemLinks[name] = { sourceType, sourceId };
+
   freezerSaveDefs(defs);
-  input.value = '';
+
+  // Reset pickers
+  const recSel = document.getElementById('fz-add-recipe-sel');
+  if (recSel) recSel.value = '';
+  const ingSel = document.getElementById('fz-add-ing-sel');
+  if (ingSel) ingSel.value = '';
+  const inp = document.getElementById('freezer-add-input');
+  if (inp) inp.value = '';
   if (catInput) catInput.value = '';
+
   freezerRenderItems(authCanAccess('Baker'));
+  if (_fzAddTab === 'recipe')     freezerPopulateRecipeSel();
+  else if (_fzAddTab === 'ingredient') freezerPopulateIngSel();
 }
 
 function freezerRemoveItem(freezerId, name) {
@@ -26548,6 +26770,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.13': ['🔗 Freezer data integrity — Add Item now has 3 source tabs: Recipe (pick from recipe library), Ingredient (pick from price library), Manual (free text for purchased/external items); each item displays a source badge (📖 recipe / 🧂 ingredient / · unlinked) so mis-linked items are immediately visible; source stored as itemLinks per freezer — all existing items appear as unlinked until re-added or migrated'],
+  '2.5.12': ['🗂 Recipe UI — recipes now open in a 3-tab modal (Details / Production / Costing) instead of inline expansion; cards show a compact summary with click-to-open; Costing tab includes an inline unit converter (oz/lbs/cups/tbsp/tsp → grams)'],
   '2.5.11': ['⏸ Channel suspension — mark any channel as paused for a specific date without deleting orders; suspended days are skipped in demand calculations and flagged with an amber banner on Today\'s Board, Smart Plan, and Priority List'],
   '2.5.10': ['❄️ Freezer — "Today\'s Pull" column removed (was showing stale prior-day numbers); "Par" column renamed to "Min Stock" for clarity'],
   '2.5.9': ['🔄 Square inventory — fully automatic: squareNightlyPush Firebase Function now runs at 9 PM ET every night with no computer required; fixed channel filter bug that was silently skipping all products (was restricted to "bella" channels; now sums all channels, relying on the variation ID map to filter to retail items); manual "Push to Square" button still works for ad-hoc pushes; both manual and scheduled pushes write a result log to Firestore (bk_square_sync_log); Supply Board now shows a live Square status badge (🟢/🟡/🔴) under the push button indicating last sync time, item count, and source (auto vs. manual); badge updates in real-time when a push completes'],
