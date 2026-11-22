@@ -3147,7 +3147,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.9';
+const APP_VERSION      = '2.5.11';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -6441,7 +6441,8 @@ function renderTodaysBoard() {
     <div style="font-size:11px;color:var(--muted)">${usingFallback
       ? "Showing confirmed batches + standing tasks (no full schedule generated yet today)"
       : "Live from today's generated schedule"}</div>
-  </div>`;
+  </div>
+  ${chSuspensionBanner()}`;
 
   let anyItems = false;
 
@@ -9815,10 +9816,20 @@ function exportPrepList() {
 function getChannelDemand(productName, day) {
   // Returns total individual units needed today across all active channels
   // Accounts for pack multiplier (3-pack order = 3 units)
+  const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayD = new Date(); todayD.setHours(0,0,0,0);
+  const dayIdx = DOW_NAMES.indexOf(day);
+  let dateStr = null;
+  if (dayIdx !== -1) {
+    const diff = (dayIdx - todayD.getDay() + 7) % 7;
+    const target = new Date(todayD); target.setDate(todayD.getDate() + diff);
+    dateStr = target.toISOString().slice(0,10);
+  }
   let total = 0;
   channels.forEach(ch => {
     if (!ch.activeThisWeek) return;
     if (!ch.activeDays.includes(day)) return;
+    if (dateStr && chIsSuspendedOn(ch, dateStr)) return;
     (ch.orderLines || []).filter(l => l.product === productName).forEach(l => {
       total += (l.days[day] || 0) * l.unitsEach;
     });
@@ -9994,6 +10005,50 @@ function deleteChannel(id) {
 function toggleChannelWeek(id, on) {
   const ch = channels.find(c => c.id === id);
   if (ch) { ch.activeThisWeek = on; saveChannels(); renderChannelsPage(); }
+}
+
+function chIsSuspendedOn(ch, dateStr) {
+  return Array.isArray(ch.suspendedDates) && ch.suspendedDates.includes(dateStr);
+}
+
+function chGetSuspensionsToday() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dateStr = today.toISOString().slice(0,10);
+  return (channels || []).filter(ch => chIsSuspendedOn(ch, dateStr));
+}
+
+function chSuspensionBanner() {
+  const suspended = chGetSuspensionsToday();
+  if (!suspended.length) return '';
+  const names = suspended.map(ch => `<strong>${ch.name}</strong>`).join(', ');
+  return `<div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px">
+    <span style="font-size:18px;flex-shrink:0">⏸</span>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#92400e">Channel suspended today</div>
+      <div style="font-size:12px;color:#78350f;margin-top:2px">${names} — orders paused for today. Demand shown below reflects this suspension.</div>
+    </div>
+  </div>`;
+}
+
+function chAddSuspension(chId, dateStr) {
+  const ch = channels.find(c => c.id === chId);
+  if (!ch || !dateStr) return;
+  if (!Array.isArray(ch.suspendedDates)) ch.suspendedDates = [];
+  if (!ch.suspendedDates.includes(dateStr)) {
+    ch.suspendedDates.push(dateStr);
+    const today = new Date(); today.setHours(0,0,0,0);
+    ch.suspendedDates = ch.suspendedDates.filter(d => new Date(d + 'T00:00:00') >= today);
+    saveChannels();
+    renderChannelsPage();
+  }
+}
+
+function chRemoveSuspension(chId, dateStr) {
+  const ch = channels.find(c => c.id === chId);
+  if (!ch) return;
+  ch.suspendedDates = (ch.suspendedDates || []).filter(d => d !== dateStr);
+  saveChannels();
+  renderChannelsPage();
 }
 
 function updateOrderQty(chId, lineId, day, val) {
@@ -10711,6 +10766,24 @@ function renderChannelsPage() {
       </div>
 
       ${orderGrid}
+
+      ${(()=>{
+        const suspended = (ch.suspendedDates || []).filter(d => new Date(d + 'T00:00:00') >= new Date(new Date().setHours(0,0,0,0)));
+        const chips = suspended.map(d => {
+          const label = new Date(d + 'T00:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+          return `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef3c7;border:1px solid #f59e0b;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:#92400e">
+            ⏸ ${label}
+            <button onclick="chRemoveSuspension('${ch.id}','${d}')" style="background:none;border:none;cursor:pointer;color:#92400e;font-size:12px;padding:0;line-height:1" title="Remove">✕</button>
+          </span>`;
+        }).join('');
+        return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+          <span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">⏸ Skip a date:</span>
+          ${chips}
+          <input type="date" min="${new Date().toISOString().slice(0,10)}"
+            onchange="if(this.value){chAddSuspension('${ch.id}',this.value);this.value=''}"
+            style="padding:3px 8px;border:1px dashed var(--border);border-radius:20px;background:transparent;color:var(--text);font-size:11px;cursor:pointer">
+        </div>`;
+      })()}
 
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
         <div style="display:flex;gap:8px;align-items:center">
@@ -14811,8 +14884,7 @@ function freezerRenderItems(canEdit) {
           <tr style="border-bottom:2px solid var(--border)">
             <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Item</th>
             <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Stock</th>
-            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Par</th>
-            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:70px">Today's Pull</th>
+            <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Min Stock</th>
             <th style="text-align:center;padding:8px 10px;color:#4a3a7a;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:70px">🌙 ${tomorrowShort}</th>
             <th style="text-align:center;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:64px">Net</th>
             <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Updated</th>
@@ -14891,7 +14963,6 @@ function freezerTableRow(freezerId, name, data, pull, nextPull, canEdit) {
     </td>
     <td style="padding:10px;text-align:center">${countDisplay}</td>
     <td style="padding:10px;text-align:center">${parInput}</td>
-    <td style="padding:10px;text-align:center">${pullDisplay}</td>
     <td style="padding:10px;text-align:center">${nextPull > 0 ? `<span style="font-weight:600;color:#4a3a7a">${nextPull}</span>` : `<span style="color:var(--border)">—</span>`}</td>
     <td style="padding:10px;text-align:center">${netDisplay}</td>
     <td style="padding:10px">${updatedStr}</td>
@@ -20206,12 +20277,15 @@ function wpSwitchTab(tab) {
 
 function bbSuggestWeekDemand(itemName, daysAhead) {
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const todayIdx = new Date().getDay();
+  const today = new Date(); today.setHours(0,0,0,0);
   const q = itemName.toLowerCase().trim();
   let total = 0;
   for (let i = 0; i < (daysAhead || 7); i++) {
-    const dk = DOW[(todayIdx + i) % 7];
+    const targetDate = new Date(today); targetDate.setDate(today.getDate() + i);
+    const dateStr = targetDate.toISOString().slice(0,10);
+    const dk = DOW[targetDate.getDay()];
     (channels || []).forEach(ch => {
+      if (chIsSuspendedOn(ch, dateStr)) return;
       (ch.orderLines || []).forEach(line => {
         if (!line.product) return;
         if (line.product.toLowerCase().trim() === q) {
@@ -20233,6 +20307,8 @@ function bbDemandByDayRow(itemNames, daysAhead) {
   const todayIdx = today.getDay();
   const names   = Array.isArray(itemNames) ? itemNames : [itemNames];
   const days    = Array.from({ length: daysAhead || 4 }, (_, i) => {
+    const targetDate = new Date(today); targetDate.setDate(today.getDate() + i);
+    const dateStr = targetDate.toISOString().slice(0,10);
     const dowIdx = (todayIdx + i) % 7;
     const dk     = DOW[dowIdx];
     const label  = LABELS[dowIdx];
@@ -20240,6 +20316,7 @@ function bbDemandByDayRow(itemNames, daysAhead) {
     names.forEach(itemName => {
       const q = itemName.toLowerCase().trim();
       (channels || []).forEach(ch => {
+        if (chIsSuspendedOn(ch, dateStr)) return;
         (ch.orderLines || []).forEach(line => {
           if (!line.product) return;
           if (line.product.toLowerCase().trim() === q) {
@@ -20686,7 +20763,7 @@ function renderWpSuggestions() {
   const low      = _wpBbItems.filter(i => i.urgency === 'low').length;
   const proj     = _wpBbItems.filter(i => i.urgency === 'projected').length;
 
-  el.innerHTML = `
+  el.innerHTML = chSuspensionBanner() + `
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
       ${spike    ? `<span class="badge badge-spike">⚡ ${spike} Spike</span>` : ''}
       ${critical ? `<span class="badge badge-critical">${critical} Critical</span>` : ''}
@@ -21331,7 +21408,7 @@ function renderSmartPlan() {
     <div style="font-size:13px">No demand signals found across freezer inventory and channel orders.</div>
   </div>` : '';
 
-  el.innerHTML = summaryBar + (noDemand || `
+  el.innerHTML = chSuspensionBanner() + summaryBar + (noDemand || `
     <div style="display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);
       border-radius:var(--radius);min-height:200px">
       ${dayCols || `<div style="padding:40px;color:var(--muted);font-size:13px;width:100%;text-align:center">No items for this week — check the Next Week section below.</div>`}
@@ -26471,6 +26548,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.11': ['⏸ Channel suspension — mark any channel as paused for a specific date without deleting orders; suspended days are skipped in demand calculations and flagged with an amber banner on Today\'s Board, Smart Plan, and Priority List'],
+  '2.5.10': ['❄️ Freezer — "Today\'s Pull" column removed (was showing stale prior-day numbers); "Par" column renamed to "Min Stock" for clarity'],
   '2.5.9': ['🔄 Square inventory — fully automatic: squareNightlyPush Firebase Function now runs at 9 PM ET every night with no computer required; fixed channel filter bug that was silently skipping all products (was restricted to "bella" channels; now sums all channels, relying on the variation ID map to filter to retail items); manual "Push to Square" button still works for ad-hoc pushes; both manual and scheduled pushes write a result log to Firestore (bk_square_sync_log); Supply Board now shows a live Square status badge (🟢/🟡/🔴) under the push button indicating last sync time, item count, and source (auto vs. manual); badge updates in real-time when a push completes'],
   '2.5.8': ['📅 Priority List — daily demand breakdown: each card now shows demand by day-of-week (SU M T W TH F SA) instead of a single "4-day demand" total; days with no demand show a dash; source-grouped items (e.g. Croissant Dough) sum demand across all variants per day; spans all 7 days so the full week\'s demand is visible at a glance'],
   '2.5.7': ['🗂 Bake Board — tab navigation redesigned: tabs are now larger (15px, bold) with a thicker 3px active underline for clear visual prominence; "Needs Baking" renamed to "Priority List" — reflects that the tab covers all production needs (dough mixing, shaping, baking) not just literal baking'],
