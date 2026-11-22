@@ -3247,7 +3247,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.21';
+const APP_VERSION      = '2.5.22';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4539,7 +4539,7 @@ function updateIngredient(recipeId, ingId, field, val) {
   const costCell = document.getElementById('ing-cost-cell-' + recipeId + '-' + ingId);
   if (costCell) {
     const qty = parseFloat(ing.quantity) || 0;
-    const cpu = parseFloat(ing.costPerUnit) || 0;
+    const cpu = resolveIngCost(ing);
     costCell.textContent = (qty && cpu) ? '$' + (qty * cpu).toFixed(2) : '—';
   }
 }
@@ -25451,8 +25451,9 @@ function plLookupByName(name) {
 }
 
 function plLookupById(id) {
-  if (!id) return null;
-  return (plLoad() || []).find(e => e.id === id) || null;
+  if (!id && id !== 0) return null;
+  const sid = String(id);
+  return (plLoad() || []).find(e => String(e.id) === sid) || null;
 }
 
 var PL_CAT_COLORS = {
@@ -27214,6 +27215,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.22': ['🐛 Fix plLookupById type mismatch — picker stored plId as a string but price library IDs are numbers; plLookupById now normalizes both sides to String() before comparing, so picker-added ingredients resolve by ID correctly; also fixed updateIngredient cost cell to use resolveIngCost() so library-linked ingredients with costPerUnit=0 show correct cost immediately after an inline edit'],
   '2.5.21': ['🔄 Backfill recipeId on existing order lines — backfillOrderLineRecipeIds() runs once post-signin (flag bk_migration_ol_recipeid_v1); loops every channel order line and stamps recipeId from resolveRecipeId(product) where missing; saves to Firestore only if any lines changed; all lines from PRODUCT_TO_RECIPE and _productRecipeLinks now carry recipeId'],
   '2.5.20': ['🔗 Channel order lines now store recipeId — recipe link saved directly on each order line at add-time (from PRODUCT_TO_RECIPE or runtime map); edit modal pre-selects from line.recipeId (falls back to name lookup); saving edit now writes recipeId to the line and keeps _productRecipeLinks in sync; channels list shows 🔗 recipe name badge (or ⚠ no recipe) on each line; freezerGetTodayPull, freezerGetNextDayPull, bbSuggestWeekDemand, and bbDemandByDayRow all match by recipeId as well as product name — eliminates name-mismatch misses for any line with a recipe link set'],
   '2.5.19': ['🔗 Recipe ingredients now store plId — price library ID saved on each ingredient at add-time (from auto-fill or picker); resolveIngCost, plSyncIngredient, plSyncAllIngredients, and ingredient badge all resolve by ID first, name fallback; prevents silent costing breakage if a library item is renamed; "📚 Price Library" picker now fills the add-ingredient modal directly when open'],
