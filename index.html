@@ -3247,7 +3247,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.15';
+const APP_VERSION      = '2.5.21';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -3398,6 +3398,7 @@ function chLineDrop(e, chId, lineId) {
 let _productRecipeLinks = JSON.parse(localStorage.getItem('bk_product_recipe_links') || '{}');
 function saveProductRecipeLinks() { localStorage.setItem('bk_product_recipe_links', JSON.stringify(_productRecipeLinks)); }
 function resolveRecipeId(product) { return PRODUCT_TO_RECIPE[product] ?? _productRecipeLinks[product] ?? null; }
+function resolveLineRecipeId(line) { return line.recipeId || resolveRecipeId(line.product) || null; }
 let dailySelections = JSON.parse(localStorage.getItem('bk_daily_sel') || '[]');
 function saveDailySelections() { localStorage.setItem('bk_daily_sel', JSON.stringify(dailySelections)); }
 // plannerDate: the calendar day being planned — defaults to today, persisted across refreshes
@@ -4405,7 +4406,7 @@ function plSyncIngredient(recipeId, ingId) {
   if (!r || !r.ingredients) return;
   const ing = r.ingredients.find(i => i.id === ingId);
   if (!ing) return;
-  const lib = plLookupByName(ing.name);
+  const lib = plLookupById(ing.plId) || plLookupByName(ing.name);
   if (!lib) return;
   // Clear any manual override so the ingredient uses the live library price going forward
   ing.costPerUnit = 0;
@@ -4435,7 +4436,7 @@ function plSyncAllIngredients(recipeId) {
   if (!r || !r.ingredients) return;
   let synced = 0;
   r.ingredients.forEach(ing => {
-    const lib = plLookupByName(ing.name);
+    const lib = plLookupById(ing.plId) || plLookupByName(ing.name);
     // Clear manual override so each ingredient resolves live from the library going forward
     if (lib && lib.pricePerGram) { ing.costPerUnit = 0; if (!ing.unit) ing.unit = 'g'; synced++; }
   });
@@ -4456,7 +4457,7 @@ function plOpenIngPicker(recipeId) {
         color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border)">${cat}</div>
     ${items.map(e => `<div class="pl-ing-row"
         data-name="${(e.name||'').toLowerCase()}" data-cat="${(e.cat||'').toLowerCase()}"
-        onclick="plSelectIng(${recipeId},'${(e.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',${e.pricePerGram})"
+        onclick="plSelectIng(${recipeId},'${(e.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',${e.pricePerGram},'${e.id}')"
         style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;
           border-bottom:1px solid var(--border);transition:background 0.1s"
         onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
@@ -4496,17 +4497,27 @@ function plFilterIngPicker(q) {
   });
 }
 
-function plSelectIng(recipeId, name, pricePerGram) {
+function plSelectIng(recipeId, name, pricePerGram, plId) {
+  _modalIngPlId = plId || null;
   const nameEl = document.getElementById('ing-name-' + recipeId);
   const costEl = document.getElementById('ing-cost-' + recipeId);
   const unitEl = document.getElementById('ing-unit-' + recipeId);
   const hintEl = document.getElementById('ing-lib-hint-' + recipeId);
+  // Also fill the add-ingredient modal fields if they exist
+  const mName = document.getElementById('modal-ing-name');
+  const mCost = document.getElementById('modal-ing-cost');
+  const mUnit = document.getElementById('modal-ing-unit');
+  const mHint = document.getElementById('modal-ing-lib-hint');
   if (nameEl) nameEl.value = name;
   if (costEl) costEl.value = pricePerGram;
   if (unitEl && !unitEl.value) unitEl.value = 'g';
   if (hintEl) hintEl.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:1px 5px;font-size:10px">📚 $' + pricePerGram.toFixed(5) + '/g</span>';
+  if (mName) mName.value = name;
+  if (mCost && !mCost.value) mCost.value = pricePerGram;
+  if (mUnit && !mUnit.value) mUnit.value = 'g';
+  if (mHint) mHint.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:600">📚 $' + pricePerGram.toFixed(5) + '/g</span>';
   document.getElementById('pl-ing-picker')?.remove();
-  setTimeout(() => document.getElementById('ing-qty-' + recipeId)?.focus(), 50);
+  setTimeout(() => (document.getElementById('modal-ing-qty') || document.getElementById('ing-qty-' + recipeId))?.focus(), 50);
 }
 
 function deleteIngredient(recipeId, ingId) {
@@ -4561,10 +4572,12 @@ function recipeIngCostPreview(recipeId) {
 // ============ ADD INGREDIENT MODAL ============
 var _addIngModalRecipeId = null;
 var _addIngModalAdded    = 0;
+var _modalIngPlId        = null;
 
 function openAddIngModal(recipeId) {
   _addIngModalRecipeId = recipeId;
   _addIngModalAdded    = 0;
+  _modalIngPlId        = null;
   const r   = recipes.find(r => r.id === recipeId);
   const el  = document.getElementById('add-ingredient-modal');
   el.style.display = 'flex';
@@ -4601,10 +4614,12 @@ function modalIngAutoFill() {
   const cost  = document.getElementById('modal-ing-cost');
   const unit  = document.getElementById('modal-ing-unit');
   if (match && match.pricePerGram) {
+    _modalIngPlId = match.id || null;
     if (hint) hint.innerHTML = '<span style="background:#1e3a2f;color:#4a9c6e;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:600">📚 ' + match.cat + ' · $' + match.pricePerGram.toFixed(5) + '/g</span>';
     if (cost && !cost.value) cost.value = match.pricePerGram;
     if (unit && !unit.value) unit.value = 'g';
   } else {
+    _modalIngPlId = null;
     if (hint) hint.innerHTML = '';
   }
   modalIngCostPreview();
@@ -4643,20 +4658,23 @@ function confirmAddIngredient() {
   let costPerUnit = parseFloat(costVal) || 0;
   let unit        = (unitVal || '').trim();
   if (!costPerUnit) {
-    const lib = plLookupByName(name);
+    const lib = plLookupById(_modalIngPlId) || plLookupByName(name);
     if (lib && lib.pricePerGram > 0) { costPerUnit = lib.pricePerGram; if (!unit) unit = 'g'; }
   }
+  const plId = _modalIngPlId || plLookupByName(name)?.id || null;
 
   r.ingredients.push({
     id: Date.now() + Math.random(),
     name,
     quantity: (document.getElementById('modal-ing-qty')?.value || '').trim(),
     unit,
-    costPerUnit
+    costPerUnit,
+    plId
   });
   save();
   recipeMarkSaved(recipeId);
   _addIngModalAdded++;
+  _modalIngPlId = null;
 
   // Clear for next ingredient
   ['modal-ing-name','modal-ing-qty','modal-ing-unit','modal-ing-cost'].forEach(id => {
@@ -4787,7 +4805,7 @@ let _recipeModalTab = 'details';
 const RECIPE_EDIT_SKILLS = ['Head Baker','Baker','Bakery Assistant','Anyone'];
 
 function resolveIngCost(ing) {
-  const lib = plLookupByName(ing.name);
+  const lib = plLookupById(ing.plId) || plLookupByName(ing.name);
   if (lib && lib.pricePerGram > 0) return lib.pricePerGram;
   return parseFloat(ing.costPerUnit) || 0;
 }
@@ -5121,7 +5139,7 @@ function _rmCostingTab(r) {
 function recipeIngredientsHtml(r) {
   const ings = r.ingredients || [];
   const rows = ings.map(ing => {
-    const lib = plLookupByName(ing.name);
+    const lib = plLookupById(ing.plId) || plLookupByName(ing.name);
     const hasLib = !!lib;
     const hasOverride = ing.costPerUnit > 0;
     const liveCost = resolveIngCost(ing);
@@ -5181,7 +5199,7 @@ function recipeIngredientsHtml(r) {
       </td>
     </tr>`;
   }).join('');
-  const libCount = ings.filter(i => plLookupByName(i.name)).length;
+  const libCount = ings.filter(i => plLookupById(i.plId) || plLookupByName(i.name)).length;
   const unlibCount = ings.length - libCount;
   return `
     <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:14px">
@@ -10310,7 +10328,8 @@ function confirmAddOrderLine(chId, unitsEach, variation) {
     product,
     variation: variation || 'individual',
     unitsEach: parseInt(unitsEach) || 1,
-    days: {}
+    days: {},
+    recipeId: resolveRecipeId(product) || null
   });
   const inp = document.getElementById('new-product-' + chId);
   if (inp) inp.value = '';
@@ -10476,7 +10495,7 @@ function openEditLineModal(chId, lineId) {
     opt.textContent = r.name + (r.category ? ` (${r.category})` : '');
     recSel.appendChild(opt);
   });
-  const currentLink = resolveRecipeId(line.product.toUpperCase());
+  const currentLink = line.recipeId || resolveRecipeId(line.product.toUpperCase()) || null;
   recSel.value = currentLink !== null ? String(currentLink) : '';
   document.getElementById('ch-edit-line-modal').style.display = 'block';
 }
@@ -10501,10 +10520,15 @@ function saveEditLine() {
   line.unitsEach = parseInt(document.getElementById('el-units').value, 10) || 1;
   const notes = document.getElementById('el-notes').value.trim();
   if (notes) line.notes = notes; else delete line.notes;
-  // Save recipe link (write to runtime map; hardcoded PRODUCT_TO_RECIPE links are read-only)
+  // Save recipe link: store on the line directly AND in the runtime map for backwards compat
   const chosenRecipeId = document.getElementById('el-recipe-link').value;
-  if (chosenRecipeId) _productRecipeLinks[line.product] = parseInt(chosenRecipeId, 10);
-  else delete _productRecipeLinks[line.product];
+  if (chosenRecipeId) {
+    line.recipeId = parseInt(chosenRecipeId, 10);
+    _productRecipeLinks[line.product] = parseInt(chosenRecipeId, 10);
+  } else {
+    line.recipeId = null;
+    delete _productRecipeLinks[line.product];
+  }
   saveProductRecipeLinks();
   saveChannels();
   closeEditLineModal();
@@ -10902,6 +10926,7 @@ function renderChannelsPage() {
                     <span style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${catMeta.color}">${catMeta.name}</span>
                   </td></tr>`;
                 }
+                const lineRecipe = line.recipeId ? (recipes||[]).find(r=>r.id===line.recipeId) : null;
                 return catHeader + `<tr draggable="true"
                   ondragstart="chLineDragStart('${escapedChId}','${escapedLineId}')"
                   ondragover="chLineDragOver(event,this)"
@@ -10913,7 +10938,7 @@ function renderChannelsPage() {
                       <span style="color:var(--muted);font-size:13px;line-height:1;user-select:none;flex-shrink:0" title="Drag to reorder within category">⠿</span>
                       <div>
                         <div style="font-weight:500">${line.product}</div>
-                        <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}</div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:1px">${line.variation} &times;${line.unitsEach}${meta.deliveryLead>0?' &middot; bake day before':''}${lineRecipe?` &middot; <span style="color:#4a9c6e" title="Linked recipe: ${lineRecipe.name}">🔗 ${lineRecipe.name}</span>`:' &middot; <span style="color:#cc8844" title="Click ✏ to link a recipe">⚠ no recipe</span>'}</div>
                         ${line.notes ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-style:italic">${line.notes}</div>` : ''}
                       </div>
                     </div>
@@ -15203,15 +15228,52 @@ function freezerSetPar(freezerId, name, val) {
 }
 
 // ---- Today's Pull (from channel pars) ----
+// Return the recipe linked to a freezer item via itemLinks (by ID), falling back
+// to name matching so existing unlinked items still work.
+function freezerGetLinkedRecipe(itemName) {
+  const defs = freezerGetDefs();
+  for (const f of defs) {
+    const link = (f.itemLinks || {})[itemName];
+    if (link && link.sourceType === 'recipe') {
+      const rec = (recipes || []).find(r => r.id === link.sourceId);
+      if (rec) return rec;
+    }
+  }
+  return (recipes || []).find(r => r.name.toLowerCase() === itemName.toLowerCase()) || null;
+}
+
+// Build the set of lowercase product names that map to a freezer item,
+// using itemLinks so a freezer item "Cinnamon Buns" linked to recipe
+// "Croissant Cinnamon Bun" will also match that channel product name.
+function freezerGetMatchNames(itemName) {
+  const names = new Set([itemName.toLowerCase().trim()]);
+  const defs = freezerGetDefs();
+  for (const f of defs) {
+    const link = (f.itemLinks || {})[itemName];
+    if (!link) continue;
+    if (link.sourceType === 'recipe') {
+      const rec = (recipes || []).find(r => r.id === link.sourceId);
+      if (rec && rec.name) names.add(rec.name.toLowerCase().trim());
+    } else if (link.sourceType === 'ingredient') {
+      const ing = (plGetAll() || []).find(i => i.id === link.sourceId);
+      if (ing && ing.name) names.add(ing.name.toLowerCase().trim());
+    }
+    break;
+  }
+  return names;
+}
+
 function freezerGetTodayPull(itemName) {
   const todayKey = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
-  const q = itemName.toLowerCase().trim();
+  const names = freezerGetMatchNames(itemName);
+  const linkedRecipeId = freezerGetLinkedRecipe(itemName)?.id || null;
   let total = 0;
   (channels || []).forEach(ch => {
+    if (!ch.activeThisWeek) return;
     (ch.orderLines || []).forEach(line => {
       if (!line.product) return;
-      const p = line.product.toLowerCase().trim();
-      if (p === q) {
+      if (names.has(line.product.toLowerCase().trim()) ||
+          (linkedRecipeId && resolveLineRecipeId(line) === linkedRecipeId)) {
         const qty = (line.days && line.days[todayKey]) || 0;
         const unitsEach = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
         total += qty * unitsEach;
@@ -15225,14 +15287,15 @@ function freezerGetTodayPull(itemName) {
 function freezerGetNextDayPull(itemName) {
   const tomorrowIdx = (new Date().getDay() + 1) % 7;
   const tomorrowKey = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][tomorrowIdx];
-  const q = itemName.toLowerCase().trim();
+  const names = freezerGetMatchNames(itemName);
+  const linkedRecipeId = freezerGetLinkedRecipe(itemName)?.id || null;
   let total = 0;
   (channels || []).forEach(ch => {
     if (!ch.activeThisWeek) return;
     (ch.orderLines || []).forEach(line => {
       if (!line.product) return;
-      const p = line.product.toLowerCase().trim();
-      if (p === q) {
+      if (names.has(line.product.toLowerCase().trim()) ||
+          (linkedRecipeId && resolveLineRecipeId(line) === linkedRecipeId)) {
         const qty = (line.days && line.days[tomorrowKey]) || 0;
         const unitsEach = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
         total += qty * unitsEach;
@@ -15515,7 +15578,7 @@ let _ltfItem = null;
 
 function wpLogToFreezer(day, itemId) {
   if (!authCanAccess('Baker')) { alert('Baker access required to log to freezer.'); return; }
-  const mondayStr = wpMondayStr(_wpWeekMonday);
+  const mondayStr = wpMondayForDay(day);
   const weekData  = wpGetWeek(mondayStr);
   const dayData   = weekData[day];
   if (!dayData) return;
@@ -15535,7 +15598,7 @@ function wpLogToFreezer(day, itemId) {
   const selEl = document.getElementById('wp-ltf-freezer-sel');
   selEl.innerHTML = bohDefs.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
 
-  const bestFreezer = wpLtfFindBestFreezer(item.name, bohDefs);
+  const bestFreezer = wpLtfFindBestFreezer(item.name, bohDefs, item.dtRecipeId || null);
   if (bestFreezer) selEl.value = bestFreezer;
 
   wpLtfSelectFreezer(selEl.value);
@@ -15547,22 +15610,49 @@ function wpLogToFreezer(day, itemId) {
   document.body.style.overflow = 'hidden';
 }
 
-function wpLtfFindBestFreezer(itemName, bohDefs) {
-  const name = itemName.toLowerCase();
-  for (const f of bohDefs) {
-    if (f.items.some(i => i.toLowerCase() === name || name.includes(i.toLowerCase()) || i.toLowerCase().includes(name))) {
-      return f.id;
+function wpLtfFindBestFreezer(itemName, bohDefs, recipeId) {
+  const q = itemName.toLowerCase().trim();
+  // 1. ID-based reverse lookup via itemLinks
+  if (recipeId) {
+    for (const f of bohDefs) {
+      for (const fi of f.items) {
+        const link = (f.itemLinks || {})[fi];
+        if (link && link.sourceType === 'recipe' && link.sourceId === recipeId) return f.id;
+      }
     }
+  }
+  // 2. Name-via-itemLinks reverse lookup (channel product name → freezer item)
+  for (const f of bohDefs) {
+    if (f.items.some(fi => freezerGetMatchNames(fi).has(q))) return f.id;
+  }
+  // 3. Substring fallback
+  for (const f of bohDefs) {
+    if (f.items.some(i => i.toLowerCase() === q || q.includes(i.toLowerCase()) || i.toLowerCase().includes(q))) return f.id;
   }
   return bohDefs[0]?.id || null;
 }
 
-function wpLtfFindBestItem(itemName, freezerItems) {
-  const name = itemName.toLowerCase();
-  let match = freezerItems.find(i => i.toLowerCase() === name);
-  if (match) return match;
-  match = freezerItems.find(i => i.toLowerCase().includes(name) || name.includes(i.toLowerCase()));
-  return match || null;
+function wpLtfFindBestItem(itemName, freezerItems, recipeId) {
+  const q = itemName.toLowerCase().trim();
+  // 1. ID-based reverse lookup via itemLinks
+  if (recipeId) {
+    const defs = freezerGetDefs();
+    for (const f of defs) {
+      const found = freezerItems.find(fi => {
+        const link = (f.itemLinks || {})[fi];
+        return link && link.sourceType === 'recipe' && link.sourceId === recipeId;
+      });
+      if (found) return found;
+    }
+  }
+  // 2. Name-via-itemLinks reverse lookup
+  const byLink = freezerItems.find(fi => freezerGetMatchNames(fi).has(q));
+  if (byLink) return byLink;
+  // 3. Exact name match
+  const exact = freezerItems.find(i => i.toLowerCase() === q);
+  if (exact) return exact;
+  // 4. Substring fallback
+  return freezerItems.find(i => i.toLowerCase().includes(q) || q.includes(i.toLowerCase())) || null;
 }
 
 function wpLtfSelectFreezer(freezerId) {
@@ -15571,7 +15661,7 @@ function wpLtfSelectFreezer(freezerId) {
   if (!freezer) return;
   const itemSel = document.getElementById('wp-ltf-item-sel');
   itemSel.innerHTML = freezer.items.map(name => `<option value="${name}">${name}</option>`).join('');
-  const best = wpLtfFindBestItem(_ltfItem?.name || '', freezer.items);
+  const best = wpLtfFindBestItem(_ltfItem?.name || '', freezer.items, _ltfItem?.dtRecipeId || null);
   if (best) itemSel.value = best;
 }
 
@@ -20808,7 +20898,8 @@ function wpSwitchTab(tab) {
 function bbSuggestWeekDemand(itemName, daysAhead) {
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const today = new Date(); today.setHours(0,0,0,0);
-  const q = itemName.toLowerCase().trim();
+  const names = freezerGetMatchNames(itemName);
+  const linkedRecipeId = freezerGetLinkedRecipe(itemName)?.id || null;
   let total = 0;
   for (let i = 0; i < (daysAhead || 7); i++) {
     const targetDate = new Date(today); targetDate.setDate(today.getDate() + i);
@@ -20818,7 +20909,8 @@ function bbSuggestWeekDemand(itemName, daysAhead) {
       if (chIsSuspendedOn(ch, dateStr)) return;
       (ch.orderLines || []).forEach(line => {
         if (!line.product) return;
-        if (line.product.toLowerCase().trim() === q) {
+        if (names.has(line.product.toLowerCase().trim()) ||
+            (linkedRecipeId && resolveLineRecipeId(line) === linkedRecipeId)) {
           const qty = (line.days && line.days[dk]) || 0;
           const ue  = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
           total += qty * ue;
@@ -20844,12 +20936,14 @@ function bbDemandByDayRow(itemNames, daysAhead) {
     const label  = LABELS[dowIdx];
     let qty = 0;
     names.forEach(itemName => {
-      const q = itemName.toLowerCase().trim();
+      const matchNames = freezerGetMatchNames(itemName);
+      const linkedRecipeId = freezerGetLinkedRecipe(itemName)?.id || null;
       (channels || []).forEach(ch => {
         if (chIsSuspendedOn(ch, dateStr)) return;
         (ch.orderLines || []).forEach(line => {
           if (!line.product) return;
-          if (line.product.toLowerCase().trim() === q) {
+          if (matchNames.has(line.product.toLowerCase().trim()) ||
+              (linkedRecipeId && resolveLineRecipeId(line) === linkedRecipeId)) {
             const q2 = (line.days && line.days[dk]) || 0;
             const ue = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
             qty += q2 * ue;
@@ -20950,7 +21044,7 @@ function bbSuggestGetItems() {
       else if (gap > 0)                                                  urgency = 'projected';
       else return;
 
-      const rec = (recipes || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+      const rec = freezerGetLinkedRecipe(name);
       const effectiveGap = rrSpike ? Math.max(gap, rrQty - stock + (par || 0)) : gap;
 
       // If this item is derived from a source dough recipe, bucket it into the group
@@ -21335,7 +21429,7 @@ function spGetProjectedItems() {
       const rrSpike = rrQty > 0 && (stock - rrQty) < (par || 0);
       const todayPull = freezerGetTodayPull(name);
       const baseGap = rrSpike ? Math.max(rawGap, rrQty - stock + (par || 0)) : rawGap;
-      const rec = (recipes || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+      const rec = freezerGetLinkedRecipe(name);
 
       if (rec && rec.sourceRecipeId) {
         // Bucket under source recipe — urgency and onBoard resolved at group level
@@ -25356,6 +25450,11 @@ function plLookupByName(name) {
   return { id: 'recipe-' + linkedRecipe.id, name: linkedRecipe.name, cat: 'Prep', pricePerGram, tags: linkedRecipe.tags || [] };
 }
 
+function plLookupById(id) {
+  if (!id) return null;
+  return (plLoad() || []).find(e => e.id === id) || null;
+}
+
 var PL_CAT_COLORS = {
   'Flour':'#c8a87a','Dairy':'#7ab8c8','Fat':'#c8b87a','Sugar':'#c87a9e',
   'Leavening':'#a8c87a','Chocolate':'#8b6249','Fruit':'#c87a7a',
@@ -27115,6 +27214,12 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.21': ['🔄 Backfill recipeId on existing order lines — backfillOrderLineRecipeIds() runs once post-signin (flag bk_migration_ol_recipeid_v1); loops every channel order line and stamps recipeId from resolveRecipeId(product) where missing; saves to Firestore only if any lines changed; all lines from PRODUCT_TO_RECIPE and _productRecipeLinks now carry recipeId'],
+  '2.5.20': ['🔗 Channel order lines now store recipeId — recipe link saved directly on each order line at add-time (from PRODUCT_TO_RECIPE or runtime map); edit modal pre-selects from line.recipeId (falls back to name lookup); saving edit now writes recipeId to the line and keeps _productRecipeLinks in sync; channels list shows 🔗 recipe name badge (or ⚠ no recipe) on each line; freezerGetTodayPull, freezerGetNextDayPull, bbSuggestWeekDemand, and bbDemandByDayRow all match by recipeId as well as product name — eliminates name-mismatch misses for any line with a recipe link set'],
+  '2.5.19': ['🔗 Recipe ingredients now store plId — price library ID saved on each ingredient at add-time (from auto-fill or picker); resolveIngCost, plSyncIngredient, plSyncAllIngredients, and ingredient badge all resolve by ID first, name fallback; prevents silent costing breakage if a library item is renamed; "📚 Price Library" picker now fills the add-ingredient modal directly when open'],
+  '2.5.18': ['🔗 Log to Freezer wired through itemLinks — when logging a bake board item to the freezer, the correct freezer and item are now auto-selected by recipe ID match (via itemLinks) rather than substring guessing; falls back to name-via-itemLinks, then substring for unlinked items; restock request freezer picker benefits from the same improvement; also fixed wpLogToFreezer to use per-column Monday so it works correctly in cross-week views'],
+  '2.5.17': ['🔗 Smart Plan / Priority List wired through itemLinks — demand calculation (bbSuggestWeekDemand, bbDemandByDayRow) now resolves a freezer item\'s linked recipe/ingredient name before matching channel products; recipe lookup in both bbSuggestGetItems and Smart Plan now uses itemLinks by ID with name fallback; a misnamed freezer item like "Cinnamon Buns" linked to recipe "Croissant Cinnamon Bun" now surfaces correctly in Priority List with correct demand, batch suggestion, and shelf-life cap'],
+  '2.5.16': ['🔗 Freezer pull wired through itemLinks — pull calculation now resolves a freezer item\'s linked recipe or ingredient name and matches against either name in channel order lines; fixes mismatches like "Cinnamon Buns" (freezer) vs "Croissant Cinnamon Bun" (channel); also made today\'s pull and tomorrow\'s pull consistent — both now respect the channel\'s activeThisWeek flag'],
   '2.5.15': ['📅 Bake Board navigation — arrows now move by view size (1 day in 1-day mode, 3 days in 3-day mode, 7 days in 7-day mode); new "week start day" selector lets you set any day as the first column of a 7-day view (e.g. Sun first so today\'s Sunday shows at the left); cross-week views (e.g. Sun from one data week + Mon-Sat from the next) are handled correctly — moving, copying, adding, and deleting items all write to the right data week automatically'],
   '2.5.14': ['🔗 Freezer link migration tool — amber banner appears when unlinked items exist; "Link Now" opens a step-through modal covering every unlinked item across all freezers; auto-matches each item to a recipe or ingredient by name and pre-selects the best match; confirm, swap to a different pick, or mark as Manual; progress bar tracks completion; skipped items can be revisited next time the banner is shown'],
   '2.5.13': ['🔗 Freezer data integrity — Add Item now has 3 source tabs: Recipe (pick from recipe library), Ingredient (pick from price library), Manual (free text for purchased/external items); each item displays a source badge (📖 recipe / 🧂 ingredient / · unlinked) so mis-linked items are immediately visible; source stored as itemLinks per freezer — all existing items appear as unlinked until re-added or migrated'],
@@ -27679,6 +27784,24 @@ function applyPendingChannelMigrations() {
   }
 }
 
+// One-time backfill: stamp recipeId on every existing order line that lacks it.
+// Runs post-signin so saveChannels() goes through the Firestore pipeline.
+function backfillOrderLineRecipeIds() {
+  const FLAG = 'bk_migration_ol_recipeid_v1';
+  if (localStorage.getItem(FLAG)) return;
+  let changed = false;
+  channels.forEach(ch => {
+    (ch.orderLines || []).forEach(line => {
+      if (!line.recipeId) {
+        const rid = resolveRecipeId(line.product);
+        if (rid) { line.recipeId = rid; changed = true; }
+      }
+    });
+  });
+  if (changed) saveChannels();
+  localStorage.setItem(FLAG, '1');
+}
+
 // SOURCE: bootstrap.js
 let secureLoginBusy = false;
 async function secureSignOut() {
@@ -27725,6 +27848,7 @@ async function secureSignIn(staffId, pin) {
     });
     secureReady = true;
     applyPendingChannelMigrations();
+    backfillOrderLineRecipeIds();
     localStorage.removeItem('bk_staff_pins');
     localStorage.removeItem('bk_auth_session');
     idleTouch(); authHideModal(); authUpdateChip(); authRedirectForRole(result.member.role);
