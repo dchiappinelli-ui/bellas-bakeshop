@@ -2652,6 +2652,21 @@ document.addEventListener('DOMContentLoaded', function() {
     🔒 Sign in as Baker or higher to update counts
   </div>
 
+  <!-- Unlinked items banner -->
+  <div id="freezer-link-banner" style="display:none;background:#2a1f00;border:1px solid #c87a00;border-radius:6px;
+       padding:10px 16px;margin-bottom:14px;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:18px">🔗</span>
+    <div style="flex:1;min-width:180px">
+      <div id="freezer-link-banner-msg" style="font-size:13px;font-weight:700;color:#f0c060"></div>
+      <div style="font-size:11px;color:#c0a040;margin-top:2px">Link items to recipes or ingredients so the app can track production, costing, and demand correctly.</div>
+    </div>
+    <button onclick="freezerOpenLinkModal()"
+      style="background:#c87a00;color:#fff;border:none;border-radius:5px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+      🔗 Link Now</button>
+    <button onclick="document.getElementById('freezer-link-banner').style.display='none'"
+      style="background:none;border:none;color:#c0a040;cursor:pointer;font-size:16px;padding:4px">✕</button>
+  </div>
+
   <!-- Freezer selector tabs -->
   <div id="freezer-tabs" style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
        scrollbar-width:none;margin-bottom:20px;padding-bottom:2px"></div>
@@ -2712,6 +2727,66 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <div id="freezer-last-submit" style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px"></div>
+</div>
+
+<!-- ======== FREEZER LINK MIGRATION MODAL ======== -->
+<div id="fz-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1500;
+     align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:10px;padding:28px 32px;max-width:520px;width:100%;
+              box-shadow:0 12px 48px rgba(0,0,0,0.5);max-height:90vh;overflow-y:auto;position:relative">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:17px;font-weight:700;color:var(--text)">🔗 Link Freezer Items</div>
+      <button onclick="freezerCloseLinkModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:2px 6px">✕</button>
+    </div>
+    <!-- Progress -->
+    <div id="fzlm-progress-wrap" style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px">
+        <span id="fzlm-progress-label"></span>
+        <span id="fzlm-progress-pct"></span>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:2px">
+        <div id="fzlm-progress-bar" style="height:4px;background:var(--accent);border-radius:2px;transition:width .3s"></div>
+      </div>
+    </div>
+    <!-- Item info -->
+    <div style="background:var(--surface2);border-radius:6px;padding:12px 16px;margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px" id="fzlm-freezer-label"></div>
+      <div style="font-size:20px;font-weight:700;color:var(--text)" id="fzlm-item-name"></div>
+    </div>
+    <!-- Source type tabs -->
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Link to</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      <button id="fzlm-tab-recipe" onclick="freezerLinkSetTab('recipe')"
+        style="padding:7px 16px;border-radius:6px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">📖 Recipe</button>
+      <button id="fzlm-tab-ingredient" onclick="freezerLinkSetTab('ingredient')"
+        style="padding:7px 16px;border-radius:6px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">🧂 Ingredient</button>
+      <button id="fzlm-tab-manual" onclick="freezerLinkSetTab('manual')"
+        style="padding:7px 16px;border-radius:6px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">✏️ Manual</button>
+    </div>
+    <!-- Pickers -->
+    <select id="fzlm-recipe-sel"
+      style="display:none;width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
+             border-radius:6px;color:var(--text);font-size:14px;margin-bottom:16px"></select>
+    <select id="fzlm-ing-sel"
+      style="display:none;width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
+             border-radius:6px;color:var(--text);font-size:14px;margin-bottom:16px"></select>
+    <div id="fzlm-manual-note" style="display:none;font-size:12px;color:var(--muted);margin-bottom:16px;
+         background:var(--surface2);border-radius:6px;padding:10px 14px">
+      This item will be kept as-is — no recipe or ingredient link. Good for purchased goods (ice cream, pesto, fresh fruit) that aren't produced in the bakery.
+    </div>
+    <!-- Suggestion note -->
+    <div id="fzlm-suggestion" style="font-size:12px;color:#4a9c6e;margin-bottom:14px"></div>
+    <!-- Actions -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="freezerLinkSkip()"
+        style="flex:1;padding:11px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);
+               border-radius:6px;font-size:13px;cursor:pointer;white-space:nowrap">Skip →</button>
+      <button onclick="freezerLinkSaveAndNext()" id="fzlm-save-btn"
+        style="flex:3;padding:11px;background:var(--accent);color:#1a1209;border:none;
+               border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Save &amp; Next →</button>
+    </div>
+  </div>
 </div>
 
 <!-- ======== FOH STATION GUIDE PAGE ======== -->
@@ -3160,7 +3235,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.13';
+const APP_VERSION      = '2.5.14';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -14908,6 +14983,7 @@ function renderFreezerPage() {
   freezerRenderItems(canEdit);
   freezerPopulateCatSelect();
   if (canEdit) freezerSetAddTab(_fzAddTab);
+  if (canEdit) freezerLinkBannerCheck();
 
   // Last submit / last scan
   const last = localStorage.getItem('bk_freezer_last_submit');
@@ -15605,6 +15681,190 @@ function freezerPopulateIngSel() {
   });
   sel.innerHTML = html;
 }
+
+// ── Freezer Link Migration ────────────────────────────────────────────────────
+
+let _fzLinkQueue = [];   // [ { freezerId, freezerName, name } ]
+let _fzLinkIdx   = 0;
+let _fzLinkTab   = 'recipe';
+
+function freezerLinkBannerCheck() {
+  const defs = freezerGetDefs();
+  let count = 0;
+  defs.forEach(f => {
+    const links = f.itemLinks || {};
+    f.items.forEach(name => { if (!links[name]) count++; });
+  });
+  const banner = document.getElementById('freezer-link-banner');
+  if (!banner) return;
+  if (count === 0) { banner.style.display = 'none'; return; }
+  document.getElementById('freezer-link-banner-msg').textContent =
+    `${count} freezer item${count !== 1 ? 's are' : ' is'} not linked to a recipe or ingredient`;
+  banner.style.display = 'flex';
+}
+
+function freezerAutoMatch(name) {
+  const n = name.toLowerCase();
+  // 1. Exact recipe name
+  let r = (recipes || []).find(r => !r.archived && r.name.toLowerCase() === n);
+  if (r) return { sourceType: 'recipe', sourceId: r.id, label: `Recipe: ${r.name}` };
+  // 2. Recipe name contained in item name or vice-versa
+  r = (recipes || []).find(r => !r.archived && (n.includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(n)));
+  if (r) return { sourceType: 'recipe', sourceId: r.id, label: `Recipe: ${r.name}` };
+  // 3. Exact ingredient match
+  const ing = plGetAll().find(i => i.name.toLowerCase() === n);
+  if (ing) return { sourceType: 'ingredient', sourceId: ing.id, label: `Ingredient: ${ing.name}` };
+  // 4. Ingredient name contained in item name
+  const ing2 = plGetAll().find(i => n.includes(i.name.toLowerCase()) || i.name.toLowerCase().includes(n));
+  if (ing2) return { sourceType: 'ingredient', sourceId: ing2.id, label: `Ingredient: ${ing2.name}` };
+  return null;
+}
+
+function freezerOpenLinkModal() {
+  const defs = freezerGetDefs();
+  _fzLinkQueue = [];
+  defs.forEach(f => {
+    const links = f.itemLinks || {};
+    f.items.forEach(name => {
+      if (!links[name]) _fzLinkQueue.push({ freezerId: f.id, freezerName: f.name, name });
+    });
+  });
+  if (!_fzLinkQueue.length) { toastBy('All items are already linked!'); return; }
+  _fzLinkIdx = 0;
+  freezerLinkRenderStep();
+  document.getElementById('fz-link-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function freezerCloseLinkModal() {
+  document.getElementById('fz-link-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  renderFreezerPage();
+}
+
+function freezerLinkRenderStep() {
+  const item = _fzLinkQueue[_fzLinkIdx];
+  if (!item) { freezerLinkDone(); return; }
+
+  const total = _fzLinkQueue.length;
+  const done  = _fzLinkIdx;
+  const pct   = Math.round((done / total) * 100);
+  document.getElementById('fzlm-progress-label').textContent = `Item ${done + 1} of ${total}`;
+  document.getElementById('fzlm-progress-pct').textContent = `${pct}% complete`;
+  document.getElementById('fzlm-progress-bar').style.width = `${pct}%`;
+  document.getElementById('fzlm-freezer-label').textContent = item.freezerName;
+  document.getElementById('fzlm-item-name').textContent = item.name;
+  document.getElementById('fzlm-save-btn').textContent = _fzLinkIdx === total - 1 ? 'Save & Finish ✓' : 'Save & Next →';
+
+  // Auto-match
+  const match = freezerAutoMatch(item.name);
+  const tab = match ? match.sourceType : 'manual';
+  _fzLinkTab = tab;
+
+  // Populate recipe select
+  const recSel = document.getElementById('fzlm-recipe-sel');
+  const grouped = {};
+  (recipes || []).filter(r => !r.archived && !r.isPlaceholder).forEach(r => {
+    const cat = r.category || 'Other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(r);
+  });
+  let rHtml = '<option value="">— pick a recipe —</option>';
+  Object.keys(grouped).sort().forEach(cat => {
+    rHtml += `<optgroup label="${cat}">`;
+    grouped[cat].sort((a,b) => a.name.localeCompare(b.name)).forEach(r => {
+      rHtml += `<option value="${r.id}"${match?.sourceType === 'recipe' && match.sourceId === r.id ? ' selected' : ''}>${r.name}</option>`;
+    });
+    rHtml += '</optgroup>';
+  });
+  recSel.innerHTML = rHtml;
+
+  // Populate ingredient select
+  const ingSel = document.getElementById('fzlm-ing-sel');
+  const all = plGetAll().filter(i => i.name).sort((a,b) => a.name.localeCompare(b.name));
+  let iHtml = '<option value="">— pick an ingredient —</option>';
+  all.forEach(i => {
+    iHtml += `<option value="${i.id}" data-name="${i.name.replace(/"/g,'&quot;')}"${match?.sourceType === 'ingredient' && match.sourceId === i.id ? ' selected' : ''}>${i.name}</option>`;
+  });
+  ingSel.innerHTML = iHtml;
+
+  // Suggestion note
+  const suggEl = document.getElementById('fzlm-suggestion');
+  if (match) {
+    suggEl.textContent = `✦ Auto-matched: ${match.label}`;
+    suggEl.style.display = '';
+  } else {
+    suggEl.style.display = 'none';
+  }
+
+  freezerLinkSetTab(tab);
+}
+
+function freezerLinkSetTab(tab) {
+  _fzLinkTab = tab;
+  [['recipe','fzlm-tab-recipe'], ['ingredient','fzlm-tab-ingredient'], ['manual','fzlm-tab-manual']].forEach(([t, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const active = t === tab;
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.background  = active ? 'var(--accent)' : 'var(--surface)';
+    btn.style.color       = active ? '#1a1209' : 'var(--text)';
+    btn.style.fontWeight  = active ? '700' : '600';
+  });
+  document.getElementById('fzlm-recipe-sel').style.display    = tab === 'recipe'     ? '' : 'none';
+  document.getElementById('fzlm-ing-sel').style.display       = tab === 'ingredient'  ? '' : 'none';
+  document.getElementById('fzlm-manual-note').style.display   = tab === 'manual'      ? '' : 'none';
+}
+
+function freezerLinkSaveAndNext() {
+  const item = _fzLinkQueue[_fzLinkIdx];
+  if (!item) return;
+
+  let sourceType = 'manual', sourceId = null;
+  if (_fzLinkTab === 'recipe') {
+    const sel = document.getElementById('fzlm-recipe-sel');
+    const id = parseInt(sel?.value);
+    if (!id) { alert('Please pick a recipe, or choose Ingredient / Manual.'); return; }
+    sourceType = 'recipe'; sourceId = id;
+  } else if (_fzLinkTab === 'ingredient') {
+    const sel = document.getElementById('fzlm-ing-sel');
+    const id = parseInt(sel?.value);
+    if (!id) { alert('Please pick an ingredient, or choose Recipe / Manual.'); return; }
+    sourceType = 'ingredient'; sourceId = id;
+  }
+
+  const defs = freezerGetDefs();
+  const freezer = defs.find(f => f.id === item.freezerId);
+  if (freezer) {
+    if (!freezer.itemLinks) freezer.itemLinks = {};
+    freezer.itemLinks[item.name] = { sourceType, sourceId };
+    freezerSaveDefs(defs);
+  }
+
+  _fzLinkIdx++;
+  if (_fzLinkIdx >= _fzLinkQueue.length) { freezerLinkDone(); return; }
+  freezerLinkRenderStep();
+}
+
+function freezerLinkSkip() {
+  _fzLinkIdx++;
+  if (_fzLinkIdx >= _fzLinkQueue.length) { freezerLinkDone(); return; }
+  freezerLinkRenderStep();
+}
+
+function freezerLinkDone() {
+  document.getElementById('fz-link-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  renderFreezerPage();
+  const remaining = _fzLinkQueue.length - _fzLinkIdx;
+  if (remaining > 0) {
+    toastBy(`Linked ${_fzLinkIdx} item${_fzLinkIdx !== 1 ? 's' : ''} · ${remaining} skipped`);
+  } else {
+    toastBy(`All ${_fzLinkQueue.length} items linked ✓`);
+  }
+}
+
+// ── End Freezer Link Migration ─────────────────────────────────────────────────
 
 function freezerCatSelectChange() {
   const sel = document.getElementById('freezer-add-cat-select');
@@ -26770,6 +27030,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.14': ['🔗 Freezer link migration tool — amber banner appears when unlinked items exist; "Link Now" opens a step-through modal covering every unlinked item across all freezers; auto-matches each item to a recipe or ingredient by name and pre-selects the best match; confirm, swap to a different pick, or mark as Manual; progress bar tracks completion; skipped items can be revisited next time the banner is shown'],
   '2.5.13': ['🔗 Freezer data integrity — Add Item now has 3 source tabs: Recipe (pick from recipe library), Ingredient (pick from price library), Manual (free text for purchased/external items); each item displays a source badge (📖 recipe / 🧂 ingredient / · unlinked) so mis-linked items are immediately visible; source stored as itemLinks per freezer — all existing items appear as unlinked until re-added or migrated'],
   '2.5.12': ['🗂 Recipe UI — recipes now open in a 3-tab modal (Details / Production / Costing) instead of inline expansion; cards show a compact summary with click-to-open; Costing tab includes an inline unit converter (oz/lbs/cups/tbsp/tsp → grams)'],
   '2.5.11': ['⏸ Channel suspension — mark any channel as paused for a specific date without deleting orders; suspended days are skipped in demand calculations and flagged with an amber banner on Today\'s Board, Smart Plan, and Priority List'],
