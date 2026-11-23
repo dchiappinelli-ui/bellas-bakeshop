@@ -3247,7 +3247,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.22';
+const APP_VERSION      = '2.5.23';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -10535,6 +10535,110 @@ function saveEditLine() {
   renderChannelsPage();
 }
 
+function showDemandBreakdown(product) {
+  const existing = document.getElementById('demand-breakdown-modal');
+  if (existing) existing.remove();
+
+  // Gather contributing lines from all active channels
+  const rows = [];
+  (channels || []).forEach(ch => {
+    if (!ch.activeThisWeek) return;
+    (ch.orderLines || []).forEach(line => {
+      if ((line.product || '').toUpperCase() !== product.toUpperCase()) return;
+      const hasAny = DAYS_SHORT.some(d => ch.activeDays.includes(d) && (line.days[d] || 0) > 0);
+      if (!hasAny) return;
+      rows.push({ ch, line });
+    });
+  });
+
+  // Totals row
+  const totals = {};
+  DAYS_SHORT.forEach(d => { totals[d] = 0; });
+  rows.forEach(({ ch, line }) => {
+    DAYS_SHORT.forEach(d => {
+      if (ch.activeDays.includes(d)) totals[d] += (line.days[d] || 0) * (line.unitsEach || 1);
+    });
+  });
+  const weekTotal = Object.values(totals).reduce((s, v) => s + v, 0);
+
+  const meta = getPackMeta(product);
+  const typeColors = { retail: '#5b8def', wholesale: '#4a9c6e', event: '#c06040' };
+
+  const headerCells = DAYS_SHORT.map((d, i) => `<th style="padding:7px 6px;text-align:center;font-size:11px;text-transform:uppercase;color:var(--muted);${i%2===1?'background:rgba(128,128,128,0.06)':''}">${d}</th>`).join('');
+  const dataRows = rows.map(({ ch, line }) => {
+    const typeInfo = CH_TYPES[ch.type] || CH_TYPES.retail;
+    const color = typeColors[ch.type] || '#8a8a8a';
+    const cells = DAYS_SHORT.map((d, i) => {
+      const active = ch.activeDays.includes(d);
+      const qty = active ? (line.days[d] || 0) : 0;
+      const units = qty * (line.unitsEach || 1);
+      const bg = i%2===1 ? 'background:rgba(128,128,128,0.06);' : '';
+      if (!active) return `<td style="padding:7px 6px;text-align:center;${bg}"><span style="color:var(--border);font-size:12px">—</span></td>`;
+      return `<td style="padding:7px 6px;text-align:center;${bg}">
+        ${units > 0 ? `<span style="font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--text)">${units}</span>${line.unitsEach>1?`<div style="font-size:9px;color:var(--muted)">${qty}×${line.unitsEach}</div>`:''}` : `<span style="color:var(--border)">—</span>`}
+      </td>`;
+    }).join('');
+    const varLabel = line.variation && line.variation !== 'individual' ? `<div style="font-size:10px;color:var(--muted)">${line.variation}</div>` : '';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;border-left:3px solid ${color}">
+        <div style="font-weight:600;font-size:13px;color:var(--text)">${ch.name}</div>
+        <div style="font-size:10px;color:${color};font-weight:600;text-transform:uppercase;letter-spacing:.04em">${typeInfo.label}</div>
+        ${varLabel}
+      </td>
+      ${cells}
+      <td style="padding:7px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--accent)">${DAYS_SHORT.reduce((s,d)=>s+(ch.activeDays.includes(d)?((line.days[d]||0)*(line.unitsEach||1)):0),0)}</td>
+    </tr>`;
+  }).join('');
+
+  const totalCells = DAYS_SHORT.map((d, i) => {
+    const v = totals[d];
+    const bg = i%2===1 ? 'background:rgba(128,128,128,0.06);' : '';
+    return `<td style="padding:8px 6px;text-align:center;${bg}border-top:2px solid var(--border)">
+      ${v > 0 ? `<span style="font-family:'DM Mono',monospace;font-weight:800;font-size:15px;color:var(--text)">${v}</span>` : `<span style="color:var(--border)">—</span>`}
+    </td>`;
+  }).join('');
+
+  const noRowsMsg = rows.length === 0
+    ? `<tr><td colspan="${DAYS_SHORT.length+2}" style="padding:20px;text-align:center;color:var(--muted);font-size:13px">No active channels have orders for this product this week.</td></tr>`
+    : '';
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'demand-breakdown-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55)';
+  backdrop.innerHTML = `
+    <div style="background:var(--bg);border-radius:12px;width:min(820px,96vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.5);border:1px solid var(--border);overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:17px;color:var(--text)">${product}</div>
+          ${meta.unitsPerPack>1?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${meta.packLabel} · ×${meta.unitsPerPack}</div>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${rows.length} channel${rows.length!==1?'s':''} · ${weekTotal} units/week</div>
+        <button onclick="document.getElementById('demand-breakdown-modal').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0 2px">✕</button>
+      </div>
+      <div style="overflow:auto;flex:1">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:560px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;min-width:160px">Channel</th>
+              ${headerCells}
+              <th style="padding:7px 6px;text-align:center;font-size:11px;color:var(--accent);text-transform:uppercase">Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dataRows}${noRowsMsg}
+            ${rows.length > 1 ? `<tr style="background:var(--surface2)">
+              <td style="padding:8px 10px;font-weight:800;font-size:13px;border-top:2px solid var(--border)">Total</td>
+              ${totalCells}
+              <td style="padding:8px 6px;text-align:center;font-family:'DM Mono',monospace;font-weight:800;font-size:15px;color:var(--accent);border-top:2px solid var(--border)">${weekTotal}</td>
+            </tr>` : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+  document.body.appendChild(backdrop);
+}
+
 function renderWeeklySummary() {
   const el = document.getElementById('ch-weekly-summary');
   if (!el) return;
@@ -10600,6 +10704,7 @@ function renderWeeklySummary() {
       ondragover="wsDragOver(event,this)"
       ondragleave="wsDragLeave(this)"
       ondrop="wsDrop(event,'${escapedProduct}')"
+      ondblclick="showDemandBreakdown('${escapedProduct}')"
       style="border-bottom:1px solid var(--border);cursor:grab;transition:outline 0.1s">
       <td style="padding:10px 10px;border-left:2px solid ${catMeta.color}66">
         <div style="display:flex;align-items:center;gap:6px">
@@ -27215,6 +27320,7 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.23': ['📊 Demand breakdown popup — double-click any product row in the Weekly Demand Summary to see a per-channel breakdown by day; each row shows the channel name, type badge, variation, and daily quantities (with pack multiplier details when unitsEach > 1); totals row appears when 2+ channels contribute; click outside or ✕ to close'],
   '2.5.22': ['🐛 Fix plLookupById type mismatch — picker stored plId as a string but price library IDs are numbers; plLookupById now normalizes both sides to String() before comparing, so picker-added ingredients resolve by ID correctly; also fixed updateIngredient cost cell to use resolveIngCost() so library-linked ingredients with costPerUnit=0 show correct cost immediately after an inline edit'],
   '2.5.21': ['🔄 Backfill recipeId on existing order lines — backfillOrderLineRecipeIds() runs once post-signin (flag bk_migration_ol_recipeid_v1); loops every channel order line and stamps recipeId from resolveRecipeId(product) where missing; saves to Firestore only if any lines changed; all lines from PRODUCT_TO_RECIPE and _productRecipeLinks now carry recipeId'],
   '2.5.20': ['🔗 Channel order lines now store recipeId — recipe link saved directly on each order line at add-time (from PRODUCT_TO_RECIPE or runtime map); edit modal pre-selects from line.recipeId (falls back to name lookup); saving edit now writes recipeId to the line and keeps _productRecipeLinks in sync; channels list shows 🔗 recipe name badge (or ⚠ no recipe) on each line; freezerGetTodayPull, freezerGetNextDayPull, bbSuggestWeekDemand, and bbDemandByDayRow all match by recipeId as well as product name — eliminates name-mismatch misses for any line with a recipe link set'],
