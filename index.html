@@ -3247,7 +3247,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.23';
+const APP_VERSION      = '2.5.25';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4252,6 +4252,7 @@ function addStage(recipeId) {
     day: parseInt(document.getElementById(`stage-day-${recipeId}`).value) || 1,
     activeMins: parseInt(document.getElementById(`stage-active-${recipeId}`).value) || 0,
     waitMins: parseInt(document.getElementById(`stage-wait-${recipeId}`).value) || 0,
+    equipment: document.getElementById(`stage-equip-${recipeId}`)?.value || '',
     skill: document.getElementById(`stage-skill-${recipeId}`).value,
     notes: document.getElementById(`stage-notes-${recipeId}`).value,
     baker: document.getElementById(`stage-baker-${recipeId}`)?.value || null,
@@ -5364,7 +5365,7 @@ function recipeStagesHtml(r, SKILLS) {
                 style="flex:1;font-weight:600;font-size:13px">
               <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
             </div>
-            <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 70px 1fr 1fr;gap:8px;align-items:end;flex-wrap:wrap">
+            <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 1fr 70px 1fr 1fr;gap:8px;align-items:end;flex-wrap:wrap">
               <div class="form-group" style="margin:0"><label>Day</label>
                 <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
                   ${[1,2,3,4].map(d=>`<option value="${d}" ${(s.day||1)===d?'selected':''}>${d}</option>`).join('')}
@@ -5375,6 +5376,11 @@ function recipeStagesHtml(r, SKILLS) {
               <div class="form-group" style="margin:0"><label>Wait (min)</label>
                 <input type="number" min="0" value="${s.waitMins}"
                   onchange="updateStage(${r.id},${s.id},'waitMins',this.value)" style="text-align:center"></div>
+              <div class="form-group" style="margin:0"><label>Equipment</label>
+                <select onchange="updateStage(${r.id},${s.id},'equipment',this.value)">
+                  <option value="">— None —</option>
+                  ${TL_EQUIPMENT.map(e=>`<option value="${e.id}" ${(s.equipment||'')==e.id?'selected':''}>${e.label}</option>`).join('')}
+                </select></div>
               <div class="form-group" style="margin:0"><label>Baker Role</label>
                 <select onchange="updateStage(${r.id},${s.id},'baker',this.value)">
                   <option value="">— Unassigned —</option>
@@ -5414,6 +5420,11 @@ function recipeStagesHtml(r, SKILLS) {
           <input type="number" id="stage-active-${r.id}" placeholder="30" min="0"></div>
         <div class="form-group"><label>Wait / Rest (mins)</label>
           <input type="number" id="stage-wait-${r.id}" placeholder="0" min="0"></div>
+        <div class="form-group"><label>Equipment</label>
+          <select id="stage-equip-${r.id}">
+            <option value="">— None —</option>
+            ${TL_EQUIPMENT.map(e=>`<option value="${e.id}">${e.label}</option>`).join('')}
+          </select></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Who Can Do This</label>
@@ -10535,6 +10546,49 @@ function saveEditLine() {
   renderChannelsPage();
 }
 
+function wsDemandEditCell(cellEl, chId, lineId, day) {
+  const ch = (channels || []).find(c => c.id === chId);
+  if (!ch) return;
+  const line = (ch.orderLines || []).find(l => l.id === lineId);
+  if (!line) return;
+  const unitsEach = line.unitsEach || 1;
+  const currentRaw = line.days[day] || 0;
+
+  let committed = false;
+  const commit = () => {
+    if (committed) return;
+    committed = true;
+    const newRaw = Math.max(0, parseInt(input.value) || 0);
+    line.days[day] = newRaw || undefined;
+    if (!newRaw) delete line.days[day];
+    saveChannels();
+    renderWeeklySummary();
+    showDemandBreakdown(line.product);
+  };
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.value = currentRaw;
+  input.style.cssText = 'width:52px;text-align:center;font-family:"DM Mono",monospace;font-weight:700;font-size:14px;border:2px solid var(--accent);border-radius:4px;padding:3px 4px;background:var(--surface);color:var(--text);outline:none';
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { committed = true; showDemandBreakdown(line.product); }
+  });
+  input.addEventListener('blur', commit);
+
+  cellEl.innerHTML = '';
+  cellEl.appendChild(input);
+  if (unitsEach > 1) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:9px;color:var(--muted);margin-top:1px';
+    hint.textContent = `×${unitsEach} = ${currentRaw * unitsEach}`;
+    cellEl.appendChild(hint);
+  }
+  input.focus();
+  input.select();
+}
+
 function showDemandBreakdown(product) {
   const existing = document.getElementById('demand-breakdown-modal');
   if (existing) existing.remove();
@@ -10574,7 +10628,7 @@ function showDemandBreakdown(product) {
       const units = qty * (line.unitsEach || 1);
       const bg = i%2===1 ? 'background:rgba(128,128,128,0.06);' : '';
       if (!active) return `<td style="padding:7px 6px;text-align:center;${bg}"><span style="color:var(--border);font-size:12px">—</span></td>`;
-      return `<td style="padding:7px 6px;text-align:center;${bg}">
+      return `<td style="padding:7px 6px;text-align:center;cursor:pointer;${bg}" title="Double-click to edit" ondblclick="wsDemandEditCell(this,${ch.id},'${line.id}','${d}')">
         ${units > 0 ? `<span style="font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--text)">${units}</span>${line.unitsEach>1?`<div style="font-size:9px;color:var(--muted)">${qty}×${line.unitsEach}</div>`:''}` : `<span style="color:var(--border)">—</span>`}
       </td>`;
     }).join('');
@@ -12918,10 +12972,13 @@ const TL_CATEGORIES = [
 ];
 
 const TL_EQUIPMENT = [
-  { id: 'mixer',  label: 'Mixer'       },
-  { id: 'deck',   label: 'Deck Oven'   },
-  { id: 'conv1',  label: 'Conv Oven 1' },
-  { id: 'conv2',  label: 'Conv Oven 2' },
+  { id: 'mixer',   label: 'Mixer'       },
+  { id: 'deck',    label: 'Deck Oven'   },
+  { id: 'conv1',   label: 'Conv Oven 1' },
+  { id: 'conv2',   label: 'Conv Oven 2' },
+  { id: 'proofer', label: 'Proofer'     },
+  { id: 'bench',   label: 'Bench'       },
+  { id: 'walkin',  label: 'Walk-in'     },
 ];
 
 const TL_SLOT       = 15;  // snap grid (minutes)
@@ -22444,6 +22501,10 @@ function wpShowTimeline(day) {
   const panel = document.getElementById('wp-timeline-panel');
   if (!panel) return;
 
+  // Preserve time control values across re-renders
+  const startAtVal  = document.getElementById('wp-tl-start-at')?.value  || '05:00';
+  const readyByVal  = document.getElementById('wp-tl-ready-by')?.value  || '';
+
   const mondayStr = wpMondayForDay(day);
   const weekData  = wpGetWeek(mondayStr);
   const dayData   = weekData[day];
@@ -22454,25 +22515,30 @@ function wpShowTimeline(day) {
     return tpl ? { ...tpl, id: item.id, _recurringId: item._recurringId } : item;
   });
 
-  const DAY_START_H = 5; // 5:00 AM
-  const DAY_START   = DAY_START_H * 60;
-  const PX_PER_MIN  = 3;
-  const LABEL_W     = 90;
-  const LANE_H      = 48;
+  const PX_PER_MIN = 3;
+  const LABEL_W    = 90;
+  const LANE_H     = 48;
 
-  // Build per-baker block arrays
-  const lanes   = {}; // id → { name, color, blocks }
-  const cursors = {}; // id → current offset from DAY_START in minutes
+  // Build per-baker and per-equipment block arrays
+  const lanes   = {}; // bakerId → { name, color, blocks }
+  const eqLanes = {}; // equipId → { label, color, blocks }
+  const cursors = {}; // bakerId → current offset in minutes from schedule start
 
   function getLane(bid) {
     if (!lanes[bid]) {
       const m = bid === '_none' ? null : staff.find(s => s.id == bid);
-      const name  = m ? m.name : 'Unassigned';
-      const color = m ? wpBakerColor(m.name) : '#aaa';
-      lanes[bid]   = { name, color, blocks: [] };
+      lanes[bid]   = { name: m ? m.name : 'Unassigned', color: m ? wpBakerColor(m.name) : '#aaa', blocks: [] };
       cursors[bid] = 0;
     }
     return lanes[bid];
+  }
+
+  function getEqLane(eqId) {
+    if (!eqLanes[eqId]) {
+      const eq = TL_EQUIPMENT.find(e => e.id === eqId);
+      eqLanes[eqId] = { label: eq ? eq.label : eqId, color: '#7a6a4a', blocks: [] };
+    }
+    return eqLanes[eqId];
   }
 
   allDayItems.forEach(item => {
@@ -22482,8 +22548,8 @@ function wpShowTimeline(day) {
       const rec = recipes.find(r => r.id == item.dtRecipeId);
       if (rec && rec.stages && rec.stages.length) {
         rec.stages.forEach(stage => {
-          const bid  = wpResolveBaker(stage.baker, item, dayData.bakers) || '_none';
-          const lane = getLane(bid);
+          const bid        = wpResolveBaker(stage.baker, item, dayData.bakers) || '_none';
+          const lane       = getLane(bid);
           const activeMins = stage.activeMins || 0;
           const waitMins   = stage.waitMins   || 0;
           if (activeMins > 0) {
@@ -22491,14 +22557,17 @@ function wpShowTimeline(day) {
             cursors[bid] += activeMins;
           }
           if (waitMins > 0) {
-            lane.blocks.push({ label: '⏳ ' + (stage.name || item.name), sub: '', start: cursors[bid], dur: waitMins, wait: true, color: phaseColor });
+            if (stage.equipment) {
+              getEqLane(stage.equipment).blocks.push({ label: (stage.name || item.name) + ' — ' + item.name, start: cursors[bid], dur: waitMins, color: '#7a6a4a' });
+            } else {
+              lane.blocks.push({ label: '⏳ ' + (stage.name || item.name), sub: '', start: cursors[bid], dur: waitMins, wait: true, color: phaseColor });
+            }
             cursors[bid] += waitMins;
           }
         });
         return;
       }
     }
-    // No recipe — use estMins as a simple block under Unassigned
     const mins = item.estMins || 0;
     if (mins > 0) {
       const lane = getLane('_none');
@@ -22507,29 +22576,38 @@ function wpShowTimeline(day) {
     }
   });
 
-  const laneKeys = Object.keys(lanes);
-  if (!laneKeys.length) {
+  const laneKeys   = Object.keys(lanes);
+  const eqLaneKeys = Object.keys(eqLanes);
+
+  if (!laneKeys.length && !eqLaneKeys.length) {
     panel.innerHTML = `<div style="padding:24px;text-align:center;color:#aaa;font-size:13px">No items with time data for this day. Add estimated times or link recipes with stages.</div>`;
     panel.style.display = 'block';
     panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
     return;
   }
 
-  // Compute visible time range
-  const maxOffset = Math.max(...Object.values(cursors), 180);
-  const visibleMins = Math.ceil((maxOffset + 60) / 60) * 60; // round up to next hour, 1hr padding
+  // Compute total schedule span
+  const bakerMax = Object.values(cursors).length ? Math.max(...Object.values(cursors)) : 0;
+  const eqMax    = eqLaneKeys.length ? Math.max(...eqLaneKeys.map(k => Math.max(...eqLanes[k].blocks.map(b => b.start + b.dur), 0))) : 0;
+  const maxOffset = Math.max(bakerMax, eqMax, 180);
+  const visibleMins = Math.ceil((maxOffset + 60) / 60) * 60;
 
-  // Time axis ticks every 30 min
+  // Determine start anchor: "ready by" back-calculates; otherwise use "start at"
+  const startAt = readyByVal
+    ? Math.max(0, timeToMins(readyByVal) - maxOffset)
+    : timeToMins(startAtVal);
+  const computedStartStr = readyByVal ? fmtTime(startAt) : '';
+
+  // Time axis ticks every 30 min using absolute clock times
   const ticks = [];
   for (let m = 0; m <= visibleMins; m += 30) {
-    const totalH = DAY_START + m;
-    const h = Math.floor(totalH / 60), mm = totalH % 60;
+    const absMin = startAt + m;
+    const h = Math.floor(absMin / 60) % 24, mm = absMin % 60;
     const label = mm === 0 ? ((h > 12 ? h - 12 : h || 12) + (h >= 12 ? 'pm' : 'am')) : '';
     ticks.push({ m, label });
   }
   const timelineW = visibleMins * PX_PER_MIN;
 
-  // Tick marks HTML (for bg grid lines)
   const gridLines = ticks.filter(t => t.label).map(t =>
     `<div style="position:absolute;left:${t.m*PX_PER_MIN}px;top:0;bottom:0;width:1px;background:#e8e8e8"></div>`
   ).join('');
@@ -22542,30 +22620,30 @@ function wpShowTimeline(day) {
     </div>
   </div>`;
 
-  const laneRowsHtml = laneKeys.map(bid => {
-    const lane = lanes[bid];
-    const blocksHtml = lane.blocks.map(b => {
-      const left  = b.start * PX_PER_MIN;
-      const w     = Math.max(b.dur * PX_PER_MIN - 2, 3);
-      const bg    = b.wait
-        ? `repeating-linear-gradient(45deg,${b.color}22,${b.color}22 4px,#fff 4px,#fff 8px)`
+  function renderLaneRow(rowLabel, rowColor, blocks, isEquipment) {
+    const blocksHtml = blocks.map(b => {
+      const left   = b.start * PX_PER_MIN;
+      const w      = Math.max(b.dur * PX_PER_MIN - 2, 3);
+      const isWait = b.wait || isEquipment;
+      const bg     = isWait
+        ? `repeating-linear-gradient(45deg,${b.color}30,${b.color}30 4px,#fff 4px,#fff 8px)`
         : b.color;
-      const border = b.wait ? `1px dashed ${b.color}` : 'none';
-      const textCol = '#fff';
+      const border = isWait ? `1px dashed ${b.color}` : 'none';
       return `<div style="position:absolute;left:${left}px;top:4px;height:${LANE_H-8}px;width:${w}px;
           background:${bg};border:${border};border-radius:3px;overflow:hidden;
           display:flex;flex-direction:column;justify-content:center;padding:0 5px;
-          box-sizing:border-box;cursor:default"
-          title="${b.label}${b.sub&&b.sub!==b.label?' ('+b.sub+')':''} — ${wpFmtMins(b.dur)}">
-        ${!b.wait && w > 28 ? `<div style="font-size:9px;font-weight:800;color:${textCol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.label}</div>` : ''}
-        ${!b.wait && w > 48 ? `<div style="font-size:8px;color:${textCol};opacity:0.75;white-space:nowrap">${wpFmtMins(b.dur)}</div>` : ''}
+          box-sizing:border-box"
+          title="${b.label} — ${wpFmtMins(b.dur)}">
+        ${!isWait && w > 28 ? `<div style="font-size:9px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.label}</div>` : ''}
+        ${!isWait && w > 48 ? `<div style="font-size:8px;color:#fff;opacity:0.75;white-space:nowrap">${wpFmtMins(b.dur)}</div>` : ''}
+        ${isEquipment && w > 28 ? `<div style="font-size:9px;font-weight:700;color:${b.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.label.split('—')[0].trim()}</div>` : ''}
       </div>`;
     }).join('');
     return `<div style="display:flex;align-items:center;margin-bottom:5px">
       <div style="width:${LABEL_W}px;flex-shrink:0;padding-right:10px;text-align:right">
         <span style="display:inline-flex;align-items:center;gap:5px">
-          <span style="width:9px;height:9px;border-radius:50%;background:${lane.color};flex-shrink:0"></span>
-          <span style="font-size:11px;font-weight:800;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px">${lane.name.split(' ')[0]}</span>
+          <span style="width:9px;height:9px;border-radius:${isEquipment?'3px':'50%'};background:${rowColor};flex-shrink:0"></span>
+          <span style="font-size:11px;font-weight:800;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px">${rowLabel.split(' ')[0]}</span>
         </span>
       </div>
       <div style="position:relative;height:${LANE_H}px;flex:1;background:#f8f8f8;border-radius:3px;overflow:hidden;min-width:${timelineW}px">
@@ -22573,9 +22651,18 @@ function wpShowTimeline(day) {
         ${blocksHtml}
       </div>
     </div>`;
-  }).join('');
+  }
 
-  // Date label for header
+  const bakerLanesHtml = laneKeys.map(bid => renderLaneRow(lanes[bid].name, lanes[bid].color, lanes[bid].blocks, false)).join('');
+
+  const eqSeparator = eqLaneKeys.length ? `
+    <div style="display:flex;align-items:center;gap:0;margin:10px 0 8px">
+      <div style="width:${LABEL_W}px;flex-shrink:0;text-align:right;padding-right:10px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#aaa">Equipment</div>
+      <div style="flex:1;height:1px;background:#ddd;min-width:${timelineW}px"></div>
+    </div>` : '';
+
+  const eqLanesHtml = eqLaneKeys.map(eqId => renderLaneRow(eqLanes[eqId].label, eqLanes[eqId].color, eqLanes[eqId].blocks, true)).join('');
+
   const idx = WP_DAYS.indexOf(day);
   const dayDate = new Date(_wpWeekMonday);
   dayDate.setDate(dayDate.getDate() + idx);
@@ -22583,19 +22670,35 @@ function wpShowTimeline(day) {
 
   panel.innerHTML = `
     <div id="wp-tl-printable">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#111">${dateLabel}</div>
-          <div style="font-size:11px;color:#aaa;margin-top:3px">Baker timeline · solid = active · hatched = wait/proof</div>
+          <div style="font-size:11px;color:#aaa;margin-top:3px">Baker timeline · solid = active · hatched = wait/proof · square = equipment</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button onclick="wpPrintTimeline()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:3px;font-size:12px;font-weight:700;cursor:pointer">🖨 Print Schedule</button>
+          <button onclick="wpPrintTimeline()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:3px;font-size:12px;font-weight:700;cursor:pointer">🖨 Print</button>
           <button onclick="document.getElementById('wp-timeline-panel').style.display='none'" style="padding:8px 14px;background:none;border:1px solid #ccc;color:#666;border-radius:3px;font-size:12px;cursor:pointer">✕</button>
         </div>
       </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;background:#f4f5f7;border-radius:4px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:11px;font-weight:700;color:#555">Start at</label>
+          <input type="time" id="wp-tl-start-at" value="${startAtVal}"
+            oninput="wpShowTimeline('${day}')"
+            style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit;background:#fff;color:#111">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:11px;font-weight:700;color:#555">Ready by</label>
+          <input type="time" id="wp-tl-ready-by" value="${readyByVal}"
+            oninput="wpShowTimeline('${day}')"
+            style="padding:5px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-family:inherit;background:#fff;color:#111">
+          <span style="font-size:10px;color:#aaa">back-calculates start</span>
+        </div>
+        ${readyByVal ? `<div style="font-size:11px;color:#1a4a8a;font-weight:700">↳ Calculated start: ${computedStartStr}</div>` : ''}
+      </div>
       <div style="overflow-x:auto">
         ${timeAxisHtml}
-        <div>${laneRowsHtml}</div>
+        <div>${bakerLanesHtml}${eqSeparator}${eqLanesHtml}</div>
       </div>
     </div>
   `;
@@ -27320,6 +27423,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.25': ['🔧 Equipment field on recipe stages — each stage now has an optional Equipment dropdown (Mixer, Deck Oven, Conv Oven 1/2, Proofer, Bench, Walk-in); 3 new equipment types added; Baker Timeline enhanced with Start-at and Ready-by time controls, equipment swim lanes (wait time routes to equipment lane when tagged), and absolute clock times instead of relative offsets'],
+  '2.5.24': ['✏️ Demand breakdown inline edit — double-click any day cell in the breakdown popup to edit that channel\'s quantity; shows a focused input (pre-filled with the raw order count); for multi-unit packs shows ×N = total hint; Enter/Tab/blur saves, Esc cancels; saves to Firestore via saveChannels() and refreshes both the popup and the weekly summary totals immediately'],
   '2.5.23': ['📊 Demand breakdown popup — double-click any product row in the Weekly Demand Summary to see a per-channel breakdown by day; each row shows the channel name, type badge, variation, and daily quantities (with pack multiplier details when unitsEach > 1); totals row appears when 2+ channels contribute; click outside or ✕ to close'],
   '2.5.22': ['🐛 Fix plLookupById type mismatch — picker stored plId as a string but price library IDs are numbers; plLookupById now normalizes both sides to String() before comparing, so picker-added ingredients resolve by ID correctly; also fixed updateIngredient cost cell to use resolveIngCost() so library-linked ingredients with costPerUnit=0 show correct cost immediately after an inline edit'],
   '2.5.21': ['🔄 Backfill recipeId on existing order lines — backfillOrderLineRecipeIds() runs once post-signin (flag bk_migration_ol_recipeid_v1); loops every channel order line and stamps recipeId from resolveRecipeId(product) where missing; saves to Firestore only if any lines changed; all lines from PRODUCT_TO_RECIPE and _productRecipeLinks now carry recipeId'],
