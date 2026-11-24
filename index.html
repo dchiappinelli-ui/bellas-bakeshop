@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function() {
   #tl-export-modal, #tl-load-modal, #tl-modal, #tl-recipe-modal,
   #dt-library-picker-modal,
   #wp-copy-modal, #wp-push-modal,
-  #deploy-modal, #sq-import-modal, #yield-modal, #freezer-scan-modal, #pl-receipt-modal {
+  #deploy-modal, #sq-import-modal, #yield-modal, #freezer-scan-modal, #pl-receipt-modal, #pl-edit-modal {
     align-items: flex-start !important;
     overflow-y: auto !important;
     padding: 20px !important;
@@ -828,7 +828,7 @@ document.addEventListener('DOMContentLoaded', function() {
   #dt-library-picker-modal > *,
   #wp-copy-modal > *, #wp-push-modal > *,
   #deploy-modal > *, #sq-import-modal > *, #yield-modal > *, #freezer-scan-modal > *,
-  #pl-receipt-modal > * {
+  #pl-receipt-modal > *, #pl-edit-modal > * {
     flex-shrink: 0 !important;
   }
   /* Lock body scroll whenever any modal overlay is visible */
@@ -1383,6 +1383,16 @@ document.addEventListener('DOMContentLoaded', function() {
           <select id="pl-supplier-filter" onchange="renderPriceLib()"
             style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
             <option value="">All Suppliers</option>
+          </select>
+          <select id="pl-tag-filter" onchange="renderPriceLib()"
+            style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+            <option value="">All Tags</option>
+            <option value="FOH">FOH</option>
+            <option value="BOH">BOH</option>
+            <option value="SANDWICH">Sandwich</option>
+            <option value="KITCHEN">Kitchen</option>
+            <option value="SOLID">Solid</option>
+            <option value="LIQUID">Liquid</option>
           </select>
           <button onclick="plShowAdd()" style="background:var(--accent);color:#1a1209;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
           <button onclick="plToggleSupplierMgr()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 12px;font-size:13px;cursor:pointer" title="Manage supplier list">⚙ Suppliers</button>
@@ -3028,6 +3038,108 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- ======== PRICE LIBRARY EDIT MODAL ======== -->
+<div id="pl-edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center" onclick="if(event.target===this)plCloseEdit()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:min(560px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column">
+    <!-- Header -->
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:10px 10px 0 0;flex-shrink:0">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700">Edit Ingredient</div>
+        <div id="pl-edit-subtitle" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button onclick="plCloseEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:20px 22px;overflow-y:auto;flex:1">
+      <!-- Name + Category + Supplier -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Name</div>
+          <input id="pl-edit-name" type="text"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;font-weight:600">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Category</div>
+          <select id="pl-edit-cat"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+            <option>Flour</option><option>Dairy</option><option>Fat</option>
+            <option>Sugar</option><option>Leavening</option><option>Chocolate</option>
+            <option>Fruit</option><option>Nut/Seed</option><option>Protein</option>
+            <option>Savory</option><option>Spice</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Supplier</div>
+        <select id="pl-edit-supplier"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+          <option value="">— None —</option>
+        </select>
+      </div>
+      <!-- Pricing -->
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Pricing</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Purchase price</div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:12px;color:var(--muted)">$</span>
+            <input id="pl-edit-unit-price" type="number" step="0.01" min="0" placeholder="0.00"
+              style="width:72px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px"
+              oninput="plCalcFromUnitEdit()">
+            <span style="font-size:12px;color:var(--muted)">per</span>
+            <select id="pl-edit-unit" onchange="plCalcFromUnitEdit()"
+              style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+              <option value="">— unit —</option>
+              <option value="453.592">lb</option>
+              <option value="28.3495">oz</option>
+              <option value="1000">kg</option>
+              <option value="100">100g</option>
+              <option value="1">gram</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">$/gram <span style="font-style:italic">(auto-fills)</span></div>
+          <input id="pl-edit-ppg" type="number" step="0.000001" min="0" placeholder="0.000000"
+            style="width:110px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace"
+            oninput="plUpdateEditPreview()">
+        </div>
+      </div>
+      <div id="pl-edit-price-preview" style="display:none;font-size:11px;color:var(--muted);padding:5px 8px;background:var(--surface2);border-radius:4px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case $</div>
+          <input id="pl-edit-case" type="number" step="0.01" min="0" placeholder="—"
+            style="width:88px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Case wt (g)</div>
+          <input id="pl-edit-casewt" type="number" step="1" min="0" placeholder="—"
+            style="width:100px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+        </div>
+      </div>
+      <!-- Tags -->
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Tags</div>
+      <div id="pl-edit-tags" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px"></div>
+      <!-- Notes -->
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Notes</div>
+      <textarea id="pl-edit-notes" rows="2" placeholder="SKU, ordering notes, substitutions…"
+        style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;resize:vertical;font-family:inherit"></textarea>
+    </div>
+    <!-- Footer -->
+    <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:0 0 10px 10px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="plDeleteFromEdit()" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer">🗑 Delete</button>
+        <span id="pl-edit-updated" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="plCloseEdit()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
+        <button onclick="plSaveEdit()" style="background:var(--accent);color:#1a1209;border:none;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ======== RESTOCK REQUEST MODAL ======== -->
 <div id="rr-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:center;justify-content:center">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:400px;max-width:94vw;padding:24px 20px">
@@ -3247,7 +3359,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.25';
+const APP_VERSION      = '2.5.27';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -5365,7 +5477,7 @@ function recipeStagesHtml(r, SKILLS) {
                 style="flex:1;font-weight:600;font-size:13px">
               <button class="btn btn-danger btn-sm" onclick="deleteStage(${r.id},${s.id})">✕</button>
             </div>
-            <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 1fr 70px 1fr 1fr;gap:8px;align-items:end;flex-wrap:wrap">
+            <div style="display:grid;grid-template-columns:70px 90px 90px 1fr 1fr;gap:8px;align-items:end;margin-bottom:6px">
               <div class="form-group" style="margin:0"><label>Day</label>
                 <select onchange="updateStage(${r.id},${s.id},'day',parseInt(this.value))" style="text-align:center">
                   ${[1,2,3,4].map(d=>`<option value="${d}" ${(s.day||1)===d?'selected':''}>${d}</option>`).join('')}
@@ -5391,6 +5503,8 @@ function recipeStagesHtml(r, SKILLS) {
                     ${staff.filter(m=>m.name).map(m=>`<option value="${m.id}" ${s.baker==m.id?'selected':''}>${m.name}</option>`).join('')}
                   </optgroup>
                 </select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:70px 1fr 2fr;gap:8px;align-items:end">
               <div class="form-group" style="margin:0"><label>Value %</label>
                 <input type="number" min="0" max="100" step="5" value="${s.valuePct||0}"
                   onchange="updateStage(${r.id},${s.id},'valuePct',this.value)" style="text-align:center"></div>
@@ -18773,7 +18887,18 @@ const HUB_PACK_KEY = 'bk_hub_state';
 let _hubActiveTab = 'packing';
 let _hubPackState = {};
 try { _hubPackState = JSON.parse(localStorage.getItem(HUB_PACK_KEY) || '{}'); } catch {}
-function hubSavePackState() { localStorage.setItem(HUB_PACK_KEY, JSON.stringify(_hubPackState)); forceSaveKeys([HUB_PACK_KEY]); }
+function hubPrunePackState() {
+  const cutoff = dateKey(-60); // drop entries older than 60 days
+  for (const k of Object.keys(_hubPackState)) {
+    const datePart = k.split('::')[0];
+    if (datePart < cutoff) delete _hubPackState[k];
+  }
+}
+function hubSavePackState() {
+  hubPrunePackState();
+  localStorage.setItem(HUB_PACK_KEY, JSON.stringify(_hubPackState));
+  forceSaveKeys([HUB_PACK_KEY]);
+}
 
 const HUB_CHAIN = ['pending','producing','delivered','packing','ready','picked_up'];
 const HUB_META = {
@@ -25847,13 +25972,22 @@ function plScanCloseModal() {
 }
 // ── End Receipt Scan ──────────────────────────────────────────
 
+function plFmtAge(ts) {
+  if (!ts) return '';
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days < 1)  return 'today';
+  if (days < 7)  return days + 'd ago';
+  if (days < 60) return Math.round(days / 7) + 'wk ago';
+  return Math.round(days / 30) + 'mo ago';
+}
+
 function renderPriceLib() {
   const wrap = document.getElementById('pl-table-wrap');
   if (!wrap) return;
-  const all  = plGetAll();
+  const all      = plGetAll();
   const suppList = plGetSuppliers();
 
-  // Populate supplier filter dropdown
+  // Populate supplier filter
   const suppFilterEl = document.getElementById('pl-supplier-filter');
   if (suppFilterEl) {
     const curVal = suppFilterEl.value;
@@ -25873,21 +26007,25 @@ function renderPriceLib() {
       : '<span style="font-size:12px;color:var(--muted)">No suppliers yet</span>';
   }
 
-  // Populate supplier selects in add form
-  const addSuppEl = document.getElementById('pl-add-supplier');
-  if (addSuppEl) {
-    const curAdd = addSuppEl.value;
-    addSuppEl.innerHTML = '<option value="">— supplier —</option>' +
-      suppList.map(s => `<option value="${s.name}"${curAdd===s.name?' selected':''}>${s.name}</option>`).join('');
-  }
+  // Populate supplier selects in add form and edit modal
+  ['pl-add-supplier','pl-edit-supplier'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = `<option value="">— None —</option>` +
+      suppList.map(s => `<option value="${s.name}"${cur===s.name?' selected':''}>${s.name}</option>`).join('');
+  });
 
-  const search  = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
-  const catF    = document.getElementById('pl-cat-filter')?.value || '';
-  const suppF   = suppFilterEl ? suppFilterEl.value : '';
+  const search = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
+  const catF   = document.getElementById('pl-cat-filter')?.value || '';
+  const suppF  = suppFilterEl ? suppFilterEl.value : '';
+  const tagF   = document.getElementById('pl-tag-filter')?.value || '';
+
   const filtered = all.filter(e => {
-    if (catF  && e.cat !== catF) return false;
-    if (suppF && e.supplier !== suppF) return false;
+    if (catF   && e.cat !== catF) return false;
+    if (suppF  && e.supplier !== suppF) return false;
     if (search && !e.name.toLowerCase().includes(search)) return false;
+    if (tagF   && !sbGetTags(e).includes(tagF)) return false;
     return true;
   }).sort((a, b) => a.cat !== b.cat ? a.cat.localeCompare(b.cat) : a.name.localeCompare(b.name));
 
@@ -25895,87 +26033,63 @@ function renderPriceLib() {
     wrap.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No ingredients match</div>';
     return;
   }
+
   const PL_ALL_TAGS = ['FOH','BOH','LIQUID','SOLID','SANDWICH','KITCHEN'];
   const PL_TAG_ABBR = { FOH:'FOH', BOH:'BOH', LIQUID:'LIQ', SOLID:'SOL', SANDWICH:'SAND', KITCHEN:'KIT' };
+
   const rows = filtered.map(e => {
-    const ppg    = parseFloat(e.pricePerGram) || 0;
-    const per100 = (ppg * 100).toFixed(4);
-    const cc     = PL_CAT_COLORS[e.cat] || '#8a8a8a';
+    const ppg      = parseFloat(e.pricePerGram) || 0;
+    const cc       = PL_CAT_COLORS[e.cat] || '#8a8a8a';
     const effTags  = sbGetTags(e);
     const isCustom = e.tags && Array.isArray(e.tags) && e.tags.length > 0;
     const tagChips = PL_ALL_TAGS.map(t => {
       const on = effTags.includes(t);
       return `<button onclick="plToggleTag(${e.id},'${t}')" title="${t}"
-        style="padding:1px 4px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;border:1px solid;line-height:1.4;
+        style="padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;border:1px solid;line-height:1.5;
                ${on ? 'background:#e8a045;color:#1a1209;border-color:#e8a045' : 'background:transparent;color:var(--muted);border-color:var(--border)'}"
         >${PL_TAG_ABBR[t]}</button>`;
     }).join('');
     const resetBtn = isCustom
       ? `<button onclick="plClearTags(${e.id})" title="Reset to category defaults"
-           style="padding:1px 4px;border-radius:6px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);line-height:1.4">↺</button>`
+           style="padding:1px 4px;border-radius:6px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);line-height:1.5">↺</button>`
       : '';
-    const suppOpts = `<option value="">— supplier —</option>` +
-      suppList.map(s => `<option value="${s.name}"${e.supplier===s.name?' selected':''}>${s.name}</option>`).join('');
+    const ageLabel = plFmtAge(e.updatedAt);
     return `<tr style="border-bottom:1px solid var(--border)" id="pl-row-${e.id}">
-      <td style="padding:6px 10px">
-        <input type="text" value="${(e.name||'').replace(/"/g,'&quot;')}"
-          style="background:transparent;border:none;font-size:13px;color:var(--text);width:100%;min-width:150px"
-          onchange="plUpdateField(${e.id},'name',this.value)">
+      <td style="padding:8px 10px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${(e.name||'').replace(/&/g,'&amp;')}</div>
+        ${e.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="${(e.notes||'').replace(/"/g,'&quot;')}">${(e.notes||'').replace(/&/g,'&amp;')}</div>` : ''}
       </td>
-      <td style="padding:6px 8px">
-        <select style="background:transparent;border:none;font-size:12px;color:${cc};font-weight:600;cursor:pointer"
-          onchange="plUpdateField(${e.id},'cat',this.value)">
-          ${['Flour','Dairy','Fat','Sugar','Leavening','Chocolate','Fruit','Nut/Seed','Protein','Savory','Spice','Other'].map(c =>
-            `<option value="${c}"${e.cat===c?' selected':''}>${c}</option>`).join('')}
-        </select>
+      <td style="padding:8px 8px;white-space:nowrap">
+        <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${cc}22;color:${cc};border:1px solid ${cc}55">${e.cat}</span>
       </td>
-      <td style="padding:6px 8px">
-        <select style="background:transparent;border:none;font-size:12px;color:var(--text);cursor:pointer;min-width:100px"
-          onchange="plUpdateField(${e.id},'supplier',this.value)">${suppOpts}</select>
+      <td style="padding:8px 8px;font-size:12px;color:var(--muted);white-space:nowrap">${e.supplier||'—'}</td>
+      <td style="padding:8px 8px">
+        <div style="display:flex;gap:2px;flex-wrap:wrap;min-width:120px">${tagChips}${resetBtn}</div>
       </td>
-      <td style="padding:6px 8px">
-        <div style="display:flex;gap:2px;flex-wrap:wrap;min-width:110px">${tagChips}${resetBtn}</div>
-      </td>
-      <td style="padding:6px 8px;text-align:right">
-        <input type="number" step="0.00001" min="0" value="${ppg||''}" placeholder="0.00000"
-          style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:90px"
-          onchange="plUpdateField(${e.id},'pricePerGram',parseFloat(this.value)||0)">
-      </td>
-      <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:12px" id="pl-100g-${e.id}">$${per100}</td>
-      <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:12px" id="pl-lb-${e.id}">$${(ppg*453.592).toFixed(2)}</td>
-      <td style="padding:6px 8px;text-align:right">
-        <input type="number" step="0.01" min="0" value="${e.caseCost||''}" placeholder="—"
-          style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:75px"
-          onchange="plUpdateField(${e.id},'caseCost',parseFloat(this.value)||0)">
-      </td>
-      <td style="padding:6px 8px;text-align:right">
-        <input type="number" step="1" min="0" value="${e.caseWeightGrams||''}" placeholder="—"
-          style="background:transparent;border:none;font-size:13px;color:var(--text);text-align:right;width:80px"
-          onchange="plUpdateField(${e.id},'caseWeightGrams',parseFloat(this.value)||0)">
-      </td>
-      <td style="padding:6px 8px;text-align:center">
-        <button onclick="plDeleteItem(${e.id})"
-          style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px">✕</button>
+      <td style="padding:8px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);white-space:nowrap">$${(ppg*100).toFixed(4)}</td>
+      <td style="padding:8px 8px;text-align:right;font-size:12px;color:var(--muted);white-space:nowrap">$${(ppg*453.592).toFixed(2)}</td>
+      <td style="padding:8px 8px;text-align:right;font-size:11px;color:var(--muted);white-space:nowrap">${ageLabel}</td>
+      <td style="padding:8px 8px;text-align:center">
+        <button onclick="plOpenEdit(${e.id})" title="Edit"
+          style="background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px;border-radius:4px;padding:3px 8px;line-height:1.4">✏ Edit</button>
       </td>
     </tr>`;
   }).join('');
 
   wrap.innerHTML = `
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${all.length} ingredients total · ${filtered.length} shown · changes save automatically · orange tag = active · ↺ = reset to category default</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${all.length} ingredients · ${filtered.length} shown · click <strong>✏ Edit</strong> to edit · orange tag = active in that area</div>
     <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead>
-        <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)">
+        <tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)">
           <th style="text-align:left;padding:6px 10px">Name</th>
           <th style="text-align:left;padding:6px 8px">Category</th>
           <th style="text-align:left;padding:6px 8px">Supplier</th>
           <th style="text-align:left;padding:6px 8px">Tags</th>
-          <th style="text-align:right;padding:6px 8px">$/gram</th>
           <th style="text-align:right;padding:6px 8px">$/100g</th>
           <th style="text-align:right;padding:6px 8px">$/lb</th>
-          <th style="text-align:right;padding:6px 8px">Case $</th>
-          <th style="text-align:right;padding:6px 8px">Case wt (g)</th>
-          <th style="width:28px"></th>
+          <th style="text-align:right;padding:6px 8px">Updated</th>
+          <th style="width:60px"></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -26085,6 +26199,142 @@ function plConfirmAdd() {
   if (prev) prev.style.display = 'none';
   renderPriceLib();
 }
+// ── Edit modal ───────────────────────────────────────────────
+let _plEditId = null;
+
+function plOpenEdit(id) {
+  const all  = plGetAll();
+  const item = all.find(e => e.id === id);
+  if (!item) return;
+  _plEditId = id;
+
+  document.getElementById('pl-edit-name').value     = item.name || '';
+  document.getElementById('pl-edit-cat').value      = item.cat  || 'Other';
+  document.getElementById('pl-edit-case').value     = item.caseCost || '';
+  document.getElementById('pl-edit-casewt').value   = item.caseWeightGrams || '';
+  document.getElementById('pl-edit-notes').value    = item.notes || '';
+  document.getElementById('pl-edit-ppg').value      = item.pricePerGram ? item.pricePerGram.toFixed(6) : '';
+  document.getElementById('pl-edit-unit-price').value = '';
+  document.getElementById('pl-edit-unit').value     = '';
+
+  const cc  = PL_CAT_COLORS[item.cat] || '#8a8a8a';
+  document.getElementById('pl-edit-subtitle').textContent = item.cat + (item.supplier ? ' · ' + item.supplier : '');
+
+  // Supplier select
+  const suppList = plGetSuppliers();
+  const suppEl = document.getElementById('pl-edit-supplier');
+  suppEl.innerHTML = '<option value="">— None —</option>' +
+    suppList.map(s => `<option value="${s.name}"${item.supplier===s.name?' selected':''}>${s.name}</option>`).join('');
+
+  // Tags
+  const PL_ALL_TAGS = ['FOH','BOH','LIQUID','SOLID','SANDWICH','KITCHEN'];
+  const PL_TAG_ABBR = { FOH:'FOH', BOH:'BOH', LIQUID:'LIQ', SOLID:'SOL', SANDWICH:'SAND', KITCHEN:'KIT' };
+  const effTags  = sbGetTags(item);
+  const isCustom = item.tags && Array.isArray(item.tags) && item.tags.length > 0;
+  document.getElementById('pl-edit-tags').innerHTML =
+    PL_ALL_TAGS.map(t => {
+      const on = effTags.includes(t);
+      return `<button onclick="plEditToggleTag('${t}')" id="pl-edit-tag-${t}"
+        style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;
+               ${on ? 'background:#e8a045;color:#1a1209;border-color:#e8a045' : 'background:transparent;color:var(--muted);border-color:var(--border)'}"
+        >${PL_TAG_ABBR[t]}</button>`;
+    }).join('') +
+    (isCustom ? `<button onclick="plEditClearTags()" style="padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted)">↺ Reset</button>` : '');
+
+  // Last updated
+  document.getElementById('pl-edit-updated').textContent = item.updatedAt ? 'Last updated ' + plFmtAge(item.updatedAt) : '';
+
+  plUpdateEditPreview();
+  document.getElementById('pl-edit-modal').style.display = 'flex';
+}
+
+function plEditToggleTag(tag) {
+  if (!_plEditId) return;
+  const all  = plGetAll();
+  const item = all.find(e => e.id === _plEditId);
+  if (!item) return;
+  const current = sbGetTags(item);
+  const custom = (item.tags && Array.isArray(item.tags) && item.tags.length) ? [...item.tags] : [...current];
+  const idx = custom.indexOf(tag);
+  if (idx >= 0) custom.splice(idx, 1); else custom.push(tag);
+  item.tags = custom;
+  item.updatedAt = Date.now();
+  plSave(all);
+  plOpenEdit(_plEditId); // re-render modal tags
+  renderPriceLib();
+}
+
+function plEditClearTags() {
+  if (!_plEditId) return;
+  const all  = plGetAll();
+  const item = all.find(e => e.id === _plEditId);
+  if (!item) return;
+  delete item.tags;
+  item.updatedAt = Date.now();
+  plSave(all);
+  plOpenEdit(_plEditId);
+  renderPriceLib();
+}
+
+function plCalcFromUnitEdit() {
+  const price = parseFloat(document.getElementById('pl-edit-unit-price')?.value) || 0;
+  const unit  = document.getElementById('pl-edit-unit')?.value || '';
+  const ppgEl = document.getElementById('pl-edit-ppg');
+  if (!unit || unit === 'each' || !price) { plUpdateEditPreview(); return; }
+  const grams = parseFloat(unit);
+  const ppg   = price / grams;
+  if (ppgEl) ppgEl.value = ppg.toFixed(6);
+  plUpdateEditPreview();
+}
+
+function plUpdateEditPreview() {
+  const ppg  = parseFloat(document.getElementById('pl-edit-ppg')?.value) || 0;
+  const prev = document.getElementById('pl-edit-price-preview');
+  if (!prev) return;
+  if (!ppg) { prev.style.display = 'none'; return; }
+  prev.style.display = '';
+  prev.textContent = `$${ppg.toFixed(6)} /gram  ·  $${(ppg*100).toFixed(4)} /100g  ·  $${(ppg*453.592).toFixed(2)} /lb`;
+}
+
+function plSaveEdit() {
+  if (!_plEditId) return;
+  const all  = plGetAll();
+  const item = all.find(e => e.id === _plEditId);
+  if (!item) return;
+
+  const name = (document.getElementById('pl-edit-name')?.value || '').trim().toUpperCase();
+  if (!name) { alert('Name is required'); document.getElementById('pl-edit-name').focus(); return; }
+
+  item.name           = name;
+  item.cat            = document.getElementById('pl-edit-cat')?.value || item.cat;
+  item.supplier       = document.getElementById('pl-edit-supplier')?.value || '';
+  item.pricePerGram   = parseFloat(document.getElementById('pl-edit-ppg')?.value) || 0;
+  item.caseCost       = parseFloat(document.getElementById('pl-edit-case')?.value) || 0;
+  item.caseWeightGrams = parseFloat(document.getElementById('pl-edit-casewt')?.value) || 0;
+  item.notes          = (document.getElementById('pl-edit-notes')?.value || '').trim();
+  item.updatedAt      = Date.now();
+
+  plSave(all);
+  plCloseEdit();
+  renderPriceLib();
+}
+
+function plCloseEdit() {
+  _plEditId = null;
+  document.getElementById('pl-edit-modal').style.display = 'none';
+}
+
+function plDeleteFromEdit() {
+  if (!_plEditId) return;
+  const all  = plGetAll();
+  const item = all.find(e => e.id === _plEditId);
+  if (!item || !confirm(`Remove "${item.name}" from the price library?`)) return;
+  plSave(all.filter(e => e.id !== _plEditId));
+  plCloseEdit();
+  renderPriceLib();
+}
+// ── End edit modal ────────────────────────────────────────────
+
 // ============ END PRICE LIBRARY ============
 
 // ======== SUPPLY BOARD ========
@@ -27423,6 +27673,8 @@ function sbPrintReport() {
 // ======== END SUPPLY BOARD ========
 
 const VERSION_NOTES = {
+  '2.5.27': ['💰 Raw Material Prices redesign — table is now read-only display (Name, Category chip, Supplier, Tags, $/100g, $/lb, Last updated); each row has an ✏ Edit button that opens a focused modal with all fields (name, category, supplier, unit converter → $/gram, case$, case wt, tags, notes); notes preview shows under name in table; tag filter added to header bar (All Tags / FOH / BOH / Sandwich / Kitchen / Solid / Liquid); last-updated age shown in table and modal'],
+  '2.5.26': ['🔧 Stage edit row split into 2 rows — Day/Active/Wait/Equipment/Baker Role on row 1; Value%/Skill/Notes on row 2 (was an overflowing 8-column grid cutting off the Notes field); 🧹 Hub state auto-prune — entries older than 60 days are dropped before each save to prevent bk_hub_state exceeding the 700KB server limit'],
   '2.5.25': ['🔧 Equipment field on recipe stages — each stage now has an optional Equipment dropdown (Mixer, Deck Oven, Conv Oven 1/2, Proofer, Bench, Walk-in); 3 new equipment types added; Baker Timeline enhanced with Start-at and Ready-by time controls, equipment swim lanes (wait time routes to equipment lane when tagged), and absolute clock times instead of relative offsets'],
   '2.5.24': ['✏️ Demand breakdown inline edit — double-click any day cell in the breakdown popup to edit that channel\'s quantity; shows a focused input (pre-filled with the raw order count); for multi-unit packs shows ×N = total hint; Enter/Tab/blur saves, Esc cancels; saves to Firestore via saveChannels() and refreshes both the popup and the weekly summary totals immediately'],
   '2.5.23': ['📊 Demand breakdown popup — double-click any product row in the Weekly Demand Summary to see a per-channel breakdown by day; each row shows the channel name, type badge, variation, and daily quantities (with pack multiplier details when unitsEach > 1); totals row appears when 2+ channels contribute; click outside or ✕ to close'],
