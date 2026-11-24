@@ -992,6 +992,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="nav-btn" onclick="showPage('doughtimer')">Dough Timer</button>
   <button class="nav-btn" onclick="showPage('weekplan')">Bake Board</button>
   <button class="nav-btn" onclick="showPage('freezer')">Freezer</button>
+  <button class="nav-btn" onclick="showPage('station')">Station</button>
   <button class="nav-btn" onclick="showPage('staffboard')">Hub</button>
   <button class="nav-btn" onclick="showPage('doughplan')">Dough Plan</button>
   <button class="nav-btn" onclick="showPage('opening')">Checklists</button>
@@ -2751,6 +2752,11 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="freezer-last-submit" style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px"></div>
 </div>
 
+<!-- ======== STATION MODE PAGE ======== -->
+<div class="page staff-page" id="page-station">
+  <div id="station-root"></div>
+</div>
+
 <!-- ======== FREEZER LINK MIGRATION MODAL ======== -->
 <div id="fz-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:1500;
      align-items:center;justify-content:center;padding:20px">
@@ -3039,7 +3045,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- ======== PRICE LIBRARY EDIT MODAL ======== -->
-<div id="pl-edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center" onclick="if(event.target===this)plCloseEdit()">
+<div id="pl-edit-modal" style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,0.7);align-items:center;justify-content:center" onclick="if(event.target===this)plCloseEdit()">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;width:min(560px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column">
     <!-- Header -->
     <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:10px 10px 0 0;flex-shrink:0">
@@ -3359,7 +3365,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.27';
+const APP_VERSION      = '2.5.29';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -4208,6 +4214,7 @@ function showPageDirect(page) {
   if (page === 'timeline') { tlInitRangeSelectors(); renderTimeline(); }
   if (page === 'eod') renderEodPage();
   if (page === 'freezer') renderFreezerPage();
+  if (page === 'station') renderStation();
   if (page === 'yield') renderYieldPage();
   if (page === 'opening') renderOpeningPage();
   if (page === 'staffboard') renderStaffBoard();
@@ -4244,6 +4251,7 @@ function showPage(page) {
   if (page === 'doughtimer') { renderDoughTimer(); dtStartTick(); }
   if (page === 'weekplan') { renderWeekPlan(); wpInitGestures(); }
   if (page === 'stationguide') renderStationGuide();
+  if (page === 'station') renderStation();
   if (page === 'dayview') renderDayView();
   if (page === 'displaystock') renderDisplayStock();
   if (page === 'doughplan') renderDoughPlanPage();
@@ -27672,7 +27680,447 @@ function sbPrintReport() {
 }
 // ======== END SUPPLY BOARD ========
 
+// ======== STATION MODE ========
+const STATION_SESSION_KEY = 'bk_station_session';
+let _stationState = null;
+
+function stationBuildQueue() {
+  const fohIds = typeof FOH_FREEZER_IDS !== 'undefined' ? FOH_FREEZER_IDS : new Set(['f-retail', 'f-bakery']);
+  const defs = freezerGetDefs ? freezerGetDefs() : [];
+  const data = freezerGetData ? freezerGetData() : {};
+  const tomorrowKey = (() => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return days[d.getDay()];
+  })();
+  const queue = [];
+  for (const fz of defs) {
+    if (fohIds.has(fz.id)) continue;
+    for (const item of (fz.items || [])) {
+      const demand = typeof freezerGetNextDayPull === 'function'
+        ? freezerGetNextDayPull(item) : 0;
+      if (demand <= 0) continue;
+      const fzKey = fz.id + '::' + item;
+      const frozen = (data[fzKey] && data[fzKey].count != null) ? data[fzKey].count : 0;
+      queue.push({
+        freezerId: fz.id,
+        freezerName: fz.name || fz.id,
+        itemName: item,
+        tomorrowDemand: demand,
+        currentFrozen: frozen,
+        finishedOnHand: 0,
+        confirmedPull: Math.max(0, demand - frozen),
+        confirmed: false,
+        skipped: false,
+      });
+    }
+  }
+  return queue;
+}
+
+function stationSaveSession() {
+  if (_stationState) {
+    try { localStorage.setItem(STATION_SESSION_KEY, JSON.stringify(_stationState)); } catch(e) {}
+  }
+}
+
+function stationLoadSession() {
+  try {
+    const raw = localStorage.getItem(STATION_SESSION_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function stationClearSession() {
+  localStorage.removeItem(STATION_SESSION_KEY);
+  _stationState = null;
+}
+
+function renderStation() {
+  const root = document.getElementById('station-root');
+  if (!root) return;
+
+  if (!_stationState) {
+    const saved = stationLoadSession();
+    if (saved && saved.phase !== 'done') {
+      _stationState = saved;
+    }
+  }
+
+  if (!_stationState || _stationState.phase === 'idle') {
+    root.innerHTML = stationRenderIdle();
+    return;
+  }
+  if (_stationState.phase === 'running') {
+    root.innerHTML = stationRenderCard();
+    return;
+  }
+  if (_stationState.phase === 'review') {
+    root.innerHTML = stationRenderReview();
+    return;
+  }
+  if (_stationState.phase === 'done') {
+    root.innerHTML = stationRenderDone();
+    return;
+  }
+}
+
+function stationRenderIdle() {
+  return `
+  <div style="max-width:600px;margin:0 auto;padding:8px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px">🧊 Station Setup</h2>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Pull frozen product for tomorrow's production</div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:28px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">🧊</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:8px">Proofer Setup Workflow</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">
+        Walk through each frozen item needed for tomorrow.<br>
+        Confirm how much to pull from the freezer.
+      </div>
+      <button onclick="stationStartProofer()"
+        style="background:var(--accent);color:#1a1209;border:none;border-radius:6px;padding:14px 32px;font-size:16px;font-weight:700;cursor:pointer">
+        Start Proofer Setup
+      </button>
+    </div>
+  </div>`;
+}
+
+function stationStartProofer() {
+  const queue = stationBuildQueue();
+  if (!queue.length) {
+    alert('No items with tomorrow demand found across non-FOH freezers.');
+    return;
+  }
+  _stationState = {
+    phase: 'running',
+    queue,
+    idx: 0,
+    startedAt: Date.now(),
+  };
+  stationSaveSession();
+  renderStation();
+}
+
+function stationRenderCard() {
+  const { queue, idx } = _stationState;
+  const item = queue[idx];
+  const total = queue.length;
+  const doneCount = queue.filter(q => q.confirmed || q.skipped).length;
+  const pct = Math.round((doneCount / total) * 100);
+
+  const recommended = Math.max(0, item.tomorrowDemand - item.currentFrozen - item.finishedOnHand);
+  const pull = item.confirmedPull;
+
+  // Group label: show freezer name when it changes from previous item
+  const prevFreezer = idx > 0 ? queue[idx - 1].freezerName : null;
+  const showFreezerLabel = prevFreezer !== item.freezerName;
+
+  return `
+  <div style="max-width:520px;margin:0 auto;padding:8px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:20px">🧊 Proofer Setup</h2>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">${doneCount} / ${total} done</div>
+    </div>
+
+    <!-- Progress bar -->
+    <div style="background:var(--surface2);border-radius:4px;height:6px;margin-bottom:20px;overflow:hidden">
+      <div style="background:var(--accent);height:100%;width:${pct}%;transition:width 0.3s"></div>
+    </div>
+
+    ${showFreezerLabel ? `<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">${item.freezerName}</div>` : ''}
+
+    <!-- Item card -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:24px">
+      <div style="font-size:22px;font-weight:700;margin-bottom:20px">${item.itemName}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;text-align:center">
+        <div style="background:var(--surface);border-radius:8px;padding:12px 8px">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Tomorrow's Need</div>
+          <div style="font-size:28px;font-weight:700;color:var(--text)">${item.tomorrowDemand}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:12px 8px">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Frozen Stock</div>
+          <div style="font-size:28px;font-weight:700;color:var(--text)">${item.currentFrozen}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:12px 8px">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Finished on Hand</div>
+          <div style="font-size:28px;font-weight:700;color:#22c55e;cursor:pointer" onclick="stationFocusFinished()">${item.finishedOnHand}</div>
+        </div>
+      </div>
+
+      <!-- Finished on hand input -->
+      <div style="margin-bottom:20px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600">Already finished / on shelf:</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <button onclick="stationAdjustFinished(-1)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;width:36px;height:36px;font-size:18px;cursor:pointer;color:var(--text)">−</button>
+          <input id="st-finished-input" type="number" min="0" value="${item.finishedOnHand}"
+            onchange="stationSetFinished(parseInt(this.value)||0)"
+            onkeydown="if(event.key==='Enter'){stationSetFinished(parseInt(this.value)||0);document.getElementById('st-pull-input').focus()}"
+            style="flex:1;text-align:center;font-size:20px;font-weight:700;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text)">
+          <button onclick="stationAdjustFinished(1)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;width:36px;height:36px;font-size:18px;cursor:pointer;color:var(--text)">+</button>
+        </div>
+      </div>
+
+      <!-- Pull amount -->
+      <div style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label style="font-size:12px;color:var(--muted);font-weight:600">Pull from freezer:</label>
+          <span style="font-size:11px;color:var(--muted)">Recommended: ${recommended}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="stationAdjust(-12)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)">−12</button>
+          <button onclick="stationAdjust(-6)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)">−6</button>
+          <button onclick="stationAdjust(-1)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;width:36px;height:36px;font-size:18px;cursor:pointer;color:var(--text)">−</button>
+          <input id="st-pull-input" type="number" min="0" value="${pull}"
+            onchange="stationSetPull(parseInt(this.value)||0)"
+            onkeydown="if(event.key==='Enter')stationConfirm()"
+            style="flex:1;text-align:center;font-size:28px;font-weight:700;padding:8px;background:var(--surface);border:2px solid var(--accent);border-radius:6px;color:var(--text)">
+          <button onclick="stationAdjust(1)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;width:36px;height:36px;font-size:18px;cursor:pointer;color:var(--text)">+</button>
+          <button onclick="stationAdjust(6)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)">+6</button>
+          <button onclick="stationAdjust(12)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)">+12</button>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:10px;margin-top:4px">
+        ${idx > 0 ? `<button onclick="stationBack()" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer">← Back</button>` : ''}
+        <button onclick="stationSkip()" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1">Skip</button>
+        <button onclick="stationConfirm()" style="background:var(--accent);color:#1a1209;border:none;border-radius:6px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;flex:2">
+          Confirm Pull (${pull}) →
+        </button>
+      </div>
+    </div>
+
+    <!-- Mini queue list -->
+    <div style="margin-top:16px;display:flex;gap:6px;flex-wrap:wrap">
+      ${queue.map((q,i) => `
+        <div title="${q.itemName}" onclick="stationJumpTo(${i})" style="cursor:pointer;width:28px;height:28px;border-radius:50%;border:2px solid ${i===idx?'var(--accent)':'var(--border)'};background:${q.confirmed?'var(--accent)':q.skipped?'var(--surface2)':'var(--surface)'};font-size:9px;display:flex;align-items:center;justify-content:center;color:${q.confirmed?'#1a1209':'var(--muted)'};font-weight:700;flex-shrink:0">${i+1}</div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+function stationFocusFinished() {
+  setTimeout(() => { const el = document.getElementById('st-finished-input'); if(el) el.focus(); }, 50);
+}
+
+function stationAdjustFinished(delta) {
+  if (!_stationState) return;
+  const item = _stationState.queue[_stationState.idx];
+  item.finishedOnHand = Math.max(0, (item.finishedOnHand || 0) + delta);
+  item.confirmedPull = Math.max(0, item.tomorrowDemand - item.currentFrozen - item.finishedOnHand);
+  stationSaveSession();
+  renderStation();
+}
+
+function stationSetFinished(val) {
+  if (!_stationState) return;
+  const item = _stationState.queue[_stationState.idx];
+  item.finishedOnHand = Math.max(0, val);
+  item.confirmedPull = Math.max(0, item.tomorrowDemand - item.currentFrozen - item.finishedOnHand);
+  stationSaveSession();
+  const inp = document.getElementById('st-pull-input');
+  if (inp) inp.value = item.confirmedPull;
+  const finInp = document.getElementById('st-finished-input');
+  if (finInp) finInp.value = item.finishedOnHand;
+  // Update pull label button text
+  const btn = document.querySelector('[onclick="stationConfirm()"]');
+  if (btn) btn.textContent = `Confirm Pull (${item.confirmedPull}) →`;
+}
+
+function stationAdjust(delta) {
+  if (!_stationState) return;
+  const item = _stationState.queue[_stationState.idx];
+  item.confirmedPull = Math.max(0, item.confirmedPull + delta);
+  stationSaveSession();
+  const inp = document.getElementById('st-pull-input');
+  if (inp) inp.value = item.confirmedPull;
+  const btn = document.querySelector('[onclick="stationConfirm()"]');
+  if (btn) btn.textContent = `Confirm Pull (${item.confirmedPull}) →`;
+}
+
+function stationSetPull(val) {
+  if (!_stationState) return;
+  const item = _stationState.queue[_stationState.idx];
+  item.confirmedPull = Math.max(0, val);
+  stationSaveSession();
+  const btn = document.querySelector('[onclick="stationConfirm()"]');
+  if (btn) btn.textContent = `Confirm Pull (${item.confirmedPull}) →`;
+}
+
+function stationConfirm() {
+  if (!_stationState) return;
+  const { queue, idx } = _stationState;
+  queue[idx].confirmed = true;
+  queue[idx].skipped = false;
+  const next = queue.findIndex((q, i) => i > idx && !q.confirmed && !q.skipped);
+  if (next === -1) {
+    _stationState.phase = 'review';
+  } else {
+    _stationState.idx = next;
+  }
+  stationSaveSession();
+  renderStation();
+}
+
+function stationSkip() {
+  if (!_stationState) return;
+  const { queue, idx } = _stationState;
+  queue[idx].skipped = true;
+  queue[idx].confirmed = false;
+  const next = queue.findIndex((q, i) => i > idx && !q.confirmed && !q.skipped);
+  if (next === -1) {
+    _stationState.phase = 'review';
+  } else {
+    _stationState.idx = next;
+  }
+  stationSaveSession();
+  renderStation();
+}
+
+function stationBack() {
+  if (!_stationState) return;
+  const { queue, idx } = _stationState;
+  if (idx === 0) return;
+  // Go to previous item regardless of status
+  queue[idx - 1].confirmed = false;
+  queue[idx - 1].skipped = false;
+  _stationState.idx = idx - 1;
+  stationSaveSession();
+  renderStation();
+}
+
+function stationJumpTo(i) {
+  if (!_stationState) return;
+  const item = _stationState.queue[i];
+  if (item.confirmed) {
+    item.confirmed = false;
+  }
+  item.skipped = false;
+  _stationState.idx = i;
+  _stationState.phase = 'running';
+  stationSaveSession();
+  renderStation();
+}
+
+function stationRenderReview() {
+  const { queue } = _stationState;
+  const confirmed = queue.filter(q => q.confirmed);
+  const skipped = queue.filter(q => q.skipped);
+  const totalPull = confirmed.reduce((s, q) => s + q.confirmedPull, 0);
+
+  let rows = confirmed.map(q => `
+    <tr>
+      <td style="padding:8px 10px;font-size:13px;font-weight:600">${q.itemName}</td>
+      <td style="padding:8px 10px;font-size:12px;color:var(--muted)">${q.freezerName}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:14px;font-weight:700;color:var(--accent)">${q.confirmedPull}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted)">${q.tomorrowDemand}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted)">${q.currentFrozen}</td>
+    </tr>`).join('');
+
+  if (skipped.length) {
+    rows += skipped.map(q => `
+      <tr style="opacity:0.5">
+        <td style="padding:8px 10px;font-size:13px">${q.itemName}</td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--muted)">${q.freezerName}</td>
+        <td style="padding:8px 10px;text-align:center;font-style:italic;color:var(--muted);font-size:12px">skipped</td>
+        <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted)">${q.tomorrowDemand}</td>
+        <td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted)">${q.currentFrozen}</td>
+      </tr>`).join('');
+  }
+
+  return `
+  <div style="max-width:600px;margin:0 auto;padding:8px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:20px">🧊 Review Pulls</h2>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">${confirmed.length} items · ${totalPull} total pulled</div>
+      </div>
+      <button onclick="stationJumpTo(0);_stationState.phase='running';renderStation()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">← Edit</button>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--surface);border-bottom:1px solid var(--border)">
+            <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Item</th>
+            <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Freezer</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Pull</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Demand</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Frozen</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <button onclick="stationComplete()"
+      style="width:100%;background:var(--accent);color:#1a1209;border:none;border-radius:8px;padding:16px;font-size:16px;font-weight:700;cursor:pointer">
+      ✓ Complete Proofer Setup — Deduct ${totalPull} items
+    </button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">This will deduct from freezer stock and cannot be undone</div>
+  </div>`;
+}
+
+function stationComplete() {
+  if (!_stationState) return;
+  const confirmed = _stationState.queue.filter(q => q.confirmed && q.confirmedPull > 0);
+  if (!confirmed.length) { stationClearSession(); renderStation(); return; }
+  const user = authGetSession ? authGetSession()?.name || 'Station' : 'Station';
+  for (const item of confirmed) {
+    if (typeof freezerAdjust === 'function') {
+      freezerAdjust(item.freezerId, item.itemName, -item.confirmedPull);
+    }
+  }
+  if (typeof forceSaveKeys === 'function') forceSaveKeys(['bk_freezer']);
+  _stationState.phase = 'done';
+  _stationState.completedAt = Date.now();
+  _stationState.completedBy = user;
+  stationSaveSession();
+  renderStation();
+}
+
+function stationRenderDone() {
+  const { queue, completedAt, completedBy } = _stationState;
+  const confirmed = queue.filter(q => q.confirmed);
+  const totalPull = confirmed.reduce((s,q) => s + q.confirmedPull, 0);
+  const timeStr = completedAt ? new Date(completedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+  return `
+  <div style="max-width:520px;margin:0 auto;padding:8px 0;text-align:center">
+    <div style="font-size:64px;margin-bottom:16px">✅</div>
+    <h2 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:8px">Proofer Setup Complete</h2>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:4px">${totalPull} items pulled from ${confirmed.length} product${confirmed.length!==1?'s':''}</div>
+    ${timeStr ? `<div style="font-size:12px;color:var(--muted);margin-bottom:24px">Completed at ${timeStr}${completedBy?' by '+completedBy:''}</div>` : ''}
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:24px;text-align:left">
+      ${confirmed.map(q => `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span>${q.itemName}</span>
+          <span style="font-weight:700;color:var(--accent)">−${q.confirmedPull}</span>
+        </div>`).join('')}
+    </div>
+    <button onclick="stationReset()"
+      style="background:var(--accent);color:#1a1209;border:none;border-radius:6px;padding:14px 32px;font-size:15px;font-weight:700;cursor:pointer">
+      Start New Setup
+    </button>
+  </div>`;
+}
+
+function stationReset() {
+  stationClearSession();
+  renderStation();
+}
+// ======== END STATION MODE ========
+
 const VERSION_NOTES = {
+  '2.5.29': ['🧊 Station Mode — new Station tab with Proofer Setup workflow; walks through all non-FOH freezer items with tomorrow demand > 0 one card at a time; shows Tomorrow Need / Frozen Stock / Finished on Hand; +/− buttons in steps of 1/6/12 plus direct entry; Skip / Back / mini queue dots for navigation; review screen summarizes all pulls before committing; single Complete button deducts from freezer stock via freezerAdjust(); session persists to localStorage across page refreshes; resets cleanly for the next run'],
+  '2.5.28': ['🐛 Fix Edit Ingredient modal z-index — was appearing behind the Raw Material Prices panel (z-index 99980); bumped pl-edit-modal to z-index 99990 so it always renders on top'],
   '2.5.27': ['💰 Raw Material Prices redesign — table is now read-only display (Name, Category chip, Supplier, Tags, $/100g, $/lb, Last updated); each row has an ✏ Edit button that opens a focused modal with all fields (name, category, supplier, unit converter → $/gram, case$, case wt, tags, notes); notes preview shows under name in table; tag filter added to header bar (All Tags / FOH / BOH / Sandwich / Kitchen / Solid / Liquid); last-updated age shown in table and modal'],
   '2.5.26': ['🔧 Stage edit row split into 2 rows — Day/Active/Wait/Equipment/Baker Role on row 1; Value%/Skill/Notes on row 2 (was an overflowing 8-column grid cutting off the Notes field); 🧹 Hub state auto-prune — entries older than 60 days are dropped before each save to prevent bk_hub_state exceeding the 700KB server limit'],
   '2.5.25': ['🔧 Equipment field on recipe stages — each stage now has an optional Equipment dropdown (Mixer, Deck Oven, Conv Oven 1/2, Proofer, Bench, Walk-in); 3 new equipment types added; Baker Timeline enhanced with Start-at and Ready-by time controls, equipment swim lanes (wait time routes to equipment lane when tagged), and absolute clock times instead of relative offsets'],
