@@ -3365,7 +3365,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.29';
+const APP_VERSION      = '2.5.30';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -27684,6 +27684,95 @@ function sbPrintReport() {
 const STATION_SESSION_KEY = 'bk_station_session';
 let _stationState = null;
 
+function stationForecastHTML(item, pullQty) {
+  if (typeof freezerGetMatchNames !== 'function') return '';
+  const DOW   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const SHORT = ['SU','M','T','W','TH','F','SA'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const names = freezerGetMatchNames(item.itemName);
+  const linkedRecipeId = typeof freezerGetLinkedRecipe === 'function'
+    ? (freezerGetLinkedRecipe(item.itemName)?.id || null) : null;
+  const days = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const dateStr = d.toISOString().slice(0,10);
+    const dowIdx = d.getDay();
+    const dk = DOW[dowIdx];
+    let qty = 0;
+    (channels || []).forEach(ch => {
+      if (typeof chIsSuspendedOn === 'function' && chIsSuspendedOn(ch, dateStr)) return;
+      (ch.orderLines || []).forEach(line => {
+        if (!line.product) return;
+        const matched = names.has(line.product.toLowerCase().trim()) ||
+          (linkedRecipeId && typeof resolveLineRecipeId === 'function' &&
+           resolveLineRecipeId(line) === linkedRecipeId);
+        if (!matched) return;
+        const q = (line.days && line.days[dk]) || 0;
+        const ue = (typeof line.unitsEach === 'number' && line.unitsEach > 0) ? line.unitsEach : 1;
+        qty += q * ue;
+      });
+    });
+    days.push({ label: SHORT[dowIdx], qty, isTomorrow: i === 1 });
+  }
+  // Show at least 5 days, extend to cover any non-zero days
+  let show = 5;
+  for (let i = 6; i >= show; i--) { if (days[i].qty > 0) { show = i + 1; break; } }
+  const vis = days.slice(0, show);
+  if (!vis.some(d => d.qty > 0)) return '';
+  // Running frozen balance: day 1 uses proofer (pull), not frozen; days 2+ consume frozen
+  const frozenAfterPull = item.currentFrozen - pullQty;
+  let running = frozenAfterPull;
+  let firstShortLabel = null;
+  const cols = vis.map((d, i) => {
+    if (i > 0) {
+      running -= d.qty;
+      if (running < 0 && !firstShortLabel) firstShortLabel = d.label;
+    }
+    return { ...d, bal: i === 0 ? null : running };
+  });
+  const demandPills = cols.map(c => {
+    const hasQty = c.qty > 0;
+    const shortfall = c.bal !== null && c.bal < 0;
+    const qColor = shortfall ? '#dc2626' : (hasQty ? 'var(--text)' : 'var(--muted2)');
+    return `<div style="display:flex;flex-direction:column;align-items:center;min-width:28px;gap:1px">
+      <span style="font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase">${c.label}</span>
+      <span style="font-size:12px;font-weight:${hasQty?'700':'400'};color:${qColor}">${hasQty ? c.qty : '—'}</span>
+    </div>`;
+  }).join('');
+  const balancePills = cols.map(c => {
+    if (c.isTomorrow) {
+      const covered = pullQty >= c.qty;
+      return `<div style="display:flex;flex-direction:column;align-items:center;min-width:28px;gap:1px">
+        <span style="font-size:10px;font-weight:700;color:${covered ? '#22c55e' : '#d97706'}">${covered ? '✓' : '~'}</span>
+      </div>`;
+    }
+    const neg = c.bal < 0;
+    return `<div style="display:flex;flex-direction:column;align-items:center;min-width:28px;gap:1px">
+      <span style="font-size:10px;font-weight:${neg?'700':'400'};color:${neg?'#dc2626':'var(--muted)'}">${c.bal}</span>
+    </div>`;
+  }).join('');
+  const productionNote = firstShortLabel
+    ? `<div style="font-size:11px;color:#dc2626;font-weight:600;margin-top:6px">⚠ Production needed before ${firstShortLabel}</div>`
+    : '';
+  return `<div id="st-forecast" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px">
+    <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Upcoming Demand</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${demandPills}</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;border-top:1px dashed var(--border);padding-top:4px">
+      <span style="font-size:9px;color:var(--muted);white-space:nowrap;flex-shrink:0">frozen →</span>
+      ${balancePills}
+    </div>
+    ${productionNote}
+  </div>`;
+}
+
+function stationUpdateForecast() {
+  if (!_stationState || _stationState.phase !== 'running') return;
+  const item = _stationState.queue[_stationState.idx];
+  const el = document.getElementById('st-forecast');
+  if (!el) return;
+  el.outerHTML = stationForecastHTML(item, item.confirmedPull) || '<div id="st-forecast"></div>';
+}
+
 function stationBuildQueue() {
   const fohIds = typeof FOH_FREEZER_IDS !== 'undefined' ? FOH_FREEZER_IDS : new Set(['f-retail', 'f-bakery']);
   const defs = freezerGetDefs ? freezerGetDefs() : [];
@@ -27709,7 +27798,7 @@ function stationBuildQueue() {
         tomorrowDemand: demand,
         currentFrozen: frozen,
         finishedOnHand: 0,
-        confirmedPull: Math.max(0, demand - frozen),
+        confirmedPull: Math.max(0, demand),
         confirmed: false,
         skipped: false,
       });
@@ -27813,7 +27902,7 @@ function stationRenderCard() {
   const doneCount = queue.filter(q => q.confirmed || q.skipped).length;
   const pct = Math.round((doneCount / total) * 100);
 
-  const recommended = Math.max(0, item.tomorrowDemand - item.currentFrozen - item.finishedOnHand);
+  const recommended = Math.max(0, item.tomorrowDemand - item.finishedOnHand);
   const pull = item.confirmedPull;
 
   // Group label: show freezer name when it changes from previous item
@@ -27854,6 +27943,8 @@ function stationRenderCard() {
           <div style="font-size:28px;font-weight:700;color:#22c55e;cursor:pointer" onclick="stationFocusFinished()">${item.finishedOnHand}</div>
         </div>
       </div>
+
+      ${stationForecastHTML(item, pull)}
 
       <!-- Finished on hand input -->
       <div style="margin-bottom:20px">
@@ -27915,7 +28006,7 @@ function stationAdjustFinished(delta) {
   if (!_stationState) return;
   const item = _stationState.queue[_stationState.idx];
   item.finishedOnHand = Math.max(0, (item.finishedOnHand || 0) + delta);
-  item.confirmedPull = Math.max(0, item.tomorrowDemand - item.currentFrozen - item.finishedOnHand);
+  item.confirmedPull = Math.max(0, item.tomorrowDemand - item.finishedOnHand);
   stationSaveSession();
   renderStation();
 }
@@ -27924,15 +28015,15 @@ function stationSetFinished(val) {
   if (!_stationState) return;
   const item = _stationState.queue[_stationState.idx];
   item.finishedOnHand = Math.max(0, val);
-  item.confirmedPull = Math.max(0, item.tomorrowDemand - item.currentFrozen - item.finishedOnHand);
+  item.confirmedPull = Math.max(0, item.tomorrowDemand - item.finishedOnHand);
   stationSaveSession();
   const inp = document.getElementById('st-pull-input');
   if (inp) inp.value = item.confirmedPull;
   const finInp = document.getElementById('st-finished-input');
   if (finInp) finInp.value = item.finishedOnHand;
-  // Update pull label button text
   const btn = document.querySelector('[onclick="stationConfirm()"]');
   if (btn) btn.textContent = `Confirm Pull (${item.confirmedPull}) →`;
+  stationUpdateForecast();
 }
 
 function stationAdjust(delta) {
@@ -27944,6 +28035,7 @@ function stationAdjust(delta) {
   if (inp) inp.value = item.confirmedPull;
   const btn = document.querySelector('[onclick="stationConfirm()"]');
   if (btn) btn.textContent = `Confirm Pull (${item.confirmedPull}) →`;
+  stationUpdateForecast();
 }
 
 function stationSetPull(val) {
@@ -27953,6 +28045,7 @@ function stationSetPull(val) {
   stationSaveSession();
   const btn = document.querySelector('[onclick="stationConfirm()"]');
   if (btn) btn.textContent = `Confirm Pull (${item.confirmedPull}) →`;
+  stationUpdateForecast();
 }
 
 function stationConfirm() {
@@ -28119,6 +28212,7 @@ function stationReset() {
 // ======== END STATION MODE ========
 
 const VERSION_NOTES = {
+  '2.5.30': ['🔧 Station Mode: fix Recommended Pull calculation — was max(0, demand − frozen) which incorrectly zeroed out when frozen stock exceeded tomorrow\'s need; corrected to max(0, demand − finishedOnHand) so a demand of 30 with 135 frozen recommends pulling 30, not 0; same fix applied in stationAdjustFinished/stationSetFinished; 📊 Demand Forecast widget — per-card "Upcoming Demand" panel showing 5–7 days of daily demand pills (same data/format as Smart Plan\'s bbDemandByDayRow); a "frozen →" row below shows projected running frozen balance after the pull (day 1 = ✓ covered by proofer, days 2+ = balance after each day\'s demand is consumed); red text + ⚠ production notice when balance goes negative; forecast updates live as pull qty is adjusted without re-rendering the full card; reuses freezerGetMatchNames / freezerGetLinkedRecipe / resolveLineRecipeId for consistent item resolution'],
   '2.5.29': ['🧊 Station Mode — new Station tab with Proofer Setup workflow; walks through all non-FOH freezer items with tomorrow demand > 0 one card at a time; shows Tomorrow Need / Frozen Stock / Finished on Hand; +/− buttons in steps of 1/6/12 plus direct entry; Skip / Back / mini queue dots for navigation; review screen summarizes all pulls before committing; single Complete button deducts from freezer stock via freezerAdjust(); session persists to localStorage across page refreshes; resets cleanly for the next run'],
   '2.5.28': ['🐛 Fix Edit Ingredient modal z-index — was appearing behind the Raw Material Prices panel (z-index 99980); bumped pl-edit-modal to z-index 99990 so it always renders on top'],
   '2.5.27': ['💰 Raw Material Prices redesign — table is now read-only display (Name, Category chip, Supplier, Tags, $/100g, $/lb, Last updated); each row has an ✏ Edit button that opens a focused modal with all fields (name, category, supplier, unit converter → $/gram, case$, case wt, tags, notes); notes preview shows under name in table; tag filter added to header bar (All Tags / FOH / BOH / Sandwich / Kitchen / Solid / Liquid); last-updated age shown in table and modal'],
