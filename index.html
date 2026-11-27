@@ -1230,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <button id="sq-eod-btn" onclick="sqEODPush()" style="background:#3a1f72;color:#fff;border:none;border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer" title="Manually push tomorrow's channel quantities to Square inventory">📤 Push to Square</button>
           <span style="font-size:10px;color:var(--muted);font-weight:500;white-space:nowrap">· Auto 9 PM ET</span>
         </div>
-        ${sqGetStatusHtml()}
+        <div id="sq-status-badge"></div>
       </div>
       <button onclick="sbPrintReport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨 Report</button>
       <button onclick="sbResetBoard()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:8px 14px;font-size:13px;cursor:pointer">↺ Reset</button>
@@ -3365,7 +3365,7 @@ function dsRefresh(page) {
 }
 
 // ============ AUTH CONSTANTS (must be first — used during page init) ============
-const APP_VERSION      = '2.5.30';
+const APP_VERSION      = '2.5.31';
 const AUTH_PINS_KEY      = 'bk_staff_pins';
 const AUTH_SESSION_KEY   = 'bk_auth_session';
 const AUTH_IDLE_KEY      = 'bk_idle_timeout_hours';
@@ -28212,6 +28212,7 @@ function stationReset() {
 // ======== END STATION MODE ========
 
 const VERSION_NOTES = {
+  '2.5.31': ['🐛 Fix Supply Board Square status showing literal ${sqGetStatusHtml()} — was a JS template expression baked into static HTML; replaced with a <div id="sq-status-badge"> placeholder that sqRefreshStatusBadge() populates on page load'],
   '2.5.30': ['🔧 Station Mode: fix Recommended Pull calculation — was max(0, demand − frozen) which incorrectly zeroed out when frozen stock exceeded tomorrow\'s need; corrected to max(0, demand − finishedOnHand) so a demand of 30 with 135 frozen recommends pulling 30, not 0; same fix applied in stationAdjustFinished/stationSetFinished; 📊 Demand Forecast widget — per-card "Upcoming Demand" panel showing 5–7 days of daily demand pills (same data/format as Smart Plan\'s bbDemandByDayRow); a "frozen →" row below shows projected running frozen balance after the pull (day 1 = ✓ covered by proofer, days 2+ = balance after each day\'s demand is consumed); red text + ⚠ production notice when balance goes negative; forecast updates live as pull qty is adjusted without re-rendering the full card; reuses freezerGetMatchNames / freezerGetLinkedRecipe / resolveLineRecipeId for consistent item resolution'],
   '2.5.29': ['🧊 Station Mode — new Station tab with Proofer Setup workflow; walks through all non-FOH freezer items with tomorrow demand > 0 one card at a time; shows Tomorrow Need / Frozen Stock / Finished on Hand; +/− buttons in steps of 1/6/12 plus direct entry; Skip / Back / mini queue dots for navigation; review screen summarizes all pulls before committing; single Complete button deducts from freezer stock via freezerAdjust(); session persists to localStorage across page refreshes; resets cleanly for the next run'],
   '2.5.28': ['🐛 Fix Edit Ingredient modal z-index — was appearing behind the Raw Material Prices panel (z-index 99980); bumped pl-edit-modal to z-index 99990 so it always renders on top'],
